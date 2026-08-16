@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "../..",
+    "ignoreDeprecations": "6.0",
+    "noEmit": true,
+    "paths": {
+      "@liaugust/monobank-sdk": ["./src/index.ts"]
+    },
+    "types": ["node"]
+  },
+  "exclude": [],
+  "include": ["./public-api.test-d.ts"]
+}

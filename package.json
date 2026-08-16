@@ -1,0 +1,70 @@
+{
+  "name": "@liaugust/monobank-sdk",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Strict, runtime-validated TypeScript SDK for Monobank APIs",
+  "license": "UNLICENSED",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20.19.5"
+  },
+  "packageManager": "pnpm@11.22.0",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "SECURITY.md"
+  ],
+  "scripts": {
+    "prepare": "husky",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix --max-warnings 0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:types": "tsc -p tests/types/tsconfig.json --noEmit",
+    "check:dead-code": "knip",
+    "check:duplication": "jscpd",
+    "build": "tsup",
+    "check:package": "publint && attw --pack . && node tests/consumers/esm.mjs && node tests/consumers/commonjs.cjs && node tests/consumers/declarations.mjs && tsup tests/consumers/browser.ts --format esm --platform browser --out-dir .tmp/browser-smoke --clean",
+    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm test:types && pnpm check:dead-code && pnpm check:duplication && pnpm build && pnpm check:package"
+  },
+  "dependencies": {
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
+    "@types/node": "20.19.43",
+    "@vitest/coverage-v8": "4.1.10",
+    "eslint": "9.39.5",
+    "eslint-plugin-import-x": "4.17.1",
+    "eslint-plugin-jsdoc": "62.9.0",
+    "eslint-plugin-simple-import-sort": "14.0.0",
+    "husky": "9.1.7",
+    "jscpd": "5.0.15",
+    "knip": "6.32.2",
+    "prettier": "3.9.6",
+    "publint": "0.3.23",
+    "tsup": "8.5.1",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.67.0",
+    "vitest": "4.1.10"
+  }
+}

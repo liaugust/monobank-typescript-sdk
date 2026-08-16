@@ -1,0 +1,8 @@
+.DS_Store
+.superpowers/
+.tmp/
+coverage/
+dist/
+docs/superpowers/
+node_modules/
+*.tgz
