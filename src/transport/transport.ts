@@ -150,6 +150,7 @@ export class MonobankTransport {
           response,
           request.endpoint,
           this.options.token,
+          attemptSignal.reason,
         );
         const delayMs = retryDelayForApiError(
           error,
@@ -498,9 +499,10 @@ async function createApiError(
   response: Response,
   endpoint: string,
   token: string,
+  reason: () => "aborted" | "network" | "timeout",
 ): Promise<MonobankApiError> {
   const upstreamMessage = sanitizeUpstreamMessage(
-    await readResponseText(response),
+    await readResponseText(response, reason),
     token,
   );
 
@@ -519,11 +521,14 @@ async function createApiError(
   });
 }
 
-async function readResponseText(response: Response): Promise<string> {
+async function readResponseText(
+  response: Response,
+  reason: () => "aborted" | "network" | "timeout",
+): Promise<string> {
   try {
     return await response.text();
   } catch (error) {
-    if (isAbortError(error)) {
+    if (reason() !== "network" || isAbortError(error)) {
       throw error;
     }
 
