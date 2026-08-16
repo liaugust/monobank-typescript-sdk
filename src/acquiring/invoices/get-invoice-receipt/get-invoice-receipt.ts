@@ -1,7 +1,7 @@
 import * as z from "zod/mini";
 
-import type { GetInvoiceStatusInput } from "../invoice-identifier.js";
-import { parseInvoiceRequest } from "../request-validation.js";
+import type { GetInvoiceStatusInput } from "../shared/invoice-identifier.js";
+import { parseInvoiceRequest } from "../shared/request-validation.js";
 
 /** Root-relative endpoint used to load or email an invoice receipt. */
 const getInvoiceReceiptEndpoint = "/api/merchant/invoice/receipt";

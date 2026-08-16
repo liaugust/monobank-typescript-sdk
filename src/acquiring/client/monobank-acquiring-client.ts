@@ -1,5 +1,5 @@
 import { MonobankTransport } from "../../transport/transport.js";
-import { MonobankAcquiringInvoices } from "../invoice/monobank-acquiring-invoices.js";
+import { MonobankAcquiringInvoices } from "../invoices/monobank-acquiring-invoices.js";
 import { MonobankAcquiringMerchant } from "../merchant/monobank-acquiring-merchant.js";
 import type { MonobankAcquiringClientOptions } from "./monobank-acquiring-client-options.js";
 

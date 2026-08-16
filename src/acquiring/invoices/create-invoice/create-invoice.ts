@@ -1,11 +1,11 @@
 import * as z from "zod/mini";
 
 import type { RequestOptions } from "../../../shared/request-options.js";
-import type { InvoicePaymentType } from "../invoice-payment-info.js";
-import { InvoicePaymentType as InvoicePaymentTypeValues } from "../invoice-payment-info.js";
-import type { MerchantPaymentInfo } from "../merchant-payment-info.js";
-import { merchantPaymentInfoSchema } from "../merchant-payment-info.js";
-import { parseInvoiceRequest } from "../request-validation.js";
+import type { InvoicePaymentType } from "../models/invoice-payment-info.js";
+import { InvoicePaymentType as InvoicePaymentTypeValues } from "../models/invoice-payment-info.js";
+import type { MerchantPaymentInfo } from "../models/merchant-payment-info.js";
+import { merchantPaymentInfoSchema } from "../models/merchant-payment-info.js";
+import { parseInvoiceRequest } from "../shared/request-validation.js";
 
 /** Root-relative endpoint used to create an Acquiring invoice. */
 export const createInvoiceEndpoint = "/api/merchant/invoice/create";

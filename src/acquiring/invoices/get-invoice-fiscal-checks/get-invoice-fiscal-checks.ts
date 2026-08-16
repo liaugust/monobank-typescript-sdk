@@ -1,7 +1,7 @@
 import * as z from "zod/mini";
 
-import type { GetInvoiceFiscalChecksInput } from "../invoice-identifier.js";
-import { createInvoiceQueryEndpoint } from "../invoice-identifier.js";
+import type { GetInvoiceFiscalChecksInput } from "../shared/invoice-identifier.js";
+import { createInvoiceQueryEndpoint } from "../shared/invoice-identifier.js";
 
 /** Root-relative endpoint used to load invoice fiscal checks. */
 const getInvoiceFiscalChecksEndpoint = "/api/merchant/invoice/fiscal-checks";
@@ -68,4 +68,4 @@ export function createInvoiceFiscalChecksEndpoint(
   return createInvoiceQueryEndpoint(getInvoiceFiscalChecksEndpoint, input);
 }
 
-export type { GetInvoiceFiscalChecksInput } from "../invoice-identifier.js";
+export type { GetInvoiceFiscalChecksInput } from "../shared/invoice-identifier.js";

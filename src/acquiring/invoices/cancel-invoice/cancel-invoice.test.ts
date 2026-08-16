@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { MonobankValidationError } from "../../../errors/monobank-validation-error.js";
-import { cancelInvoiceResponseSchema } from "../invoice-cancellation.js";
+import { cancelInvoiceResponseSchema } from "../models/invoice-cancellation.js";
 import { createCancelInvoiceBody } from "./cancel-invoice.js";
 
 describe("cancel invoice contract", () => {

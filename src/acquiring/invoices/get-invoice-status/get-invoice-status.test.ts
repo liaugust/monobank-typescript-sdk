@@ -4,8 +4,8 @@ import { MonobankValidationError } from "../../../errors/monobank-validation-err
 import {
   InvoicePaymentMethod,
   InvoicePaymentSystem,
-} from "../invoice-payment-info.js";
-import { InvoiceWalletStatus } from "../invoice-wallet.js";
+} from "../models/invoice-payment-info.js";
+import { InvoiceWalletStatus } from "../models/invoice-wallet.js";
 import {
   createInvoiceStatusEndpoint,
   InvoiceStatus,

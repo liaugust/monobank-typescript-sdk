@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { MonobankValidationError } from "../../../errors/monobank-validation-error.js";
-import { DiscountMode, DiscountType } from "../invoice-discount.js";
-import { InvoicePaymentType } from "../invoice-payment-info.js";
+import { DiscountMode, DiscountType } from "../models/invoice-discount.js";
+import { InvoicePaymentType } from "../models/invoice-payment-info.js";
 import {
   createInvoiceBody,
   createInvoiceHeaders,

@@ -1,6 +1,6 @@
-import type { RemoveInvoiceInput } from "../invoice-identifier.js";
-import { invoiceIdentifierSchema } from "../invoice-identifier.js";
-import { parseInvoiceRequest } from "../request-validation.js";
+import type { RemoveInvoiceInput } from "../shared/invoice-identifier.js";
+import { invoiceIdentifierSchema } from "../shared/invoice-identifier.js";
+import { parseInvoiceRequest } from "../shared/request-validation.js";
 
 /** Root-relative endpoint used to invalidate an unpaid invoice. */
 export const removeInvoiceEndpoint = "/api/merchant/invoice/remove";
@@ -25,4 +25,4 @@ export function createRemoveInvoiceBody(
   );
 }
 
-export type { RemoveInvoiceInput } from "../invoice-identifier.js";
+export type { RemoveInvoiceInput } from "../shared/invoice-identifier.js";

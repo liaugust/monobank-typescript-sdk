@@ -1,66 +1,64 @@
 export { MonobankAcquiringClient } from "./acquiring/client/monobank-acquiring-client.js";
 export type { MonobankAcquiringClientOptions } from "./acquiring/client/monobank-acquiring-client-options.js";
-export type { CancelInvoiceInput } from "./acquiring/invoice/cancel-invoice/cancel-invoice.js";
+export type { CancelInvoiceInput } from "./acquiring/invoices/cancel-invoice/cancel-invoice.js";
 export type {
   CreateInvoiceInput,
   CreateInvoiceOptions,
   NewInvoice,
-} from "./acquiring/invoice/create-invoice/create-invoice.js";
-export { newInvoiceSchema } from "./acquiring/invoice/create-invoice/create-invoice.js";
+} from "./acquiring/invoices/create-invoice/create-invoice.js";
+export { newInvoiceSchema } from "./acquiring/invoices/create-invoice/create-invoice.js";
 export type {
   FinalizeInvoiceInput,
   InvoiceFinalization,
-} from "./acquiring/invoice/finalize-invoice/finalize-invoice.js";
-export { finalizeInvoiceResponseSchema } from "./acquiring/invoice/finalize-invoice/finalize-invoice.js";
-export type { FiscalizationItem } from "./acquiring/invoice/fiscalization-item.js";
+} from "./acquiring/invoices/finalize-invoice/finalize-invoice.js";
+export { finalizeInvoiceResponseSchema } from "./acquiring/invoices/finalize-invoice/finalize-invoice.js";
 export type {
   GetInvoiceFiscalChecksInput,
   InvoiceFiscalChecks,
-} from "./acquiring/invoice/get-invoice-fiscal-checks/get-invoice-fiscal-checks.js";
+} from "./acquiring/invoices/get-invoice-fiscal-checks/get-invoice-fiscal-checks.js";
 export {
   FiscalCheckStatus,
   FiscalCheckType,
   FiscalizationSource,
   invoiceFiscalChecksSchema,
-} from "./acquiring/invoice/get-invoice-fiscal-checks/get-invoice-fiscal-checks.js";
+} from "./acquiring/invoices/get-invoice-fiscal-checks/get-invoice-fiscal-checks.js";
 export type {
   GetInvoiceReceiptInput,
   InvoiceReceipt,
-} from "./acquiring/invoice/get-invoice-receipt/get-invoice-receipt.js";
-export { receiptSchema } from "./acquiring/invoice/get-invoice-receipt/get-invoice-receipt.js";
+} from "./acquiring/invoices/get-invoice-receipt/get-invoice-receipt.js";
+export { receiptSchema } from "./acquiring/invoices/get-invoice-receipt/get-invoice-receipt.js";
 export type {
   GetInvoiceStatusInput,
   Invoice,
-} from "./acquiring/invoice/get-invoice-status/get-invoice-status.js";
+} from "./acquiring/invoices/get-invoice-status/get-invoice-status.js";
 export {
   InvoiceStatus,
   invoiceStatusSchema,
-} from "./acquiring/invoice/get-invoice-status/get-invoice-status.js";
-export type { InvoiceCancellation } from "./acquiring/invoice/invoice-cancellation.js";
+} from "./acquiring/invoices/get-invoice-status/get-invoice-status.js";
+export type { FiscalizationItem } from "./acquiring/invoices/models/fiscalization-item.js";
+export type { InvoiceCancellation } from "./acquiring/invoices/models/invoice-cancellation.js";
 export {
   cancelInvoiceResponseSchema,
   InvoiceCancellationStatus,
-} from "./acquiring/invoice/invoice-cancellation.js";
-export type { InvoiceDiscount } from "./acquiring/invoice/invoice-discount.js";
+} from "./acquiring/invoices/models/invoice-cancellation.js";
+export type { InvoiceDiscount } from "./acquiring/invoices/models/invoice-discount.js";
 export {
   DiscountMode,
   DiscountType,
-} from "./acquiring/invoice/invoice-discount.js";
+} from "./acquiring/invoices/models/invoice-discount.js";
 export {
   InvoicePaymentMethod,
   InvoicePaymentSystem,
   InvoicePaymentType,
-} from "./acquiring/invoice/invoice-payment-info.js";
-export { InvoiceWalletStatus } from "./acquiring/invoice/invoice-wallet.js";
+} from "./acquiring/invoices/models/invoice-payment-info.js";
+export { InvoiceWalletStatus } from "./acquiring/invoices/models/invoice-wallet.js";
 export type {
   InvoiceBasketItem,
   MerchantPaymentInfo,
-} from "./acquiring/invoice/merchant-payment-info.js";
-export { MonobankAcquiringInvoices } from "./acquiring/invoice/monobank-acquiring-invoices.js";
-export type { RemoveInvoiceInput } from "./acquiring/invoice/remove-invoice/remove-invoice.js";
+} from "./acquiring/invoices/models/merchant-payment-info.js";
+export type { RemoveInvoiceInput } from "./acquiring/invoices/remove-invoice/remove-invoice.js";
 export type { MerchantDetails } from "./acquiring/merchant/get-merchant-details/get-merchant-details.js";
 export { merchantDetailsSchema } from "./acquiring/merchant/get-merchant-details/get-merchant-details.js";
-export { MonobankAcquiringMerchant } from "./acquiring/merchant/monobank-acquiring-merchant.js";
 export type { MonobankApiErrorOptions } from "./errors/monobank-api-error.js";
 export { MonobankApiError } from "./errors/monobank-api-error.js";
 export type {

@@ -1,10 +1,10 @@
 import * as z from "zod/mini";
 
-import { cancelInvoiceResponseSchema } from "../invoice-cancellation.js";
-import type { GetInvoiceStatusInput } from "../invoice-identifier.js";
-import { createInvoiceQueryEndpoint } from "../invoice-identifier.js";
-import { invoicePaymentInfoSchema } from "../invoice-payment-info.js";
-import { invoiceWalletSchema } from "../invoice-wallet.js";
+import { cancelInvoiceResponseSchema } from "../models/invoice-cancellation.js";
+import { invoicePaymentInfoSchema } from "../models/invoice-payment-info.js";
+import { invoiceWalletSchema } from "../models/invoice-wallet.js";
+import type { GetInvoiceStatusInput } from "../shared/invoice-identifier.js";
+import { createInvoiceQueryEndpoint } from "../shared/invoice-identifier.js";
 
 /** Root-relative endpoint used to load invoice status. */
 const getInvoiceStatusEndpoint = "/api/merchant/invoice/status";
@@ -62,4 +62,4 @@ export function createInvoiceStatusEndpoint(
   return createInvoiceQueryEndpoint(getInvoiceStatusEndpoint, input);
 }
 
-export type { GetInvoiceStatusInput } from "../invoice-identifier.js";
+export type { GetInvoiceStatusInput } from "../shared/invoice-identifier.js";

@@ -7,7 +7,7 @@ import {
   invoiceStatusFixture,
   newInvoiceFixture,
   receiptFixture,
-} from "../../../tests/fixtures/acquiring/invoice.js";
+} from "../../../tests/fixtures/acquiring/invoices.js";
 import {
   createFetchSequence,
   jsonResponse,
@@ -19,7 +19,7 @@ import {
 import { MonobankResponseValidationError } from "../../errors/monobank-response-validation-error.js";
 import { MonobankValidationError } from "../../errors/monobank-validation-error.js";
 import { MonobankAcquiringClient } from "../client/monobank-acquiring-client.js";
-import { InvoicePaymentType } from "./invoice-payment-info.js";
+import { InvoicePaymentType } from "./models/invoice-payment-info.js";
 
 function firstRequestBody(fetch: ReturnType<typeof createFetchSequence>) {
   const body = fetch.mock.calls[0]?.[1]?.body;

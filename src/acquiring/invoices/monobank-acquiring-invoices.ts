@@ -49,8 +49,8 @@ import {
   createInvoiceStatusEndpoint,
   invoiceStatusSchema,
 } from "./get-invoice-status/get-invoice-status.js";
-import type { InvoiceCancellation } from "./invoice-cancellation.js";
-import { cancelInvoiceResponseSchema } from "./invoice-cancellation.js";
+import type { InvoiceCancellation } from "./models/invoice-cancellation.js";
+import { cancelInvoiceResponseSchema } from "./models/invoice-cancellation.js";
 import type { RemoveInvoiceInput } from "./remove-invoice/remove-invoice.js";
 import {
   createRemoveInvoiceBody,

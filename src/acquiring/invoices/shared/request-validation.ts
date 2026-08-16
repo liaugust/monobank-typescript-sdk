@@ -1,5 +1,5 @@
-import { MonobankValidationError } from "../../errors/monobank-validation-error.js";
-import type { ResponseSchema } from "../../transport/response-schema.js";
+import { MonobankValidationError } from "../../../errors/monobank-validation-error.js";
+import type { ResponseSchema } from "../../../transport/response-schema.js";
 
 /**
  * Parses Acquiring invoice request data and converts schema issues into the SDK validation error.

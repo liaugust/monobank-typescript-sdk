@@ -7,7 +7,7 @@ import tseslint from "typescript-eslint";
 const publicApiFiles = [
   "src/acquiring/**/*.ts",
   "src/errors/*.ts",
-  "src/personal/*.ts",
+  "src/personal/**/*.ts",
   "src/public/**/*.ts",
   "src/shared/*.ts",
   "src/transport/fetch-like.ts",

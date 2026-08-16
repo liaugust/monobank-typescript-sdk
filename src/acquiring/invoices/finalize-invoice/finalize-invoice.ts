@@ -1,9 +1,9 @@
 import * as z from "zod/mini";
 
-import type { FiscalizationItem } from "../fiscalization-item.js";
-import { fiscalizationItemSchema } from "../fiscalization-item.js";
-import type { GetInvoiceStatusInput } from "../invoice-identifier.js";
-import { parseInvoiceRequest } from "../request-validation.js";
+import type { FiscalizationItem } from "../models/fiscalization-item.js";
+import { fiscalizationItemSchema } from "../models/fiscalization-item.js";
+import type { GetInvoiceStatusInput } from "../shared/invoice-identifier.js";
+import { parseInvoiceRequest } from "../shared/request-validation.js";
 
 /** Root-relative endpoint used to finalize a held invoice. */
 export const finalizeInvoiceEndpoint = "/api/merchant/invoice/finalize";
