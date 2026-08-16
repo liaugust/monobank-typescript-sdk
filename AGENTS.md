@@ -37,10 +37,10 @@ claim endorsement by Monobank.
   infrastructure and refresh it only after verification with the cached key
   fails; the SDK intentionally does not own cache policy.
 - Use only documented Acquiring methods. The current surface contains merchant
-  details, submerchant listing, read-only QR cashier listing and details, and
-  statements plus invoice creation, status, cancellation, removal,
+  details, submerchant listing, QR cashier listing, details, and amount reset,
+  and statements plus invoice creation, status, cancellation, removal,
   finalization, receipt, and fiscal-check operations. Do not invent
-  unimplemented payment calls; `acquiring.qr.resetAmount()` is not implemented.
+  unimplemented payment calls.
 
 ## Minimal Correct Usage
 

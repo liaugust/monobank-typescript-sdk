@@ -6,6 +6,7 @@ import {
 } from "../../../tests/support/create-fetch-sequence.js";
 import {
   createRetryingTransport,
+  getBankSync,
   requestSafeGet,
   requestSafeGetWithSignal,
   requestSafePost,
@@ -150,6 +151,19 @@ describe("MonobankTransport retry behavior", () => {
 
     await expect(result).rejects.toMatchObject({ status: 503 });
     expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not retry a GET that opts out of retries", async () => {
+    const fetch = createFetchSequence([
+      new Response(null, { status: 503 }),
+      jsonResponse({ ok: true }),
+    ]);
+    const transport = createRetryingTransport(fetch);
+
+    await expect(
+      getBankSync(transport, { retryable: false }),
+    ).rejects.toMatchObject({ status: 503 });
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 
   it("does not retry POST requests even when marked retryable", async () => {

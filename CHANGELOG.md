@@ -9,9 +9,10 @@ All notable changes to this package are documented here.
   importable transaction status and payment-scheme values.
 - Add authenticated Acquiring submerchant discovery with validated terminal
   ownership data, safe retries, cancellation, schemas, and public types.
-- Add read-only Acquiring QR cashier listing and details with validated
-  identifiers, safe retries, cancellation, schemas, public types, and
-  importable amount-type values.
+- Add Acquiring QR cashier listing, details, and amount reset with validated
+  identifiers, cancellation, schemas, public types, and importable amount-type
+  values. Listing and details are safe GETs eligible for configured retries;
+  `acquiring.qr.resetAmount()` mutates merchant state and is never retried.
 
 ## 0.1.0 - 2026-08-16
 

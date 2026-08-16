@@ -86,6 +86,7 @@ example focused; production code should validate the environment value first.
 | `acquiring.submerchants.list()`             | Acquiring token | `AcquiringSubmerchantList`  | Terminals available to supported merchants     |
 | `acquiring.qr.list()`                       | Acquiring token | `AcquiringQrCashierList`    | QR cashiers registered for the merchant        |
 | `acquiring.qr.getDetails(input)`            | Acquiring token | `AcquiringQrDetails`        | State of one activated QR cashier              |
+| `acquiring.qr.resetAmount(input)`           | Acquiring token | `void`                      | Clears a QR amount; never retried              |
 | `acquiring.webhooks.getPublicKey()`         | Acquiring token | `AcquiringWebhookPublicKey` | Key used to authenticate webhook signatures    |
 | `acquiring.invoices.create(input)`          | Acquiring token | `NewInvoice`                | Creates a hosted payment page                  |
 | `acquiring.invoices.getStatus(input)`       | Acquiring token | `Invoice`                   | Safe GET; eligible for configured retries      |
@@ -167,10 +168,22 @@ if (first !== undefined) {
 `merchant`, `client`, or `fix`. `getDetails()` answers only for activated
 cashiers; Monobank documents `invoiceId` as present only while an amount is set
 on the cashier, and `amount` and `ccy` may be omitted for the same reason, so
-treat all three as absent unless present. Amounts are integer minor units. Both
-calls are safe GETs eligible for configured retries. `getDetails()` rejects a
+treat all three as absent unless present. Amounts are integer minor units.
+`list()` and `getDetails()` are safe GETs eligible for configured retries.
+`getDetails()` rejects a
 `qrId` that is not a nonempty string without surrounding whitespace with
 `MonobankValidationError`, before any request is sent.
+
+Clear an amount a merchant previously set on a cashier:
+
+```ts
+await acquiring.qr.resetAmount({ qrId: "XJ_DiM4rTd5V" });
+```
+
+`resetAmount()` mutates merchant state, so the SDK never retries it even when
+the client has a retry policy. Monobank acknowledges the reset with an empty
+payload, so the method resolves to `undefined`. It validates `qrId` exactly as
+`getDetails()` does, before any request is sent.
 
 ### Acquiring statements
 
@@ -351,7 +364,9 @@ application so storage and refresh policy stay explicit.
 ## Retries, timeouts, and cancellation
 
 Retries are disabled unless configured. A retry policy applies only to safe
-GET requests, respects `Retry-After`, and never retries `webhooks.set()`.
+GET requests and respects `Retry-After`. Mutating methods are never retried,
+including `personal.webhooks.set()`, every `acquiring.invoices` mutation, and
+`acquiring.qr.resetAmount()`.
 
 ```ts
 const monobank = new MonobankPersonalClient({

@@ -7,8 +7,13 @@ import type { AcquiringQrCashierList } from "./models/acquiring-qr-cashier.js";
 import { acquiringQrCashierListSchema } from "./models/acquiring-qr-cashier.js";
 import type { AcquiringQrDetails } from "./models/acquiring-qr-details.js";
 import { acquiringQrDetailsSchema } from "./models/acquiring-qr-details.js";
+import type { ResetAcquiringQrAmountInput } from "./reset-qr-amount/reset-qr-amount.js";
+import {
+  createResetAcquiringQrAmountBody,
+  resetAcquiringQrAmountEndpoint,
+} from "./reset-qr-amount/reset-qr-amount.js";
 
-/** Read-only Acquiring QR cashier operations. */
+/** Acquiring QR cashier listing, details, and amount-reset operations. */
 export class MonobankAcquiringQr {
   private readonly transport: MonobankTransport;
 
@@ -78,6 +83,38 @@ export class MonobankAcquiringQr {
       endpoint,
       retryable: true,
       schema: acquiringQrDetailsSchema,
+      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+    });
+  }
+
+  /**
+   * Clears the payment amount currently set on a QR cashier.
+   *
+   * Monobank returns an empty success payload, so this method resolves to
+   * `undefined`. The request mutates merchant state and is therefore never
+   * retried, even when the parent client has a retry policy; a caller that
+   * wants another attempt must decide that itself. A provided
+   * `RequestOptions.signal` cancels the active attempt.
+   * @example
+   * ```ts
+   * await client.qr.resetAmount({ qrId: "XJ_DiM4rTd5V" });
+   * ```
+   * @param input QR cashier identifier returned by `list()`.
+   * @param options Optional cancellation controls for this request.
+   * @returns Nothing; Monobank acknowledges the reset with an empty payload.
+   * @throws {MonobankApiError} When Monobank returns a non-success HTTP status, including an unknown QR cashier.
+   * @throws {MonobankNetworkError} When Fetch fails, times out, or the caller aborts.
+   * @throws {MonobankValidationError} When `qrId` is not a nonempty string without surrounding whitespace, rejected before Fetch runs.
+   */
+  public async resetAmount(
+    input: ResetAcquiringQrAmountInput,
+    options?: RequestOptions,
+  ): Promise<void> {
+    await this.transport.postEmpty({
+      auth: true,
+      body: createResetAcquiringQrAmountBody(input),
+      endpoint: resetAcquiringQrAmountEndpoint,
+      retryable: false,
       ...(options?.signal === undefined ? {} : { signal: options.signal }),
     });
   }

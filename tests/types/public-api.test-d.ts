@@ -24,6 +24,7 @@ import type {
   MerchantDetails,
   NewInvoice,
   PersonalWebhookEvent,
+  ResetAcquiringQrAmountInput,
   VerifyAcquiringWebhookSignatureInput,
 } from "@liaugust/monobank-sdk";
 import {
@@ -76,6 +77,12 @@ const acquiringQrDetails: Promise<AcquiringQrDetails> =
 const acquiringQrAmountType: AcquiringQrAmountType =
   AcquiringQrAmountType.Merchant;
 const minimalQrDetails: AcquiringQrDetails = { shortQrId: "OBJE" };
+const acquiringQrResetInput: ResetAcquiringQrAmountInput = {
+  qrId: "XJ_DiM4rTd5V",
+};
+const acquiringQrReset: Promise<void> = acquiringClient.qr.resetAmount(
+  acquiringQrResetInput,
+);
 const acquiringQrAmountTypesAreExact = {
   client: true,
   fix: true,
@@ -161,6 +168,7 @@ void acquiringQrDetails;
 void acquiringQrAmountType;
 void acquiringQrAmountTypesAreExact;
 void minimalQrDetails;
+void acquiringQrReset;
 void webhookPublicKey;
 void signatureMatches;
 void newInvoice;
@@ -226,6 +234,9 @@ void mutableQrCashierList;
 
 // @ts-expect-error -- QR details require a cashier identifier.
 void acquiringClient.qr.getDetails({});
+
+// @ts-expect-error -- Clearing a QR amount requires a cashier identifier.
+void acquiringClient.qr.resetAmount({});
 
 // @ts-expect-error -- Validated QR details always carry the short identifier.
 const qrDetailsWithoutShortId: AcquiringQrDetails = {};
