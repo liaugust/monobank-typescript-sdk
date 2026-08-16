@@ -6,6 +6,7 @@
 
 Package: https://www.npmjs.com/package/@liaugust/monobank-sdk
 Repository: https://github.com/liaugust/monobank-typescript-sdk
+API reference: https://github.com/liaugust/monobank-typescript-sdk/blob/main/docs/API.md
 License: MIT
 
 ## Use the package
@@ -101,6 +102,8 @@ See `src/index.ts` for the complete authoritative export list, including types.
 ## Authoritative project documents
 
 - `README.md`: human-facing guide and examples.
+- `docs/API.md`: complete public API reference with method contracts, models,
+  schemas, errors, and examples.
 - `AGENTS.md`: operational rules for agents using or modifying the SDK.
 - `src/index.ts`: public export boundary.
 - `CONTRIBUTING.md`: contributor workflow.

@@ -79,6 +79,9 @@ example focused; production code should validate the environment value first.
 | `getStatements(input)` | Personal token | `readonly StatementItem[]` | Maximum window: 2,682,000 seconds              |
 | `setWebhook(input)`    | Personal token | `void`                     | Mutating request; never retried automatically  |
 
+See the [complete API reference](docs/API.md) for signatures, parameters,
+returns, errors, retry behavior, data models, and focused examples.
+
 The client requires a token at construction because it owns both public and
 authenticated Personal methods. The SDK never sends that token to `/bank/*`
 endpoints.
@@ -108,8 +111,14 @@ runtime code.
 ### Statements
 
 ```ts
+const account = info.accounts[0];
+
+if (account === undefined) {
+  throw new Error("No account is available");
+}
+
 const statements = await monobank.getStatements({
-  account: info.accounts[0]?.id,
+  account: account.id,
   from: 1_786_060_800,
   to: 1_787_356_800,
 });
@@ -251,6 +260,8 @@ suite uses synthetic fixtures and injected Fetch implementations.
 
 ## Project guides
 
+- [API reference](docs/API.md) documents every public method, model, schema,
+  value, and error in one place.
 - [llms.txt](llms.txt) gives language models a compact package and API map.
 - [AGENTS.md](AGENTS.md) defines safe usage and contribution rules for coding
   agents.
