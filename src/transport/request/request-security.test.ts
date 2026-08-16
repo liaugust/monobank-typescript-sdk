@@ -5,11 +5,13 @@ import {
   jsonResponse,
 } from "../../../tests/support/create-fetch-sequence.js";
 import {
+  expectRejectsWithoutSecret,
   firstRequestInit,
   getBankSync,
   getPersonalClientInfo,
   passthroughSchema,
 } from "../../../tests/support/transport.js";
+import { MonobankNetworkError } from "../../errors/monobank-network-error.js";
 import { MonobankValidationError } from "../../errors/monobank-validation-error.js";
 import { MonobankTransport } from "../transport.js";
 
@@ -46,6 +48,42 @@ describe("MonobankTransport request security", () => {
       MonobankValidationError,
     );
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("refuses to follow redirects that could carry the token off origin", async () => {
+    const fetch = createFetchSequence([
+      jsonResponse({ ok: true }),
+      jsonResponse({ ok: true }),
+    ]);
+    const transport = new MonobankTransport({ fetch, token: "secret-token" });
+
+    await getPersonalClientInfo(transport);
+    expect(firstRequestInit(fetch)?.redirect).toBe("error");
+
+    await transport.postEmpty({
+      auth: true,
+      body: { webHookUrl: "" },
+      endpoint: "/personal/webhook",
+    });
+    expect(fetch.mock.calls[1]?.[1]?.redirect).toBe("error");
+  });
+
+  it("surfaces a blocked redirect as a credential-safe network error", async () => {
+    // undici rejects a blocked redirect as TypeError("fetch failed") whose
+    // cause carries the detail; the transport discards both.
+    const fetch = createFetchSequence([
+      new TypeError("fetch failed", {
+        cause: new Error("unexpected redirect"),
+      }),
+    ]);
+    const transport = new MonobankTransport({ fetch, token: "secret-token" });
+
+    const request = getPersonalClientInfo(transport);
+    request.catch(() => undefined);
+
+    await expect(request).rejects.toBeInstanceOf(MonobankNetworkError);
+    await expect(request).rejects.toMatchObject({ reason: "network" });
+    await expectRejectsWithoutSecret(request);
   });
 
   it("sets JSON accept headers without content type for bodyless requests", async () => {

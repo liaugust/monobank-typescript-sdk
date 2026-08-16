@@ -36,7 +36,11 @@ export function createRequest(
     );
   }
 
-  const init: RequestInit = { headers, method };
+  // `validateEndpointUrl` can only vet the initial URL. Fetch keeps custom
+  // headers such as `X-Token` across a cross-origin redirect, and 307/308
+  // replays the method and body, so following one would send credentials and
+  // repeat mutations somewhere this transport never validated.
+  const init: RequestInit = { headers, method, redirect: "error" };
 
   if (request.signal !== undefined) {
     init.signal = request.signal;

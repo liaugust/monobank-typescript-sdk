@@ -166,6 +166,9 @@ See `src/index.ts` for the complete authoritative export list, including types.
 - Never expose, log, or commit a real token or banking payload.
 - Never mix Personal and Acquiring tokens or send `X-Token` to public
   `/bank/*` endpoints.
+- The transport sets `redirect: "error"`, so a redirect surfaces as
+  `MonobankNetworkError` and a token is never replayed to another origin. A
+  custom `fetch` must honor `RequestInit.redirect` or that protection is lost.
 - Never treat webhook parsing as sender authentication.
 - For Acquiring webhooks, verify the exact raw body bytes before parsing or
   transforming them. Read `X-Sign`, use the key from
