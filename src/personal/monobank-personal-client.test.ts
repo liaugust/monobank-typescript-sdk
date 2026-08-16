@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   bankSyncFixture,
+  clientInfoFixture,
   currencyRateFixture,
 } from "../../tests/fixtures/personal-api.js";
 import {
@@ -178,5 +179,117 @@ describe("MonobankPersonalClient public endpoints", () => {
     await expect(client.getCurrencyRates()).rejects.toBeInstanceOf(
       MonobankResponseValidationError,
     );
+  });
+});
+
+describe("MonobankPersonalClient authenticated client information", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("gets client info with X-Token and validates nested data", async () => {
+    const fetch = createFetchSequence([jsonResponse(clientInfoFixture)]);
+    const client = new MonobankPersonalClient({
+      fetch,
+      token: "personal-token",
+    });
+
+    await expect(client.getClientInfo()).resolves.toEqual(clientInfoFixture);
+    expect(fetch).toHaveBeenCalledWith(
+      new URL("https://api.monobank.ua/personal/client-info"),
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(firstRequestHeaders(fetch).get("X-Token")).toBe("personal-token");
+  });
+
+  it("passes caller signals to authenticated client-info requests", async () => {
+    const fetch = createFetchSequence([jsonResponse(clientInfoFixture)]);
+    const client = new MonobankPersonalClient({
+      fetch,
+      token: "personal-token",
+    });
+    const controller = new AbortController();
+
+    await client.getClientInfo({ signal: controller.signal });
+
+    expect(fetch.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("turns malformed nested client-info payloads into safe response validation errors", async () => {
+    const fetch = createFetchSequence([
+      jsonResponse({
+        ...clientInfoFixture,
+        accounts: [
+          {
+            ...clientInfoFixture.accounts[0],
+            balance: "10000000",
+          },
+        ],
+      }),
+    ]);
+    const client = new MonobankPersonalClient({
+      fetch,
+      token: "personal-token",
+    });
+
+    await expect(client.getClientInfo()).rejects.toMatchObject({
+      endpoint: "/personal/client-info",
+      name: "MonobankResponseValidationError",
+    });
+  });
+
+  it("surfaces upstream client-info failures without leaking the token", async () => {
+    const fetch = createFetchSequence([
+      textResponse("personal-token denied", { status: 403 }),
+    ]);
+    const client = new MonobankPersonalClient({
+      fetch,
+      token: "personal-token",
+    });
+
+    await expect(client.getClientInfo()).rejects.toMatchObject({
+      endpoint: "/personal/client-info",
+      status: 403,
+      upstreamMessage: "[redacted] denied",
+    });
+  });
+
+  it("uses configured safe retries for authenticated client-info GET requests", async () => {
+    vi.useFakeTimers();
+    const fetch = createFetchSequence([
+      new Response(null, { status: 503 }),
+      jsonResponse(clientInfoFixture),
+    ]);
+    const client = new MonobankPersonalClient({
+      fetch,
+      retry: { baseDelayMs: 100, maxAttempts: 2, maxDelayMs: 200 },
+      token: "personal-token",
+    });
+
+    const result = client.getClientInfo();
+    result.catch(() => undefined);
+    await vi.advanceTimersByTimeAsync(99);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+
+    await expect(result).resolves.toEqual(clientInfoFixture);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(
+      fetch.mock.calls.every(
+        ([, init]) =>
+          new Headers(init?.headers).get("X-Token") === "personal-token",
+      ),
+    ).toBe(true);
+  });
+
+  it("does not retry authenticated client-info GET unless retry is configured", async () => {
+    const fetch = createFetchSequence([new Response(null, { status: 503 })]);
+    const client = new MonobankPersonalClient({
+      fetch,
+      token: "personal-token",
+    });
+
+    await expect(client.getClientInfo()).rejects.toMatchObject({ status: 503 });
+    expect(fetch).toHaveBeenCalledOnce();
   });
 });
