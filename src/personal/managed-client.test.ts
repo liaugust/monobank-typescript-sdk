@@ -7,12 +7,23 @@ const managedClientFixture = clientInfoFixture.managedClients[0];
 const managedAccountFixture = managedClientFixture.accounts[0];
 
 describe("managed client schemas", () => {
-  it("accepts delegated FOP clients with string TIN values", () => {
+  it("accepts delegated FOP clients with numeric TIN values", () => {
     expect(managedAccountSchema.parse(managedAccountFixture)).toEqual(
       managedAccountFixture,
     );
     expect(managedClientSchema.parse(managedClientFixture)).toEqual(
       managedClientFixture,
+    );
+  });
+
+  it("accepts delegated FOP clients with string TIN values", () => {
+    const stringTinPayload = {
+      ...managedClientFixture,
+      tin: "1234567890",
+    } as const;
+
+    expect(managedClientSchema.parse(stringTinPayload)).toEqual(
+      stringTinPayload,
     );
   });
 
@@ -43,7 +54,7 @@ describe("managed client schemas", () => {
       ...managedClientFixture,
       accounts: managedClientFixture.accounts[0],
       clientId: 123,
-      tin: 1_234_567_890,
+      tin: 1_234_567_890.5,
     });
 
     expect(result.success).toBe(false);
@@ -55,6 +66,20 @@ describe("managed client schemas", () => {
           expect.objectContaining({ path: ["tin"] }),
         ]),
       );
+    }
+  });
+
+  it("rejects non-string non-numeric delegated client TIN values", () => {
+    const result = managedClientSchema.safeParse({
+      ...managedClientFixture,
+      tin: null,
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toEqual([
+        expect.objectContaining({ path: ["tin"] }),
+      ]);
     }
   });
 

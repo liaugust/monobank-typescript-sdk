@@ -18,13 +18,15 @@ export const managedAccountSchema = z.looseObject({
 /**
  * Runtime validator for a delegated FOP client available from `/personal/client-info`.
  *
- * `tin` remains a string to preserve leading zeroes and upstream formatting.
+ * Official upstream examples vary between numeric and string `tin`
+ * representations, so the validator accepts and preserves either a string or
+ * an integer without coercion.
  */
 export const managedClientSchema = z.looseObject({
   accounts: z.array(managedAccountSchema),
   clientId: z.string(),
   name: z.string(),
-  tin: z.string(),
+  tin: z.union([z.string(), z.int()]),
 });
 
 /**

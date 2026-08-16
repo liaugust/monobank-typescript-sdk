@@ -39,7 +39,7 @@ describe("client info schema", () => {
       managedClients: [
         {
           ...clientInfoFixture.managedClients[0],
-          tin: 1_234_567_890,
+          tin: 1_234_567_890.5,
         },
       ],
       permissions: null,

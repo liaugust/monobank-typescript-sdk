@@ -53,7 +53,7 @@ export const clientInfoFixture = {
       ],
       clientId: "managed-client-id",
       name: "Redacted Person",
-      tin: "1234567890",
+      tin: 1_234_567_890,
     },
   ],
   name: "Redacted Person",
