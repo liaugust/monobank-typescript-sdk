@@ -1,8 +1,8 @@
 import * as z from "zod/mini";
 
 import { MonobankResponseValidationError } from "../errors/monobank-response-validation-error.js";
-import type { StatementItem } from "./statement-item.js";
-import { statementItemSchema } from "./statement-item.js";
+import type { StatementItem } from "./statements/models/statement-item.js";
+import { statementItemSchema } from "./statements/models/statement-item.js";
 
 /**
  * Runtime validator for an incoming Personal webhook event payload.

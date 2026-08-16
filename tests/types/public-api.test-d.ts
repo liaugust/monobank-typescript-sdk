@@ -32,7 +32,7 @@ const publicClient = new MonobankPublicClient();
 const acquiringClient = new MonobankAcquiringClient({ token: "token" });
 const input: GetStatementsInput = { from: new Date(0) };
 const bankSync: Promise<BankSync> = publicClient.bank.getSync();
-const statements = client.getStatements(input);
+const statements = client.statements.get(input);
 const clientInfo: Promise<ClientInfo> = client.client.getInfo();
 const rates: Promise<readonly CurrencyRate[]> =
   publicClient.currency.getRates();
@@ -140,7 +140,7 @@ new MonobankPersonalClient({});
 new MonobankAcquiringClient({});
 
 // @ts-expect-error -- Statement start time must be a Date or Unix number.
-void client.getStatements({ account: "0", from: "2026-08-01" });
+void client.statements.get({ account: "0", from: "2026-08-01" });
 
 // @ts-expect-error -- Account types are limited to documented wire values.
 const invalidAccountType: AccountType = "gold";

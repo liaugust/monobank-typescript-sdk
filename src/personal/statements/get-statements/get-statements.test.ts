@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { MonobankValidationError } from "../errors/monobank-validation-error.js";
-import { createStatementsEndpoint } from "./get-statements-input.js";
+import { MonobankValidationError } from "../../../errors/monobank-validation-error.js";
+import { createStatementsEndpoint } from "./get-statements.js";
 
 describe("get statements input validation", () => {
   it("builds an encoded statement endpoint from Date inputs", () => {

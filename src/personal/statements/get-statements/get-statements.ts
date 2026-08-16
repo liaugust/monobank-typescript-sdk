@@ -1,4 +1,4 @@
-import { MonobankValidationError } from "../errors/monobank-validation-error.js";
+import { MonobankValidationError } from "../../../errors/monobank-validation-error.js";
 
 const statementWindowMaxSeconds = 2_682_000;
 const statementsEndpoint = "/personal/statement";

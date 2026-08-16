@@ -92,21 +92,21 @@ export {
   managedAccountSchema,
   managedClientSchema,
 } from "./personal/client-info/models/managed-client.js";
-export type {
-  GetStatementsInput,
-  UnixTimeInput,
-} from "./personal/get-statements-input.js";
 export type { PersonalWebhookEvent } from "./personal/personal-webhook-event.js";
 export {
   parsePersonalWebhookEvent,
   personalWebhookEventSchema,
 } from "./personal/personal-webhook-event.js";
 export type { SetWebhookInput } from "./personal/set-webhook-input.js";
-export type { StatementItem } from "./personal/statement-item.js";
+export type {
+  GetStatementsInput,
+  UnixTimeInput,
+} from "./personal/statements/get-statements/get-statements.js";
+export type { StatementItem } from "./personal/statements/models/statement-item.js";
 export {
   statementItemSchema,
   statementItemsSchema,
-} from "./personal/statement-item.js";
+} from "./personal/statements/models/statement-item.js";
 export type { BankSync } from "./public/bank/get-sync/get-sync.js";
 export { bankSyncSchema } from "./public/bank/get-sync/get-sync.js";
 export { MonobankPublicClient } from "./public/client/monobank-public-client.js";

@@ -1,15 +1,9 @@
 import type { RequestOptions } from "../../shared/request-options.js";
 import { MonobankTransport } from "../../transport/transport.js";
 import { MonobankPersonalClientInfo } from "../client-info/monobank-personal-client-info.js";
-import type {
-  GetStatementsInput,
-  UnixTimeInput,
-} from "../get-statements-input.js";
-import { createStatementsEndpoint } from "../get-statements-input.js";
 import type { SetWebhookInput } from "../set-webhook-input.js";
 import { createSetWebhookBody } from "../set-webhook-input.js";
-import type { StatementItem } from "../statement-item.js";
-import { statementItemsSchema } from "../statement-item.js";
+import { MonobankPersonalStatements } from "../statements/monobank-personal-statements.js";
 import type { MonobankPersonalClientOptions } from "./monobank-personal-client-options.js";
 
 /**
@@ -27,6 +21,9 @@ export class MonobankPersonalClient {
   /** Authenticated Personal client identity and account operations. */
   public readonly client: MonobankPersonalClientInfo;
 
+  /** Authenticated Personal account and jar statement operations. */
+  public readonly statements: MonobankPersonalStatements;
+
   private readonly transport: MonobankTransport;
 
   /**
@@ -37,45 +34,7 @@ export class MonobankPersonalClient {
   public constructor(options: MonobankPersonalClientOptions) {
     this.transport = new MonobankTransport(options);
     this.client = new MonobankPersonalClientInfo(this.transport);
-  }
-
-  /**
-   * Loads account or jar statements for an explicit Monobank time window.
-   *
-   * `Date` inputs are normalized to Unix seconds; numeric inputs must already
-   * be finite nonnegative Unix-second integers. The statement window is not
-   * split or delayed by the SDK: Monobank's inclusive maximum is 2,682,000
-   * seconds, and this endpoint is limited to one request per 60 seconds. This
-   * authenticated safe GET is retried only when a bounded retry policy is
-   * supplied to the constructor. A provided `RequestOptions.signal` cancels
-   * the active Fetch attempt and any retry delay.
-   * @example
-   * ```ts
-   * const statements = await client.getStatements({
-   *   account: "0",
-   *   from: new Date("2026-08-01T00:00:00.000Z"),
-   *   to: new Date("2026-08-02T00:00:00.000Z"),
-   * });
-   * ```
-   * @param input Account or jar identifier plus statement window.
-   * @param options Optional cancellation controls for this request.
-   * @returns Validated statement items with monetary values in minor currency units.
-   * @throws {MonobankApiError} When Monobank returns a non-success HTTP status.
-   * @throws {MonobankNetworkError} When Fetch fails, times out, or the caller aborts.
-   * @throws {MonobankResponseValidationError} When the successful payload does not match the statement schema.
-   * @throws {MonobankValidationError} When account or time-window input is invalid before Fetch runs.
-   */
-  public async getStatements(
-    input: GetStatementsInput,
-    options?: RequestOptions,
-  ): Promise<readonly StatementItem[]> {
-    return await this.transport.getJson({
-      auth: true,
-      endpoint: createStatementsEndpoint(createStatementRequestInput(input)),
-      retryable: true,
-      schema: statementItemsSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
-    });
+    this.statements = new MonobankPersonalStatements(this.transport);
   }
 
   /**
@@ -110,25 +69,4 @@ export class MonobankPersonalClient {
       ...(options?.signal === undefined ? {} : { signal: options.signal }),
     });
   }
-}
-
-function createStatementRequestInput(
-  input: GetStatementsInput,
-): GetStatementsInput {
-  const from: UnixTimeInput = input.from;
-
-  if (input.to === undefined) {
-    return {
-      ...(input.account === undefined ? {} : { account: input.account }),
-      from,
-    };
-  }
-
-  const to: UnixTimeInput = input.to;
-
-  return {
-    ...(input.account === undefined ? {} : { account: input.account }),
-    from,
-    to,
-  };
 }
