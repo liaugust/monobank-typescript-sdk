@@ -40,7 +40,7 @@ const packedPackage = packResult[0];
 
 assert.ok(packedPackage);
 assert.equal(packedPackage.name, "@liaugust/monobank-sdk");
-assert.equal(packedPackage.version, "0.1.0");
+assert.equal(packedPackage.version, "0.0.1");
 
 const archivePath = join(archiveDirectory, packedPackage.filename);
 execFileSync("tar", ["-xzf", archivePath, "-C", extractedDirectory]);

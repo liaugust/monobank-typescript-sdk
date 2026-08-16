@@ -5,8 +5,9 @@ The workflow never uses a long-lived npm publish token.
 
 ## One-time setup
 
-1. Make the initial `@liaugust/monobank-sdk` publication interactively so the
-   package exists on npm. Do not store that credential in GitHub.
+1. Publish version `0.0.1` interactively as the one-time bootstrap release so
+   `@liaugust/monobank-sdk` exists on npm. Do not create a GitHub Release for
+   this version, and do not store the publishing credential in GitHub.
 2. Create a GitHub environment named `npm` and require approval for deployments.
 3. In the npm package settings, add a GitHub Actions trusted publisher with:
    - organization or user: `liaugust`
@@ -15,6 +16,10 @@ The workflow never uses a long-lived npm publish token.
    - environment: `npm`
    - allowed action: `npm publish`
 4. Restrict or revoke npm write tokens after the trusted publisher succeeds.
+
+The first trusted-publishing release should be `0.1.0`. Prepare it in a new
+pull request only after the bootstrap publication and trusted-publisher setup
+are complete.
 
 Trusted publishing requires a GitHub-hosted runner, Node.js 22.14.0 or newer,
 npm 11.5.1 or newer, and `id-token: write`. The workflow uses Node.js 24.19.0
