@@ -92,12 +92,6 @@ export {
   managedAccountSchema,
   managedClientSchema,
 } from "./personal/client-info/models/managed-client.js";
-export type { PersonalWebhookEvent } from "./personal/personal-webhook-event.js";
-export {
-  parsePersonalWebhookEvent,
-  personalWebhookEventSchema,
-} from "./personal/personal-webhook-event.js";
-export type { SetWebhookInput } from "./personal/set-webhook-input.js";
 export type {
   GetStatementsInput,
   UnixTimeInput,
@@ -107,6 +101,12 @@ export {
   statementItemSchema,
   statementItemsSchema,
 } from "./personal/statements/models/statement-item.js";
+export type { PersonalWebhookEvent } from "./personal/webhooks/models/personal-webhook-event.js";
+export {
+  parsePersonalWebhookEvent,
+  personalWebhookEventSchema,
+} from "./personal/webhooks/models/personal-webhook-event.js";
+export type { SetWebhookInput } from "./personal/webhooks/set-webhook/set-webhook.js";
 export type { BankSync } from "./public/bank/get-sync/get-sync.js";
 export { bankSyncSchema } from "./public/bank/get-sync/get-sync.js";
 export { MonobankPublicClient } from "./public/client/monobank-public-client.js";

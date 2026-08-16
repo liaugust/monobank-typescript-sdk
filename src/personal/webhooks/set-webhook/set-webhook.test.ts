@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { MonobankValidationError } from "../errors/monobank-validation-error.js";
-import { createSetWebhookBody } from "./set-webhook-input.js";
+import { MonobankValidationError } from "../../../errors/monobank-validation-error.js";
+import { createSetWebhookBody } from "./set-webhook.js";
 
 describe("set webhook input validation", () => {
   it("accepts absolute HTTP and HTTPS webhook URLs", () => {

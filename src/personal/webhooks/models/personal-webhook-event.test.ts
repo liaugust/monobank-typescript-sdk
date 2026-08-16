@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   personalWebhookEventFixture,
   statementItemFixture,
-} from "../../tests/fixtures/personal-api.js";
-import { MonobankResponseValidationError } from "../errors/monobank-response-validation-error.js";
+} from "../../../../tests/fixtures/personal-api.js";
+import { MonobankResponseValidationError } from "../../../errors/monobank-response-validation-error.js";
 import {
   parsePersonalWebhookEvent,
   personalWebhookEventSchema,

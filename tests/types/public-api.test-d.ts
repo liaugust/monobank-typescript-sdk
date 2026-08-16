@@ -67,7 +67,7 @@ const removal: Promise<void> = acquiringClient.invoices.remove({
   invoiceId: "invoice-42",
 });
 const invoiceStatus: InvoiceStatus = InvoiceStatus.Success;
-const webhookUpdate: Promise<void> = client.setWebhook({ webHookUrl: "" });
+const webhookUpdate: Promise<void> = client.webhooks.set({ webHookUrl: "" });
 const accountType: AccountType = AccountType.Black;
 const cashbackType: CashbackType = CashbackType.UAH;
 const accountTypesAreExact = {

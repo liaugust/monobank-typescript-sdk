@@ -1,6 +1,7 @@
-import { MonobankValidationError } from "../errors/monobank-validation-error.js";
+import { MonobankValidationError } from "../../../errors/monobank-validation-error.js";
 
-const webhookEndpoint = "/personal/webhook";
+/** Root-relative endpoint for authenticated Personal webhook configuration. */
+export const setWebhookEndpoint = "/personal/webhook";
 
 /**
  * Input for setting or removing a Personal webhook URL.
@@ -19,9 +20,7 @@ export interface SetWebhookInput {
  * @returns JSON-serializable request body accepted by Monobank.
  * @throws {MonobankValidationError} When the URL is relative or uses a non-HTTP(S) protocol.
  */
-export function createSetWebhookBody(input: SetWebhookInput): {
-  readonly webHookUrl: string;
-} {
+export function createSetWebhookBody(input: SetWebhookInput): SetWebhookInput {
   if (input.webHookUrl.length === 0) {
     return { webHookUrl: "" };
   }
@@ -42,7 +41,7 @@ export function createSetWebhookBody(input: SetWebhookInput): {
 
 function createInvalidWebhookUrlError(): MonobankValidationError {
   return new MonobankValidationError({
-    endpoint: webhookEndpoint,
+    endpoint: setWebhookEndpoint,
     issues: ["webHookUrl must be an empty string or an absolute HTTP(S) URL"],
     message: "Invalid Personal webhook request.",
   });
