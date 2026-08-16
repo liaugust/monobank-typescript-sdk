@@ -1,0 +1,9 @@
+{
+  "exitCode": 1,
+  "minLines": 5,
+  "minTokens": 75,
+  "path": ["src", "tests"],
+  "reporters": ["console"],
+  "silent": true,
+  "threshold": 0
+}
