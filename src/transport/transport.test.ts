@@ -11,6 +11,10 @@ import { MonobankValidationError } from "../errors/monobank-validation-error.js"
 import { MonobankTransport } from "./transport.js";
 
 const passthroughSchema = z.looseObject({ ok: z.boolean() });
+const shortRetry = { baseDelayMs: 100, maxAttempts: 2, maxDelayMs: 100 };
+type TestFetch = NonNullable<
+  ConstructorParameters<typeof MonobankTransport>[0]["fetch"]
+>;
 
 function textResponse(body: string, init: ResponseInit = {}): Response {
   return new Response(body, init);
@@ -35,6 +39,55 @@ async function getPersonalClientInfo(transport: MonobankTransport) {
     auth: true,
     endpoint: "/personal/client-info",
     schema: passthroughSchema,
+  });
+}
+
+async function requestSafeGet(transport: MonobankTransport) {
+  return transport.getJson({
+    auth: true,
+    endpoint: "/personal/client-info",
+    retryable: true,
+    schema: passthroughSchema,
+  });
+}
+
+async function requestSafePost(transport: MonobankTransport) {
+  return transport.postJson({
+    auth: true,
+    endpoint: "/personal/webhook",
+    retryable: true,
+    schema: passthroughSchema,
+  });
+}
+
+function requestSafeGetWithSignal(
+  transport: MonobankTransport,
+  signal: AbortSignal,
+) {
+  return transport.getJson({
+    auth: true,
+    endpoint: "/personal/client-info",
+    retryable: true,
+    schema: passthroughSchema,
+    signal,
+  });
+}
+
+function createRetryingTransport(fetch: TestFetch): MonobankTransport {
+  return new MonobankTransport({
+    fetch,
+    retry: shortRetry,
+    token: "secret-token",
+  });
+}
+
+function createAbortRejectingFetch(): TestFetch {
+  return vi.fn((_: RequestInfo | URL, init?: RequestInit) => {
+    return new Promise<Response>((_resolve, reject) => {
+      init?.signal?.addEventListener("abort", () => {
+        reject(new DOMException("Request aborted", "AbortError"));
+      });
+    });
   });
 }
 
@@ -82,10 +135,17 @@ function containsStringRecursively(
   }
 
   if (value instanceof Error) {
-    return (
-      value.message.includes(needle) ||
-      containsStringRecursively(value.cause, needle, seen)
-    );
+    if (seen.has(value)) {
+      return false;
+    }
+    seen.add(value);
+
+    const values: unknown[] = [value.message, value.cause];
+    for (const key of Object.keys(value)) {
+      values.push((value as unknown as Readonly<Record<string, unknown>>)[key]);
+    }
+
+    return values.some((item) => containsStringRecursively(item, needle, seen));
   }
 
   if (typeof value !== "object" || value === null) {
@@ -104,6 +164,7 @@ function containsStringRecursively(
 
 describe("MonobankTransport", () => {
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
@@ -179,7 +240,7 @@ describe("MonobankTransport", () => {
     expect(headers.get("Accept")).toBe("application/json");
     expect(headers.has("Content-Type")).toBe(false);
     expect(init?.method).toBe("GET");
-    expect(init?.signal).toBe(controller.signal);
+    expect(init?.signal).toBeInstanceOf(AbortSignal);
   });
 
   it("sets content type and serializes JSON bodies for postJson", async () => {
@@ -404,6 +465,306 @@ describe("MonobankTransport", () => {
       cause: undefined,
       reason: "network",
     });
+  });
+
+  it("does not retry unless a retry policy is configured", async () => {
+    const fetch = createFetchSequence([new Response(null, { status: 503 })]);
+    const transport = new MonobankTransport({ fetch, token: "secret-token" });
+
+    await expect(requestSafeGet(transport)).rejects.toMatchObject({
+      status: 503,
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("honors Retry-After for a configured safe GET", async () => {
+    vi.useFakeTimers();
+    const fetch = createFetchSequence([
+      new Response(null, { headers: { "Retry-After": "2" }, status: 429 }),
+      jsonResponse({ ok: true }),
+    ]);
+    const transport = new MonobankTransport({
+      fetch,
+      retry: { baseDelayMs: 100, maxAttempts: 2, maxDelayMs: 5_000 },
+      token: "secret-token",
+    });
+
+    const result = requestSafeGet(transport);
+    result.catch(() => undefined);
+    await vi.advanceTimersByTimeAsync(1_999);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+
+    await expect(result).resolves.toEqual({ ok: true });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("uses capped exponential backoff when Retry-After is absent", async () => {
+    vi.useFakeTimers();
+    const fetch = createFetchSequence([
+      new Response(null, { status: 500 }),
+      new Response(null, { status: 502 }),
+      jsonResponse({ ok: true }),
+    ]);
+    const transport = new MonobankTransport({
+      fetch,
+      retry: { baseDelayMs: 100, maxAttempts: 3, maxDelayMs: 150 },
+      token: "secret-token",
+    });
+
+    const result = requestSafeGet(transport);
+    result.catch(() => undefined);
+    await vi.advanceTimersByTimeAsync(99);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(149);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(1);
+
+    await expect(result).resolves.toEqual({ ok: true });
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it.each([429, 500, 502, 503, 504])(
+    "retries status %i for configured safe GET requests",
+    async (status) => {
+      vi.useFakeTimers();
+      const fetch = createFetchSequence([
+        new Response(null, { status }),
+        jsonResponse({ ok: true }),
+      ]);
+      const transport = new MonobankTransport({
+        fetch,
+        retry: { baseDelayMs: 50, maxAttempts: 2, maxDelayMs: 100 },
+        token: "secret-token",
+      });
+
+      const result = requestSafeGet(transport);
+      result.catch(() => undefined);
+      await vi.advanceTimersByTimeAsync(50);
+
+      await expect(result).resolves.toEqual({ ok: true });
+      expect(fetch).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  it("does not retry when Retry-After exceeds maxDelayMs", async () => {
+    vi.useFakeTimers();
+    const fetch = createFetchSequence([
+      new Response(null, { headers: { "Retry-After": "6" }, status: 429 }),
+      jsonResponse({ ok: true }),
+    ]);
+    const transport = new MonobankTransport({
+      fetch,
+      retry: { baseDelayMs: 100, maxAttempts: 2, maxDelayMs: 5_000 },
+      token: "secret-token",
+    });
+
+    await expect(requestSafeGet(transport)).rejects.toMatchObject({
+      retryAfterMs: 6_000,
+      status: 429,
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries network failures for configured safe GET requests", async () => {
+    vi.useFakeTimers();
+    const fetch = createFetchSequence([
+      new Error("socket closed"),
+      jsonResponse({ ok: true }),
+    ]);
+    const transport = createRetryingTransport(fetch);
+
+    const result = requestSafeGet(transport);
+    result.catch(() => undefined);
+    await vi.advanceTimersByTimeAsync(100);
+
+    await expect(result).resolves.toEqual({ ok: true });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("stops retrying after the configured maximum attempt", async () => {
+    vi.useFakeTimers();
+    const fetch = createFetchSequence([
+      new Response(null, { status: 503 }),
+      new Response(null, { status: 503 }),
+      jsonResponse({ ok: true }),
+    ]);
+    const transport = createRetryingTransport(fetch);
+
+    const result = requestSafeGet(transport);
+    result.catch(() => undefined);
+    await vi.advanceTimersByTimeAsync(100);
+
+    await expect(result).rejects.toMatchObject({ status: 503 });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not retry POST requests even when marked retryable", async () => {
+    const fetch = createFetchSequence([
+      new Response(null, { status: 503 }),
+      jsonResponse({ ok: true }),
+    ]);
+    const transport = createRetryingTransport(fetch);
+
+    await expect(requestSafePost(transport)).rejects.toMatchObject({
+      status: 503,
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not retry authentication failures", async () => {
+    const fetch = createFetchSequence([
+      new Response(null, { status: 401 }),
+      jsonResponse({ ok: true }),
+    ]);
+    const transport = createRetryingTransport(fetch);
+
+    await expect(requestSafeGet(transport)).rejects.toMatchObject({
+      status: 401,
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not retry schema validation failures", async () => {
+    const fetch = createFetchSequence([
+      jsonResponse({ ok: "wrong" }),
+      jsonResponse({ ok: true }),
+    ]);
+    const transport = createRetryingTransport(fetch);
+
+    await expect(requestSafeGet(transport)).rejects.toBeInstanceOf(
+      MonobankResponseValidationError,
+    );
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("classifies caller abort during Fetch as aborted", async () => {
+    const controller = new AbortController();
+    const fetch = createAbortRejectingFetch();
+    const transport = createRetryingTransport(fetch);
+
+    const result = requestSafeGetWithSignal(transport, controller.signal);
+    result.catch(() => undefined);
+    controller.abort();
+
+    await expect(result).rejects.toMatchObject({
+      reason: "aborted",
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects a pre-aborted caller signal before Fetch", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const fetch = createFetchSequence([jsonResponse({ ok: true })]);
+    const transport = new MonobankTransport({
+      fetch,
+      token: "secret-token",
+    });
+
+    await expect(
+      transport.getJson({
+        auth: true,
+        endpoint: "/personal/client-info",
+        retryable: true,
+        schema: passthroughSchema,
+        signal: controller.signal,
+      }),
+    ).rejects.toMatchObject({
+      reason: "aborted",
+    });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("classifies caller abort during retry delay as aborted", async () => {
+    vi.useFakeTimers();
+    const controller = new AbortController();
+    const fetch = createFetchSequence([
+      new Response(null, { status: 503 }),
+      jsonResponse({ ok: true }),
+    ]);
+    const transport = createRetryingTransport(fetch);
+
+    const result = requestSafeGetWithSignal(transport, controller.signal);
+    result.catch(() => undefined);
+    await vi.advanceTimersByTimeAsync(50);
+    controller.abort();
+
+    await expect(result).rejects.toMatchObject({
+      reason: "aborted",
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("does not enter retry delay when the caller aborts while reading an error response", async () => {
+    const controller = new AbortController();
+    const response = {
+      headers: new Headers(),
+      ok: false,
+      status: 503,
+      text: () => {
+        controller.abort();
+        return Promise.resolve("");
+      },
+    } as Response;
+    const fetch = createFetchSequence([response, jsonResponse({ ok: true })]);
+    const transport = createRetryingTransport(fetch);
+
+    await expect(
+      requestSafeGetWithSignal(transport, controller.signal),
+    ).rejects.toMatchObject({
+      reason: "aborted",
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("classifies timeout aborts as timeout", async () => {
+    vi.useFakeTimers();
+    const fetch = createAbortRejectingFetch();
+    const transport = new MonobankTransport({
+      fetch,
+      timeoutMs: 250,
+      token: "secret-token",
+    });
+
+    const result = requestSafeGet(transport);
+    result.catch(() => undefined);
+    await vi.advanceTimersByTimeAsync(249);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+
+    await expect(result).rejects.toMatchObject({
+      reason: "timeout",
+    });
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("removes caller abort listeners after successful requests", async () => {
+    const fetch = createFetchSequence([jsonResponse({ ok: true })]);
+    const controller = new AbortController();
+    const removeEventListener = vi.spyOn(
+      controller.signal,
+      "removeEventListener",
+    );
+    const transport = new MonobankTransport({
+      fetch,
+      token: "secret-token",
+    });
+
+    await transport.getJson({
+      auth: true,
+      endpoint: "/personal/client-info",
+      schema: passthroughSchema,
+      signal: controller.signal,
+    });
+
+    expect(removeEventListener).toHaveBeenCalledWith(
+      "abort",
+      expect.any(Function),
+    );
   });
 
   it("does not expose token text from thrown API errors", async () => {
