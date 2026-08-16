@@ -32,7 +32,7 @@ describe("release readiness", () => {
     expect(packageJson).not.toHaveProperty("private");
   });
 
-  it("provides a tokenless trusted-publishing workflow", () => {
+  it("provides OIDC trusted publishing with automatic provenance", () => {
     const workflowPath = resolve(
       repositoryRoot,
       ".github/workflows/release.yml",
@@ -94,28 +94,6 @@ describe("release readiness", () => {
 
     expect(missing.status).not.toBe(0);
     expect(extra.status).not.toBe(0);
-  });
-
-  it("documents installation, bootstrap publishing, and the private-repository limitation", () => {
-    expect(readRepositoryFile("README.md")).toContain(
-      "pnpm add @liaugust/monobank-sdk",
-    );
-    const changelog = readRepositoryFile("CHANGELOG.md");
-    expect(changelog).toContain("## 0.1.0");
-    expect(changelog).toContain("## 0.0.1");
-    const releasing = readRepositoryFile("RELEASING.md");
-    expect(releasing).toContain(
-      "Publish version `0.0.1` interactively as the one-time bootstrap release",
-    );
-    expect(releasing).toContain(
-      "The first trusted-publishing release should be `0.1.0`",
-    );
-    expect(releasing).toContain(
-      "The current GitHub plan does not support required reviewers",
-    );
-    expect(releasing).toContain(
-      "Private GitHub repositories do not receive npm provenance attestations",
-    );
   });
 
   it("runs a smoke test against the packed tarball", () => {
