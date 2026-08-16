@@ -7,6 +7,7 @@ describe("public package surface", () => {
     expect(Object.keys(sdk).sort()).toStrictEqual([
       "AccountType",
       "CashbackType",
+      "MonobankAcquiringClient",
       "MonobankApiError",
       "MonobankNetworkError",
       "MonobankPersonalClient",
@@ -20,6 +21,7 @@ describe("public package surface", () => {
       "jarSchema",
       "managedAccountSchema",
       "managedClientSchema",
+      "merchantDetailsSchema",
       "parsePersonalWebhookEvent",
       "personalWebhookEventSchema",
       "statementItemSchema",

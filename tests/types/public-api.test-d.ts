@@ -4,21 +4,26 @@ import type {
   ClientInfo,
   CurrencyRate,
   GetStatementsInput,
+  MerchantDetails,
   PersonalWebhookEvent,
 } from "@liaugust/monobank-sdk";
 import {
   AccountType,
   CashbackType,
+  MonobankAcquiringClient,
   MonobankPersonalClient,
   parsePersonalWebhookEvent,
 } from "@liaugust/monobank-sdk";
 
 const client = new MonobankPersonalClient({ token: "token" });
+const acquiringClient = new MonobankAcquiringClient({ token: "token" });
 const input: GetStatementsInput = { from: new Date(0) };
 const bankSync: Promise<BankSync> = client.getBankSync();
 const statements = client.getStatements(input);
 const clientInfo: Promise<ClientInfo> = client.getClientInfo();
 const rates: Promise<readonly CurrencyRate[]> = client.getCurrencyRates();
+const merchantDetails: Promise<MerchantDetails> =
+  acquiringClient.getMerchantDetails();
 const webhookUpdate: Promise<void> = client.setWebhook({ webHookUrl: "" });
 const accountType: AccountType = AccountType.Black;
 const cashbackType: CashbackType = CashbackType.UAH;
@@ -46,6 +51,7 @@ void bankSync;
 void statements;
 void clientInfo;
 void rates;
+void merchantDetails;
 void webhookUpdate;
 void accountType;
 void accountTypesAreExact;
@@ -56,6 +62,9 @@ void webhookEvent;
 
 // @ts-expect-error -- Personal token is required by the public constructor.
 new MonobankPersonalClient({});
+
+// @ts-expect-error -- Acquiring token is required by the public constructor.
+new MonobankAcquiringClient({});
 
 // @ts-expect-error -- Statement start time must be a Date or Unix number.
 void client.getStatements({ account: "0", from: "2026-08-01" });

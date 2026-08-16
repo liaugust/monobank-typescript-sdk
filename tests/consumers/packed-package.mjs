@@ -80,13 +80,13 @@ symlinkSync(extractedPackage, installedPackage, "junction");
 
 writeFileSync(
   join(consumerDirectory, "esm.mjs"),
-  'import { AccountType, MonobankPersonalClient } from "@liaugust/monobank-sdk";\n' +
-    'if (AccountType.Black !== "black" || typeof MonobankPersonalClient !== "function") process.exitCode = 1;\n',
+  'import { AccountType, MonobankAcquiringClient, MonobankPersonalClient } from "@liaugust/monobank-sdk";\n' +
+    'if (AccountType.Black !== "black" || typeof MonobankAcquiringClient !== "function" || typeof MonobankPersonalClient !== "function") process.exitCode = 1;\n',
 );
 writeFileSync(
   join(consumerDirectory, "commonjs.cjs"),
-  'const { CashbackType, MonobankPersonalClient } = require("@liaugust/monobank-sdk");\n' +
-    'if (CashbackType.UAH !== "UAH" || typeof MonobankPersonalClient !== "function") process.exitCode = 1;\n',
+  'const { CashbackType, MonobankAcquiringClient, MonobankPersonalClient } = require("@liaugust/monobank-sdk");\n' +
+    'if (CashbackType.UAH !== "UAH" || typeof MonobankAcquiringClient !== "function" || typeof MonobankPersonalClient !== "function") process.exitCode = 1;\n',
 );
 
 for (const consumer of ["esm.mjs", "commonjs.cjs"]) {

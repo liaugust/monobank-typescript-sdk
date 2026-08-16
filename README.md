@@ -6,9 +6,9 @@
 
 A strict, runtime-validated TypeScript SDK for the Monobank API.
 
-It gives applications typed Personal API responses without trusting the wire:
-every successful JSON payload crosses a Zod validation boundary before it
-reaches your code.
+It gives applications typed Personal and Acquiring API responses without
+trusting the wire: every successful JSON payload crosses a Zod validation
+boundary before it reaches your code.
 
 > [!IMPORTANT]
 > This is an unofficial community package. It is not developed, sponsored, or
@@ -28,6 +28,7 @@ reaches your code.
 
 - Node.js 20.19.5 or newer, or a modern browser with the standard Fetch API
 - A Monobank Personal API token for `MonobankPersonalClient`
+- A Monobank Acquiring token for `MonobankAcquiringClient`
 
 ## Installation
 
@@ -71,13 +72,14 @@ example focused; production code should validate the environment value first.
 
 ## API at a glance
 
-| Method                 | Authentication | Result                     | Notes                                          |
-| ---------------------- | -------------- | -------------------------- | ---------------------------------------------- |
-| `getBankSync()`        | Public         | `BankSync`                 | Server time and public verification key        |
-| `getCurrencyRates()`   | Public         | `readonly CurrencyRate[]`  | Monobank may cache rates for five minutes      |
-| `getClientInfo()`      | Personal token | `ClientInfo`               | Limited upstream to one request per 60 seconds |
-| `getStatements(input)` | Personal token | `readonly StatementItem[]` | Maximum window: 2,682,000 seconds              |
-| `setWebhook(input)`    | Personal token | `void`                     | Mutating request; never retried automatically  |
+| Method                 | Authentication  | Result                     | Notes                                          |
+| ---------------------- | --------------- | -------------------------- | ---------------------------------------------- |
+| `getBankSync()`        | Public          | `BankSync`                 | Server time and public verification key        |
+| `getCurrencyRates()`   | Public          | `readonly CurrencyRate[]`  | Monobank may cache rates for five minutes      |
+| `getClientInfo()`      | Personal token  | `ClientInfo`               | Limited upstream to one request per 60 seconds |
+| `getStatements(input)` | Personal token  | `readonly StatementItem[]` | Maximum window: 2,682,000 seconds              |
+| `setWebhook(input)`    | Personal token  | `void`                     | Mutating request; never retried automatically  |
+| `getMerchantDetails()` | Acquiring token | `MerchantDetails`          | Merchant identity for the supplied token       |
 
 See the [complete API reference](docs/API.md) for signatures, parameters,
 returns, errors, retry behavior, data models, and focused examples.
@@ -85,6 +87,23 @@ returns, errors, retry behavior, data models, and focused examples.
 The client requires a token at construction because it owns both public and
 authenticated Personal methods. The SDK never sends that token to `/bank/*`
 endpoints.
+
+### Acquiring merchant details
+
+Use a separate client so Personal and Acquiring credentials cannot be mixed:
+
+```ts
+import { MonobankAcquiringClient } from "@liaugust/monobank-sdk";
+
+const acquiring = new MonobankAcquiringClient({
+  token: process.env.MONOBANK_ACQUIRING_TOKEN!,
+});
+
+const merchant = await acquiring.getMerchantDetails();
+console.log(merchant.merchantId, merchant.merchantName, merchant.edrpou);
+```
+
+The Acquiring token is sent only to authenticated `/api/merchant/*` methods.
 
 ### Public data
 
@@ -213,7 +232,7 @@ try {
 - `MonobankResponseValidationError` — successful JSON did not match its schema
 
 Public errors retain only bounded diagnostic data. They intentionally exclude
-tokens, authorization headers, request objects, and raw Personal payloads.
+tokens, authorization headers, request objects, and raw API payloads.
 
 ## Runtime schemas
 
@@ -224,6 +243,7 @@ same validation boundary:
 import {
   clientInfoSchema,
   currencyRatesSchema,
+  merchantDetailsSchema,
   personalWebhookEventSchema,
   statementItemsSchema,
 } from "@liaugust/monobank-sdk";
@@ -255,8 +275,8 @@ const monobank = new MonobankPersonalClient({
 });
 ```
 
-The SDK repository itself never requires live Personal credentials. Its test
-suite uses synthetic fixtures and injected Fetch implementations.
+The SDK repository itself never requires live credentials. Its test suite uses
+synthetic fixtures and injected Fetch implementations.
 
 ## Project guides
 
