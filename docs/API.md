@@ -9,16 +9,17 @@ supported contract.
 ## Contents
 
 - [Shared conventions](#shared-conventions)
+- [MonobankPublicClient](#monobankpublicclient)
 - [MonobankPersonalClient](#monobankpersonalclient)
 - [MonobankAcquiringClient](#monobankacquiringclient)
-- [getMerchantDetails](#getmerchantdetails)
-- [createInvoice](#createinvoice)
-- [getInvoiceStatus](#getinvoicestatus)
-- [cancelInvoice](#cancelinvoice)
-- [removeInvoice](#removeinvoice)
-- [finalizeInvoice](#finalizeinvoice)
-- [getInvoiceReceipt](#getinvoicereceipt)
-- [getInvoiceFiscalChecks](#getinvoicefiscalchecks)
+- [merchant.getDetails](#merchantgetdetails)
+- [invoices.create](#invoicescreate)
+- [invoices.getStatus](#invoicesgetstatus)
+- [invoices.cancel](#invoicescancel)
+- [invoices.remove](#invoicesremove)
+- [invoices.finalize](#invoicesfinalize)
+- [invoices.getReceipt](#invoicesgetreceipt)
+- [invoices.getFiscalChecks](#invoicesgetfiscalchecks)
 - [getBankSync](#getbanksync)
 - [getCurrencyRates](#getcurrencyrates)
 - [getClientInfo](#getclientinfo)
@@ -41,8 +42,33 @@ supported contract.
 - Response objects preserve unknown additive fields from Monobank.
 - A Personal token is sent only to authenticated `/personal/*` endpoints, and
   an Acquiring token is sent only to authenticated `/api/merchant/*` endpoints.
+- Public `/bank/*` calls use `MonobankPublicClient`, which has no token option.
 - Optional request controls use `RequestOptions`, whose only field is
   `signal?: AbortSignal`.
+
+## MonobankPublicClient
+
+```ts
+new MonobankPublicClient(options?: MonobankPublicClientOptions)
+```
+
+The Public client exposes token-free `/bank/*` endpoints. It cannot retain or
+send a Personal or Acquiring token because its constructor has no token option.
+
+Its optional `baseUrl`, `fetch`, `timeoutMs`, and `retry` settings have the same
+contracts and defaults as the authenticated clients.
+
+```ts
+import { MonobankPublicClient } from "@liaugust/monobank-sdk";
+
+const publicApi = new MonobankPublicClient({
+  retry: {
+    baseDelayMs: 250,
+    maxAttempts: 3,
+    maxDelayMs: 2_000,
+  },
+});
+```
 
 ## MonobankPersonalClient
 
@@ -50,9 +76,8 @@ supported contract.
 new MonobankPersonalClient(options: MonobankPersonalClientOptions)
 ```
 
-The client contains the implemented Public and Personal API methods. A token is
-required at construction even when an application uses a public method, but
-the SDK does not send it to `/bank/*` endpoints.
+The Personal client contains only authenticated `/personal/*` methods. Its
+validated token is never used for Public or Acquiring requests.
 
 ### Constructor options
 
@@ -137,10 +162,15 @@ const acquiring = new MonobankAcquiringClient({
 });
 ```
 
-## getMerchantDetails
+The client groups operations into resource objects:
+
+- `acquiring.merchant`: merchant identity operations
+- `acquiring.invoices`: invoice lifecycle operations
+
+## merchant.getDetails
 
 ```ts
-acquiring.getMerchantDetails(
+acquiring.merchant.getDetails(
   options?: RequestOptions,
 ): Promise<MerchantDetails>
 ```
@@ -160,14 +190,14 @@ Throws `MonobankApiError`, `MonobankNetworkError`,
 `MonobankResponseValidationError`, or `MonobankValidationError`.
 
 ```ts
-const merchant = await acquiring.getMerchantDetails();
+const merchant = await acquiring.merchant.getDetails();
 console.log(merchant.merchantId, merchant.merchantName, merchant.edrpou);
 ```
 
-## createInvoice
+## invoices.create
 
 ```ts
-acquiring.createInvoice(
+acquiring.invoices.create(
   input: CreateInvoiceInput,
   options?: CreateInvoiceOptions,
 ): Promise<NewInvoice>
@@ -199,7 +229,7 @@ Fetch.
 `X-Cms-Version` integration-attribution headers.
 
 ```ts
-const created = await acquiring.createInvoice({
+const created = await acquiring.invoices.create({
   amount: 4_200,
   merchantPaymInfo: {
     destination: "Order 42",
@@ -209,10 +239,10 @@ const created = await acquiring.createInvoice({
 });
 ```
 
-## getInvoiceStatus
+## invoices.getStatus
 
 ```ts
-acquiring.getInvoiceStatus(
+acquiring.invoices.getStatus(
   input: GetInvoiceStatusInput,
   options?: RequestOptions,
 ): Promise<Invoice>
@@ -227,15 +257,15 @@ This safe GET is eligible for configured retries. Throws the four standard SDK
 error classes.
 
 ```ts
-const invoice = await acquiring.getInvoiceStatus({
+const invoice = await acquiring.invoices.getStatus({
   invoiceId: created.invoiceId,
 });
 ```
 
-## cancelInvoice
+## invoices.cancel
 
 ```ts
-acquiring.cancelInvoice(
+acquiring.invoices.cancel(
   input: CancelInvoiceInput,
   options?: RequestOptions,
 ): Promise<InvoiceCancellation>
@@ -249,10 +279,10 @@ documented cancellation status plus creation and modification timestamps.
 This mutating request is never retried. Throws the four standard SDK error
 classes.
 
-## removeInvoice
+## invoices.remove
 
 ```ts
-acquiring.removeInvoice(
+acquiring.invoices.remove(
   input: RemoveInvoiceInput,
   options?: RequestOptions,
 ): Promise<void>
@@ -263,10 +293,10 @@ Monobank rejects removal after payment. This mutating request is never retried.
 Throws `MonobankApiError`, `MonobankNetworkError`, or
 `MonobankValidationError`.
 
-## finalizeInvoice
+## invoices.finalize
 
 ```ts
-acquiring.finalizeInvoice(
+acquiring.invoices.finalize(
   input: FinalizeInvoiceInput,
   options?: RequestOptions,
 ): Promise<InvoiceFinalization>
@@ -280,10 +310,10 @@ when Monobank accepts the request.
 This mutating request is never retried. Throws the four standard SDK error
 classes.
 
-## getInvoiceReceipt
+## invoices.getReceipt
 
 ```ts
-acquiring.getInvoiceReceipt(
+acquiring.invoices.getReceipt(
   input: GetInvoiceReceiptInput,
   options?: RequestOptions,
 ): Promise<InvoiceReceipt>
@@ -296,10 +326,10 @@ a base64-encoded PDF.
 This safe GET is eligible for configured retries. Throws the four standard SDK
 error classes.
 
-## getInvoiceFiscalChecks
+## invoices.getFiscalChecks
 
 ```ts
-acquiring.getInvoiceFiscalChecks(
+acquiring.invoices.getFiscalChecks(
   input: GetInvoiceFiscalChecksInput,
   options?: RequestOptions,
 ): Promise<InvoiceFiscalChecks>
@@ -315,7 +345,7 @@ error classes.
 ## getBankSync
 
 ```ts
-client.getBankSync(options?: RequestOptions): Promise<BankSync>
+publicApi.getBankSync(options?: RequestOptions): Promise<BankSync>
 ```
 
 Loads public synchronization metadata from `GET /bank/sync`.
@@ -333,14 +363,14 @@ Throws `MonobankApiError`, `MonobankNetworkError`,
 `MonobankResponseValidationError`, or `MonobankValidationError`.
 
 ```ts
-const synchronization = await client.getBankSync();
+const synchronization = await publicApi.getBankSync();
 console.log(synchronization.serverTimeMsec);
 ```
 
 ## getCurrencyRates
 
 ```ts
-client.getCurrencyRates(
+publicApi.getCurrencyRates(
   options?: RequestOptions,
 ): Promise<readonly CurrencyRate[]>
 ```
@@ -361,7 +391,7 @@ Throws `MonobankApiError`, `MonobankNetworkError`,
 `MonobankResponseValidationError`, or `MonobankValidationError`.
 
 ```ts
-const rates = await client.getCurrencyRates();
+const rates = await publicApi.getCurrencyRates();
 const quotedAt = rates[0]?.date;
 ```
 
@@ -804,6 +834,7 @@ object containing the target `account` identifier and validated
 
 | Export                                   | Purpose                                                        |
 | ---------------------------------------- | -------------------------------------------------------------- |
+| `MonobankPublicClientOptions`            | Token-free Public constructor configuration                    |
 | `MonobankPersonalClientOptions`          | Constructor configuration                                      |
 | `MonobankAcquiringClientOptions`         | Acquiring constructor configuration                            |
 | `RequestOptions`                         | Optional per-request `AbortSignal`                             |

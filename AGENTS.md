@@ -13,6 +13,7 @@ claim endorsement by Monobank.
 ## Rules for Consumer Code
 
 - Import public values and types only from `@liaugust/monobank-sdk`.
+- Construct `MonobankPublicClient` without a token for `/bank/*` calls.
 - Construct `MonobankPersonalClient` with a validated Personal token.
 - Construct `MonobankAcquiringClient` with a separate validated Acquiring token.
 - Never hardcode, log, serialize, or commit real tokens or API payloads.
@@ -24,7 +25,7 @@ claim endorsement by Monobank.
   enum-like values instead of repeating their wire strings.
 - Pass an `AbortSignal` when a caller needs cancellation.
 - Configure retries only when the application accepts repeated safe GET calls.
-  mutating Personal and Acquiring methods are never retried by the SDK.
+  Mutating Personal and Acquiring methods are never retried by the SDK.
 - Narrow caught errors with the exported SDK error classes. Do not assume every
   failure is an HTTP error.
 - Treat `parsePersonalWebhookEvent()` as shape validation only. Authenticate
@@ -71,7 +72,10 @@ async function loadStatements(token: string, signal: AbortSignal) {
 The root entry point exports:
 
 - `MonobankPersonalClient`
+- `MonobankPublicClient`
 - `MonobankAcquiringClient`
+- `MonobankAcquiringMerchant` through `acquiring.merchant`
+- `MonobankAcquiringInvoices` through `acquiring.invoices`
 - Personal and Acquiring enum-like const values, including `AccountType`,
   `CashbackType`, `InvoicePaymentType`, and `InvoiceStatus`
 - response schemas for accounts, bank sync, client info, currency rates, jars,
@@ -90,7 +94,10 @@ before generating calls; do not guess arguments.
 
 ```text
 src/index.ts                    public package boundary
-src/acquiring/                 Acquiring client, schemas, and types
+src/acquiring/client/          Acquiring parent client and options
+src/acquiring/merchant/        merchant resource and endpoint slices
+src/acquiring/invoice/         invoices resource, shared models, endpoint slices
+src/public/                    token-free Public client and options
 src/personal/                   Personal client, inputs, schemas, and types
 src/transport/                  Fetch transport, retry, timeout, and parsing
 src/errors/                     public credential-safe error classes
@@ -103,9 +110,12 @@ tests/consumers/                ESM, CJS, browser, declaration, and tarball smok
 
 ## Architectural Invariants
 
-- Preserve the separation between Personal and Acquiring credentials and clients.
+- Preserve the separation between Public, Personal, and Acquiring clients.
 - Send Personal `X-Token` only to `/personal/*` and Acquiring `X-Token` only to
   `/api/merchant/*`. Public `/bank/*` requests must never receive either token.
+- Keep Acquiring operations grouped by resource: `merchant` and `invoices`.
+- Put each new Acquiring endpoint in its own named folder with implementation
+  and colocated tests; keep shared resource models one level above endpoints.
 - Parse every successful JSON response through its matching Zod Mini schema.
 - Use loose response objects so validated additive upstream fields survive.
 - Keep Zod as the only runtime dependency unless a design change is explicitly
