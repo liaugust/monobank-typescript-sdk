@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { statementItemFixture } from "../../../../tests/fixtures/personal-api.js";
+import { statementItemFixture } from "../../../../tests/fixtures/personal/statements.js";
 import { statementItemSchema, statementItemsSchema } from "./statement-item.js";
 
 describe("statement item schema", () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { clientInfoFixture } from "../../../../tests/fixtures/personal-api.js";
+import { clientInfoFixture } from "../../../../tests/fixtures/personal/client-info.js";
 import { clientInfoSchema } from "./get-info.js";
 
 describe("client info schema", () => {

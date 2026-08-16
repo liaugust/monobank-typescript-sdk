@@ -20,11 +20,11 @@ supported contract.
 - [invoices.finalize](#invoicesfinalize)
 - [invoices.getReceipt](#invoicesgetreceipt)
 - [invoices.getFiscalChecks](#invoicesgetfiscalchecks)
-- [getBankSync](#getbanksync)
-- [getCurrencyRates](#getcurrencyrates)
-- [getClientInfo](#getclientinfo)
-- [getStatements](#getstatements)
-- [setWebhook](#setwebhook)
+- [bank.getSync](#bankgetsync)
+- [currency.getRates](#currencygetrates)
+- [client.getInfo](#clientgetinfo)
+- [statements.get](#statementsget)
+- [webhooks.set](#webhooksset)
 - [parsePersonalWebhookEvent](#parsepersonalwebhookevent)
 - [Errors](#errors)
 - [Runtime schemas](#runtime-schemas)
@@ -76,8 +76,9 @@ const publicApi = new MonobankPublicClient({
 new MonobankPersonalClient(options: MonobankPersonalClientOptions)
 ```
 
-The Personal client contains only authenticated `/personal/*` methods. Its
-validated token is never used for Public or Acquiring requests.
+The Personal client groups authenticated `/personal/*` operations under
+`client`, `statements`, and `webhooks` resources. Its validated token is never
+used for Public or Acquiring requests.
 
 ### Constructor options
 
@@ -124,7 +125,7 @@ only methods marked as safe GET requests and only for:
 
 Caller aborts and per-attempt timeouts are not retried. A valid `Retry-After`
 value takes precedence over exponential backoff; if it exceeds `maxDelayMs`,
-the request fails without another attempt. `setWebhook()` is never retried.
+the request fails without another attempt. `webhooks.set()` is never retried.
 
 ## MonobankAcquiringClient
 
@@ -342,10 +343,10 @@ optional status text, tax URL, and base64 PDF.
 This safe GET is eligible for configured retries. Throws the four standard SDK
 error classes.
 
-## getBankSync
+## bank.getSync
 
 ```ts
-publicApi.getBankSync(options?: RequestOptions): Promise<BankSync>
+publicApi.bank.getSync(options?: RequestOptions): Promise<BankSync>
 ```
 
 Loads public synchronization metadata from `GET /bank/sync`.
@@ -363,14 +364,14 @@ Throws `MonobankApiError`, `MonobankNetworkError`,
 `MonobankResponseValidationError`, or `MonobankValidationError`.
 
 ```ts
-const synchronization = await publicApi.getBankSync();
+const synchronization = await publicApi.bank.getSync();
 console.log(synchronization.serverTimeMsec);
 ```
 
-## getCurrencyRates
+## currency.getRates
 
 ```ts
-publicApi.getCurrencyRates(
+publicApi.currency.getRates(
   options?: RequestOptions,
 ): Promise<readonly CurrencyRate[]>
 ```
@@ -391,14 +392,14 @@ Throws `MonobankApiError`, `MonobankNetworkError`,
 `MonobankResponseValidationError`, or `MonobankValidationError`.
 
 ```ts
-const rates = await publicApi.getCurrencyRates();
+const rates = await publicApi.currency.getRates();
 const quotedAt = rates[0]?.date;
 ```
 
-## getClientInfo
+## client.getInfo
 
 ```ts
-client.getClientInfo(options?: RequestOptions): Promise<ClientInfo>
+client.client.getInfo(options?: RequestOptions): Promise<ClientInfo>
 ```
 
 Loads the authenticated Personal profile from `GET /personal/client-info`.
@@ -417,14 +418,14 @@ Throws `MonobankApiError`, `MonobankNetworkError`,
 `MonobankResponseValidationError`, or `MonobankValidationError`.
 
 ```ts
-const info = await client.getClientInfo();
+const info = await client.client.getInfo();
 const firstAccount = info.accounts[0];
 ```
 
-## getStatements
+## statements.get
 
 ```ts
-client.getStatements(
+client.statements.get(
   input: GetStatementsInput,
   options?: RequestOptions,
 ): Promise<readonly StatementItem[]>
@@ -459,11 +460,11 @@ Throws `MonobankApiError`, `MonobankNetworkError`,
 `MonobankResponseValidationError`, or `MonobankValidationError`.
 
 ```ts
-const info = await client.getClientInfo();
+const info = await client.client.getInfo();
 const account = info.accounts[0];
 
 if (account !== undefined) {
-  const statements = await client.getStatements({
+  const statements = await client.statements.get({
     account: account.id,
     from: new Date("2026-08-01T00:00:00.000Z"),
     to: new Date("2026-08-16T00:00:00.000Z"),
@@ -474,16 +475,16 @@ if (account !== undefined) {
 Omit `account` to request Monobank's default account identifier:
 
 ```ts
-const statements = await client.getStatements({
+const statements = await client.statements.get({
   from: 1_786_060_800,
   to: 1_787_356_800,
 });
 ```
 
-## setWebhook
+## webhooks.set
 
 ```ts
-client.setWebhook(
+client.webhooks.set(
   input: SetWebhookInput,
   options?: RequestOptions,
 ): Promise<void>
@@ -508,11 +509,11 @@ Throws `MonobankApiError`, `MonobankNetworkError`, or
 `MonobankValidationError`.
 
 ```ts
-await client.setWebhook({
+await client.webhooks.set({
   webHookUrl: "https://example.com/webhooks/monobank",
 });
 
-await client.setWebhook({ webHookUrl: "" });
+await client.webhooks.set({ webHookUrl: "" });
 ```
 
 ## parsePersonalWebhookEvent

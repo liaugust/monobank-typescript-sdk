@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { bankSyncFixture } from "../../../../tests/fixtures/personal-api.js";
+import { bankSyncFixture } from "../../../../tests/fixtures/public/bank.js";
 import { bankSyncSchema } from "./get-sync.js";
 
 describe("bank sync schema", () => {

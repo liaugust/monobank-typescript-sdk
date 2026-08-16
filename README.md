@@ -50,8 +50,8 @@ const monobank = new MonobankPersonalClient({
   token: process.env.MONOBANK_TOKEN!,
 });
 
-const client = await monobank.getClientInfo();
-const blackAccounts = client.accounts.filter(
+const info = await monobank.client.getInfo();
+const blackAccounts = info.accounts.filter(
   (account) => account.type === AccountType.Black,
 );
 
@@ -60,7 +60,7 @@ if (account === undefined) {
   throw new Error("No black account is available");
 }
 
-const statements = await monobank.getStatements({
+const statements = await monobank.statements.get({
   account: account.id,
   from: new Date("2026-08-01T00:00:00.000Z"),
   to: new Date("2026-08-16T00:00:00.000Z"),
@@ -75,11 +75,11 @@ example focused; production code should validate the environment value first.
 
 | Call                                        | Authentication  | Result                     | Notes                                          |
 | ------------------------------------------- | --------------- | -------------------------- | ---------------------------------------------- |
-| `publicApi.getBankSync()`                   | None            | `BankSync`                 | Server time and public verification key        |
-| `publicApi.getCurrencyRates()`              | None            | `readonly CurrencyRate[]`  | Monobank may cache rates for five minutes      |
-| `personal.getClientInfo()`                  | Personal token  | `ClientInfo`               | Limited upstream to one request per 60 seconds |
-| `personal.getStatements(input)`             | Personal token  | `readonly StatementItem[]` | Maximum window: 2,682,000 seconds              |
-| `personal.setWebhook(input)`                | Personal token  | `void`                     | Mutating request; never retried automatically  |
+| `publicApi.bank.getSync()`                  | None            | `BankSync`                 | Server time and public verification key        |
+| `publicApi.currency.getRates()`             | None            | `readonly CurrencyRate[]`  | Monobank may cache rates for five minutes      |
+| `personal.client.getInfo()`                 | Personal token  | `ClientInfo`               | Limited upstream to one request per 60 seconds |
+| `personal.statements.get(input)`            | Personal token  | `readonly StatementItem[]` | Maximum window: 2,682,000 seconds              |
+| `personal.webhooks.set(input)`              | Personal token  | `void`                     | Mutating request; never retried automatically  |
 | `acquiring.merchant.getDetails()`           | Acquiring token | `MerchantDetails`          | Merchant identity for the supplied token       |
 | `acquiring.invoices.create(input)`          | Acquiring token | `NewInvoice`               | Creates a hosted payment page                  |
 | `acquiring.invoices.getStatus(input)`       | Acquiring token | `Invoice`                  | Safe GET; eligible for configured retries      |
@@ -157,8 +157,8 @@ mutations are never retried automatically.
 import { MonobankPublicClient } from "@liaugust/monobank-sdk";
 
 const publicApi = new MonobankPublicClient();
-const rates = await publicApi.getCurrencyRates();
-const synchronization = await publicApi.getBankSync();
+const rates = await publicApi.currency.getRates();
+const synchronization = await publicApi.bank.getSync();
 ```
 
 ### Client information
@@ -166,7 +166,7 @@ const synchronization = await publicApi.getBankSync();
 ```ts
 import { CashbackType } from "@liaugust/monobank-sdk";
 
-const info = await monobank.getClientInfo();
+const info = await monobank.client.getInfo();
 const cashbackAccounts = info.accounts.filter(
   (account) => account.cashbackType === CashbackType.UAH,
 );
@@ -185,7 +185,7 @@ if (account === undefined) {
   throw new Error("No account is available");
 }
 
-const statements = await monobank.getStatements({
+const statements = await monobank.statements.get({
   account: account.id,
   from: 1_786_060_800,
   to: 1_787_356_800,
@@ -201,11 +201,11 @@ requests Monobank's default account identifier, `0`.
 Set or remove the Personal webhook URL:
 
 ```ts
-await monobank.setWebhook({
+await monobank.webhooks.set({
   webHookUrl: "https://example.com/webhooks/monobank",
 });
 
-await monobank.setWebhook({ webHookUrl: "" });
+await monobank.webhooks.set({ webHookUrl: "" });
 ```
 
 Validate an incoming JSON body:
@@ -223,7 +223,7 @@ acting on a webhook.
 ## Retries, timeouts, and cancellation
 
 Retries are disabled unless configured. A retry policy applies only to safe
-GET requests, respects `Retry-After`, and never retries `setWebhook()`.
+GET requests, respects `Retry-After`, and never retries `webhooks.set()`.
 
 ```ts
 const monobank = new MonobankPersonalClient({
@@ -238,7 +238,7 @@ const monobank = new MonobankPersonalClient({
 
 const controller = new AbortController();
 
-const info = await monobank.getClientInfo({
+const info = await monobank.client.getInfo({
   signal: controller.signal,
 });
 
@@ -259,7 +259,7 @@ import {
 } from "@liaugust/monobank-sdk";
 
 try {
-  await monobank.getClientInfo();
+  await monobank.client.getInfo();
 } catch (error) {
   if (error instanceof MonobankApiError) {
     console.error(error.status, error.retryAfterMs, error.upstreamMessage);

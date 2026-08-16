@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { clientInfoFixture } from "../../../../tests/fixtures/personal-api.js";
+import { clientInfoFixture } from "../../../../tests/fixtures/personal/client-info.js";
 import { accountSchema, AccountType, CashbackType } from "./account.js";
 
 const accountFixture = clientInfoFixture.accounts[0];

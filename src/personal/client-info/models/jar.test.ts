@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { clientInfoFixture } from "../../../../tests/fixtures/personal-api.js";
+import { clientInfoFixture } from "../../../../tests/fixtures/personal/client-info.js";
 import { jarSchema } from "./jar.js";
 
 const jarFixture = clientInfoFixture.jars[0];

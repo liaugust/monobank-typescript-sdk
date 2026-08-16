@@ -82,13 +82,17 @@ writeFileSync(
   join(consumerDirectory, "esm.mjs"),
   'import { AccountType, MonobankAcquiringClient, MonobankPersonalClient, MonobankPublicClient } from "@liaugust/monobank-sdk";\n' +
     'const acquiring = new MonobankAcquiringClient({ token: "acquiring" });\n' +
-    'if (AccountType.Black !== "black" || typeof MonobankPersonalClient !== "function" || !(new MonobankPublicClient()) || !acquiring.invoices || !acquiring.merchant) process.exitCode = 1;\n',
+    'const personal = new MonobankPersonalClient({ token: "personal" });\n' +
+    "const publicApi = new MonobankPublicClient();\n" +
+    'if (AccountType.Black !== "black" || !publicApi.bank || !publicApi.currency || !personal.client || !personal.statements || !personal.webhooks || !acquiring.invoices || !acquiring.merchant) process.exitCode = 1;\n',
 );
 writeFileSync(
   join(consumerDirectory, "commonjs.cjs"),
   'const { CashbackType, MonobankAcquiringClient, MonobankPersonalClient, MonobankPublicClient } = require("@liaugust/monobank-sdk");\n' +
     'const acquiring = new MonobankAcquiringClient({ token: "acquiring" });\n' +
-    'if (CashbackType.UAH !== "UAH" || typeof MonobankPersonalClient !== "function" || !(new MonobankPublicClient()) || !acquiring.invoices || !acquiring.merchant) process.exitCode = 1;\n',
+    'const personal = new MonobankPersonalClient({ token: "personal" });\n' +
+    "const publicApi = new MonobankPublicClient();\n" +
+    'if (CashbackType.UAH !== "UAH" || !publicApi.bank || !publicApi.currency || !personal.client || !personal.statements || !personal.webhooks || !acquiring.invoices || !acquiring.merchant) process.exitCode = 1;\n',
 );
 
 for (const consumer of ["esm.mjs", "commonjs.cjs"]) {

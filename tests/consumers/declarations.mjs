@@ -65,12 +65,7 @@ for (const errorClassName of [
 const clientClass = findClass("MonobankPersonalClient");
 assert.ok(hasJSDoc(clientClass), "MonobankPersonalClient JSDoc is missing");
 
-for (const memberName of [
-  "constructor",
-  "getClientInfo",
-  "getStatements",
-  "setWebhook",
-]) {
+for (const memberName of ["constructor", "client", "statements", "webhooks"]) {
   assert.ok(
     hasJSDoc(findClassMember(clientClass, memberName)),
     `MonobankPersonalClient.${memberName} JSDoc is missing`,
@@ -80,7 +75,7 @@ for (const memberName of [
 const publicClientClass = findClass("MonobankPublicClient");
 assert.ok(hasJSDoc(publicClientClass), "MonobankPublicClient JSDoc is missing");
 
-for (const memberName of ["constructor", "getBankSync", "getCurrencyRates"]) {
+for (const memberName of ["constructor", "bank", "currency"]) {
   assert.ok(
     hasJSDoc(findClassMember(publicClientClass, memberName)),
     `MonobankPublicClient.${memberName} JSDoc is missing`,
@@ -98,6 +93,26 @@ for (const memberName of ["constructor", "invoices", "merchant"]) {
     hasJSDoc(findClassMember(acquiringClientClass, memberName)),
     `MonobankAcquiringClient.${memberName} JSDoc is missing`,
   );
+}
+
+const resourceContracts = [
+  ["MonobankPublicBank", ["constructor", "getSync"]],
+  ["MonobankPublicCurrency", ["constructor", "getRates"]],
+  ["MonobankPersonalClientInfo", ["constructor", "getInfo"]],
+  ["MonobankPersonalStatements", ["constructor", "get"]],
+  ["MonobankPersonalWebhooks", ["constructor", "set"]],
+];
+
+for (const [className, memberNames] of resourceContracts) {
+  const resourceClass = findClass(className);
+  assert.ok(hasJSDoc(resourceClass), `${className} JSDoc is missing`);
+
+  for (const memberName of memberNames) {
+    assert.ok(
+      hasJSDoc(findClassMember(resourceClass, memberName)),
+      `${className}.${memberName} JSDoc is missing`,
+    );
+  }
 }
 
 const merchantClass = findClass("MonobankAcquiringMerchant");

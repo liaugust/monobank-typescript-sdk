@@ -16,7 +16,10 @@ const acquiringClient = new MonobankAcquiringClient({
   token: "browser-acquiring-token",
 });
 
-void client;
-void publicApi;
+void publicApi.bank;
+void publicApi.currency;
+void client.client;
+void client.statements;
+void client.webhooks;
 void acquiringClient.invoices;
 void acquiringClient.merchant;

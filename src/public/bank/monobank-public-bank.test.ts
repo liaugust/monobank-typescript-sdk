@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { bankSyncFixture } from "../../../tests/fixtures/personal-api.js";
+import { bankSyncFixture } from "../../../tests/fixtures/public/bank.js";
 import {
   createFetchSequence,
   jsonResponse,

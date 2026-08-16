@@ -50,14 +50,14 @@ async function loadStatements(token: string, signal: AbortSignal) {
     token,
   });
 
-  const info = await client.getClientInfo({ signal });
+  const info = await client.client.getInfo({ signal });
   const account = info.accounts[0];
 
   if (account === undefined) {
     return [];
   }
 
-  return await client.getStatements(
+  return await client.statements.get(
     {
       account: account.id,
       from: new Date("2026-08-01T00:00:00.000Z"),
@@ -74,8 +74,8 @@ The root entry point exports:
 - `MonobankPersonalClient`
 - `MonobankPublicClient`
 - `MonobankAcquiringClient`
-- `MonobankAcquiringMerchant` through `acquiring.merchant`
-- `MonobankAcquiringInvoices` through `acquiring.invoices`
+- seven resource properties exposed through the three parent clients: `bank`,
+  `currency`, `client`, `statements`, `webhooks`, `merchant`, and `invoices`
 - Personal and Acquiring enum-like const values, including `AccountType`,
   `CashbackType`, `InvoicePaymentType`, and `InvoiceStatus`
 - response schemas for accounts, bank sync, client info, currency rates, jars,
@@ -94,16 +94,23 @@ before generating calls; do not guess arguments.
 
 ```text
 src/index.ts                    public package boundary
-src/acquiring/client/          Acquiring parent client and options
-src/acquiring/merchant/        merchant resource and endpoint slices
-src/acquiring/invoice/         invoices resource, shared models, endpoint slices
-src/public/                    token-free Public client and options
-src/personal/                   Personal client, inputs, schemas, and types
-src/transport/                  Fetch transport, retry, timeout, and parsing
+src/acquiring/client/           Acquiring parent client and options
+src/acquiring/merchant/         merchant resource and endpoint slice
+src/acquiring/invoices/         invoice endpoints, models, and request helpers
+src/public/client/              token-free Public parent client and options
+src/public/bank/                bank resource and sync endpoint
+src/public/currency/            currency resource and rates endpoint
+src/personal/client/            Personal parent client and options
+src/personal/client-info/       identity resource, endpoint, and models
+src/personal/statements/        statements resource, endpoint, and models
+src/personal/webhooks/          webhook resource, input, and event parser
+src/transport/request/          request security and attempt-signal ownership
+src/transport/retry/            retry policy, delay, and Retry-After parsing
+src/transport/response/         successful and failed response normalization
 src/errors/                     public credential-safe error classes
-tests/fixtures/                 synthetic Monobank contract fixtures
+tests/fixtures/{public,personal,acquiring}/ synthetic contract fixtures
 tests/types/                    compile-time public API assertions
-tests/consumers/                ESM, CJS, browser, declaration, and tarball smoke tests
+tests/consumers/                ESM, CJS, browser, declaration, and tarball checks
 .github/workflows/ci.yml        Node 20/22/24 verification matrix
 .github/workflows/release.yml   npm trusted-publishing workflow
 ```
@@ -113,9 +120,9 @@ tests/consumers/                ESM, CJS, browser, declaration, and tarball smok
 - Preserve the separation between Public, Personal, and Acquiring clients.
 - Send Personal `X-Token` only to `/personal/*` and Acquiring `X-Token` only to
   `/api/merchant/*`. Public `/bank/*` requests must never receive either token.
-- Keep Acquiring operations grouped by resource: `merchant` and `invoices`.
-- Put each new Acquiring endpoint in its own named folder with implementation
-  and colocated tests; keep shared resource models one level above endpoints.
+- Keep every API family grouped by resource and each endpoint in its own named
+  folder with colocated tests. Put response models under the owning resource's
+  `models` folder and request-only helpers under `shared` when reused.
 - Parse every successful JSON response through its matching Zod Mini schema.
 - Use loose response objects so validated additive upstream fields survive.
 - Keep Zod as the only runtime dependency unless a design change is explicitly

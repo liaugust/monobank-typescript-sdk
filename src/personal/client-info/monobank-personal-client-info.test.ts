@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { clientInfoFixture } from "../../../tests/fixtures/personal-api.js";
+import { clientInfoFixture } from "../../../tests/fixtures/personal/client-info.js";
 import {
   createFetchSequence,
   jsonResponse,

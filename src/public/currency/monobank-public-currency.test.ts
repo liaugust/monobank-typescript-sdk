@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { currencyRateFixture } from "../../../tests/fixtures/personal-api.js";
+import { currencyRateFixture } from "../../../tests/fixtures/public/currency.js";
 import {
   createFetchSequence,
   jsonResponse,
