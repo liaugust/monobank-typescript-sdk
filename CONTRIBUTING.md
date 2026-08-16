@@ -1,6 +1,6 @@
 # Contributing
 
-Use Node.js 20.19.5+ and pnpm 11.22.0. Corepack should select the
+Use Node.js 20.19.5+ and pnpm 10.34.5. Corepack should select the
 package-manager version declared in `package.json`.
 
 All behavior changes are test-first: write the failing test, confirm the RED
