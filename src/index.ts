@@ -59,6 +59,18 @@ export type {
 export type { RemoveInvoiceInput } from "./acquiring/invoices/remove-invoice/remove-invoice.js";
 export type { MerchantDetails } from "./acquiring/merchant/get-merchant-details/get-merchant-details.js";
 export { merchantDetailsSchema } from "./acquiring/merchant/get-merchant-details/get-merchant-details.js";
+export type { GetAcquiringQrDetailsInput } from "./acquiring/qr/get-qr-details/get-qr-details.js";
+export type {
+  AcquiringQrCashier,
+  AcquiringQrCashierList,
+} from "./acquiring/qr/models/acquiring-qr-cashier.js";
+export {
+  AcquiringQrAmountType,
+  acquiringQrCashierListSchema,
+  acquiringQrCashierSchema,
+} from "./acquiring/qr/models/acquiring-qr-cashier.js";
+export type { AcquiringQrDetails } from "./acquiring/qr/models/acquiring-qr-details.js";
+export { acquiringQrDetailsSchema } from "./acquiring/qr/models/acquiring-qr-details.js";
 export type {
   AcquiringStatementUnixTimeInput,
   GetAcquiringStatementsInput,

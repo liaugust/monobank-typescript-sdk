@@ -58,6 +58,17 @@ Use `MonobankAcquiringClient` with a separate Acquiring token.
   `/api/merchant/submerchant/list`; returns
   `Promise<AcquiringSubmerchantList>` with a readonly list of terminal codes,
   IBANs, and optional owner details.
+- `acquiring.qr.list(options?)`: authenticated `/api/merchant/qr/list`; returns
+  `Promise<AcquiringQrCashierList>` with a readonly list of `shortQrId`,
+  `qrId`, `amountType`, and `pageUrl`; safe GET eligible for configured
+  retries.
+- `acquiring.qr.getDetails(input, options?)`: authenticated
+  `/api/merchant/qr/details`; requires a nonempty string `qrId` without
+  surrounding whitespace and rejects with `MonobankValidationError` before
+  Fetch otherwise; returns `Promise<AcquiringQrDetails>` for activated QR
+  cashiers only, where `invoiceId` is documented as present only while an
+  amount is set and `amount`/`ccy` may be omitted for the same reason; safe GET
+  eligible for configured retries.
 - `acquiring.webhooks.getPublicKey(options?)`: authenticated
   `/api/merchant/pubkey`; returns `Promise<AcquiringWebhookPublicKey>`; caller
   owns caching and refresh after signature verification fails.
@@ -110,7 +121,8 @@ objects, or raw API payloads.
 ## Exported runtime values
 
 - Enum-like const objects: `AccountType`, `CashbackType`,
-  `AcquiringPaymentScheme`, `AcquiringStatementStatus`, `InvoicePaymentType`,
+  `AcquiringPaymentScheme`, `AcquiringQrAmountType`,
+  `AcquiringStatementStatus`, `InvoicePaymentType`,
   `InvoiceStatus`, `InvoiceCancellationStatus`, `InvoicePaymentSystem`,
   `InvoicePaymentMethod`, `InvoiceWalletStatus`, `DiscountType`, `DiscountMode`,
   `FiscalCheckType`, `FiscalCheckStatus`, `FiscalizationSource`.
@@ -121,7 +133,8 @@ objects, or raw API payloads.
   `merchantDetailsSchema`, `acquiringStatementSchema`,
   `acquiringStatementItemSchema`, `acquiringStatementCancellationSchema`,
   `acquiringSubmerchantSchema`, `acquiringSubmerchantListSchema`,
-  `acquiringWebhookPublicKeySchema`,
+  `acquiringQrCashierSchema`, `acquiringQrCashierListSchema`,
+  `acquiringQrDetailsSchema`, `acquiringWebhookPublicKeySchema`,
   `newInvoiceSchema`, `invoiceStatusSchema`,
   `cancelInvoiceResponseSchema`, `finalizeInvoiceResponseSchema`,
   `receiptSchema`, `invoiceFiscalChecksSchema`.
@@ -157,7 +170,8 @@ See `src/index.ts` for the complete authoritative export list, including types.
   `acquiring.invoices.cancel()`, `acquiring.invoices.remove()`, or
   `acquiring.invoices.finalize()` automatically.
 - Do not invent Acquiring APIs beyond the implemented merchant-details,
-  submerchant-list, statement, webhook-trust, and invoice-lifecycle methods.
+  submerchant-list, QR read-only, statement, webhook-trust, and
+  invoice-lifecycle methods. `acquiring.qr.resetAmount()` is not implemented.
 - Prefer exported SDK types, schemas, value objects, and error classes over
   duplicate local definitions.
 - Validate environment configuration before constructing the client.

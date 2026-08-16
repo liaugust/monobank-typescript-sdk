@@ -7,6 +7,7 @@ describe("public package surface", () => {
     expect(Object.keys(sdk).sort()).toStrictEqual([
       "AccountType",
       "AcquiringPaymentScheme",
+      "AcquiringQrAmountType",
       "AcquiringStatementStatus",
       "CashbackType",
       "DiscountMode",
@@ -28,6 +29,9 @@ describe("public package surface", () => {
       "MonobankResponseValidationError",
       "MonobankValidationError",
       "accountSchema",
+      "acquiringQrCashierListSchema",
+      "acquiringQrCashierSchema",
+      "acquiringQrDetailsSchema",
       "acquiringStatementCancellationSchema",
       "acquiringStatementItemSchema",
       "acquiringStatementSchema",

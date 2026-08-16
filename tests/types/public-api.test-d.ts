@@ -1,5 +1,8 @@
 import type {
   Account,
+  AcquiringQrCashier,
+  AcquiringQrCashierList,
+  AcquiringQrDetails,
   AcquiringStatement,
   AcquiringSubmerchant,
   AcquiringSubmerchantList,
@@ -10,6 +13,7 @@ import type {
   CreateInvoiceInput,
   CreateInvoiceOptions,
   CurrencyRate,
+  GetAcquiringQrDetailsInput,
   GetAcquiringStatementsInput,
   GetStatementsInput,
   Invoice,
@@ -25,6 +29,8 @@ import type {
 import {
   AccountType,
   AcquiringPaymentScheme,
+  AcquiringQrAmountType,
+  acquiringQrCashierListSchema,
   AcquiringStatementStatus,
   acquiringSubmerchantListSchema,
   CashbackType,
@@ -58,6 +64,23 @@ const acquiringSubmerchants: Promise<AcquiringSubmerchantList> =
   acquiringClient.submerchants.list();
 const parsedSubmerchants: AcquiringSubmerchantList =
   acquiringSubmerchantListSchema.parse({ list: [] });
+const acquiringQrCashiers: Promise<AcquiringQrCashierList> =
+  acquiringClient.qr.list();
+const parsedQrCashiers: AcquiringQrCashierList =
+  acquiringQrCashierListSchema.parse({ list: [] });
+const acquiringQrDetailsInput: GetAcquiringQrDetailsInput = {
+  qrId: "XJ_DiM4rTd5V",
+};
+const acquiringQrDetails: Promise<AcquiringQrDetails> =
+  acquiringClient.qr.getDetails(acquiringQrDetailsInput);
+const acquiringQrAmountType: AcquiringQrAmountType =
+  AcquiringQrAmountType.Merchant;
+const minimalQrDetails: AcquiringQrDetails = { shortQrId: "OBJE" };
+const acquiringQrAmountTypesAreExact = {
+  client: true,
+  fix: true,
+  merchant: true,
+} satisfies Record<AcquiringQrAmountType, true>;
 const webhookPublicKey: Promise<AcquiringWebhookPublicKey> =
   acquiringClient.webhooks.getPublicKey();
 const signatureInput: VerifyAcquiringWebhookSignatureInput = {
@@ -132,6 +155,12 @@ void merchantDetails;
 void acquiringStatements;
 void acquiringSubmerchants;
 void parsedSubmerchants;
+void acquiringQrCashiers;
+void parsedQrCashiers;
+void acquiringQrDetails;
+void acquiringQrAmountType;
+void acquiringQrAmountTypesAreExact;
+void minimalQrDetails;
 void webhookPublicKey;
 void signatureMatches;
 void newInvoice;
@@ -190,6 +219,21 @@ void acquiringClient.statements.get({ from: "2026-08-01" });
 // @ts-expect-error -- The validated submerchant list is not assignable to a mutable array.
 const mutableSubmerchantList: AcquiringSubmerchant[] = parsedSubmerchants.list;
 void mutableSubmerchantList;
+
+// @ts-expect-error -- The validated QR cashier list is not assignable to a mutable array.
+const mutableQrCashierList: AcquiringQrCashier[] = parsedQrCashiers.list;
+void mutableQrCashierList;
+
+// @ts-expect-error -- QR details require a cashier identifier.
+void acquiringClient.qr.getDetails({});
+
+// @ts-expect-error -- Validated QR details always carry the short identifier.
+const qrDetailsWithoutShortId: AcquiringQrDetails = {};
+void qrDetailsWithoutShortId;
+
+// @ts-expect-error -- QR cashier amount types are limited to documented wire values.
+const invalidQrAmountType: AcquiringQrAmountType = "operator";
+void invalidQrAmountType;
 
 // @ts-expect-error -- Account types are limited to documented wire values.
 const invalidAccountType: AccountType = "gold";

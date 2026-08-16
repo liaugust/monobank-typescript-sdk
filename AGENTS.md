@@ -37,9 +37,10 @@ claim endorsement by Monobank.
   infrastructure and refresh it only after verification with the cached key
   fails; the SDK intentionally does not own cache policy.
 - Use only documented Acquiring methods. The current surface contains merchant
-  details, submerchant listing, and statements plus invoice creation, status,
-  cancellation, removal, finalization, receipt, and fiscal-check operations.
-  Do not invent unimplemented payment calls.
+  details, submerchant listing, read-only QR cashier listing and details, and
+  statements plus invoice creation, status, cancellation, removal,
+  finalization, receipt, and fiscal-check operations. Do not invent
+  unimplemented payment calls; `acquiring.qr.resetAmount()` is not implemented.
 
 ## Minimal Correct Usage
 
@@ -80,15 +81,17 @@ The root entry point exports:
 - `MonobankPersonalClient`
 - `MonobankPublicClient`
 - `MonobankAcquiringClient`
-- ten resource properties exposed through the three parent clients: `bank`,
+- eleven resource properties exposed through the three parent clients: `bank`,
   `currency`, `client`, Personal `statements`, Personal `webhooks`, `merchant`,
-  `invoices`, Acquiring `statements`, `submerchants`, and Acquiring `webhooks`
+  `invoices`, Acquiring `statements`, `submerchants`, `qr`, and Acquiring
+  `webhooks`
 - Personal and Acquiring enum-like const values, including `AccountType`,
-  `CashbackType`, `AcquiringPaymentScheme`, `AcquiringStatementStatus`,
-  `InvoicePaymentType`, and `InvoiceStatus`
+  `CashbackType`, `AcquiringPaymentScheme`, `AcquiringQrAmountType`,
+  `AcquiringStatementStatus`, `InvoicePaymentType`, and `InvoiceStatus`
 - response schemas for accounts, bank sync, client info, currency rates, jars,
-  managed clients, merchant details, submerchants, invoices, receipts, fiscal
-  checks, statements, and Personal webhook events
+  managed clients, merchant details, submerchants, QR cashiers, QR cashier
+  details, invoices, receipts, fiscal checks, statements, and Personal webhook
+  events
 - `parsePersonalWebhookEvent`
 - `verifyAcquiringWebhookSignature`
 - Personal and Acquiring request, response, transport, retry, and error types
@@ -106,6 +109,7 @@ src/index.ts                    public package boundary
 src/acquiring/client/           Acquiring parent client and options
 src/acquiring/merchant/         merchant resource and endpoint slice
 src/acquiring/invoices/         invoice endpoints, models, and request helpers
+src/acquiring/qr/               QR cashier resource, endpoints, and models
 src/acquiring/statements/       statement resource, endpoint, and models
 src/acquiring/submerchants/     submerchant resource, endpoint, and models
 src/acquiring/webhooks/         trust-key endpoint and signature verification
@@ -137,6 +141,10 @@ tests/consumers/                ESM, CJS, browser, declaration, and tarball chec
   `models` folder and request-only helpers under `shared` when reused.
 - Parse every successful JSON response through its matching Zod Mini schema.
 - Use loose response objects so validated additive upstream fields survive.
+- Model the `list` wrapper as required across Acquiring list endpoints even
+  where Monobank's OpenAPI `required` array omits it, matching the statement,
+  submerchant, and QR schemas. Revisit all three together if an account with no
+  records is observed to return a bare `{}`.
 - Keep Zod as the only runtime dependency unless a design change is explicitly
   approved.
 - Keep transport failures credential-safe: never retain tokens, authorization

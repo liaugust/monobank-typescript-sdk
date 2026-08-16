@@ -24,6 +24,7 @@ void client.statements;
 void client.webhooks;
 void acquiringClient.invoices;
 void acquiringClient.merchant;
+void acquiringClient.qr;
 void acquiringClient.statements;
 void acquiringClient.submerchants;
 void acquiringClient.webhooks;

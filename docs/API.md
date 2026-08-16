@@ -16,6 +16,8 @@ supported contract.
 - [verifyAcquiringWebhookSignature](#verifyacquiringwebhooksignature)
 - [merchant.getDetails](#merchantgetdetails)
 - [acquiring.submerchants.list](#acquiringsubmerchantslist)
+- [acquiring.qr.list](#acquiringqrlist)
+- [acquiring.qr.getDetails](#acquiringqrgetdetails)
 - [acquiring.statements.get](#acquiringstatementsget)
 - [invoices.create](#invoicescreate)
 - [invoices.getStatus](#invoicesgetstatus)
@@ -172,6 +174,7 @@ The client groups operations into resource objects:
 
 - `acquiring.merchant`: merchant identity operations
 - `acquiring.invoices`: invoice lifecycle operations
+- `acquiring.qr`: read-only QR cashier operations
 - `acquiring.statements`: transaction statement operations
 - `acquiring.submerchants`: submerchant terminal operations
 - `acquiring.webhooks`: webhook trust-material operations
@@ -304,6 +307,76 @@ const submerchants = await acquiring.submerchants.list();
 
 for (const submerchant of submerchants.list) {
   console.log(submerchant.code, submerchant.iban);
+}
+```
+
+## acquiring.qr.list
+
+```ts
+acquiring.qr.list(
+  options?: RequestOptions,
+): Promise<AcquiringQrCashierList>
+```
+
+Loads `GET /api/merchant/qr/list`. Each item carries the `shortQrId` printed on
+the QR cashier, the `qrId` used by `acquiring.qr.getDetails()`, the hosted
+`pageUrl`, and the `amountType` describing who sets the payment amount.
+
+| Property       | Value                                                      |
+| -------------- | ---------------------------------------------------------- |
+| Authentication | Acquiring token in `X-Token`                               |
+| Rate limit     | No endpoint-specific limit is encoded or enforced          |
+| Retries        | Eligible when a retry policy is configured                 |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds   |
+| Cancellation   | `options.signal` cancels the active request or retry delay |
+| Returns        | `AcquiringQrCashierList` with readonly `list`              |
+
+Throws `MonobankApiError`, `MonobankNetworkError`,
+`MonobankResponseValidationError`, or `MonobankValidationError`.
+
+```ts
+const cashiers = await acquiring.qr.list();
+
+for (const cashier of cashiers.list) {
+  console.log(cashier.shortQrId, cashier.amountType, cashier.pageUrl);
+}
+```
+
+## acquiring.qr.getDetails
+
+```ts
+acquiring.qr.getDetails(
+  input: GetAcquiringQrDetailsInput,
+  options?: RequestOptions,
+): Promise<AcquiringQrDetails>
+```
+
+Loads `GET /api/merchant/qr/details`. Monobank answers only for activated QR
+cashiers and documents `invoiceId` as present only while an amount is set on
+the cashier; `amount` and `ccy` may be omitted for the same reason, so treat
+all three as absent unless present. `amount` is an integer minor currency unit
+and `ccy` is an ISO 4217 numeric code. `qrId` must be a nonempty string without
+surrounding whitespace.
+
+| Property       | Value                                                      |
+| -------------- | ---------------------------------------------------------- |
+| Authentication | Acquiring token in `X-Token`                               |
+| Rate limit     | No endpoint-specific limit is encoded or enforced          |
+| Retries        | Eligible when a retry policy is configured                 |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds   |
+| Cancellation   | `options.signal` cancels the active request or retry delay |
+| Returns        | `AcquiringQrDetails`                                       |
+
+Rejects with `MonobankApiError` (including `404` for an unknown QR cashier),
+`MonobankNetworkError`, `MonobankResponseValidationError`, or
+`MonobankValidationError`. Input validation runs before Fetch and rejects the
+returned promise rather than throwing synchronously.
+
+```ts
+const details = await acquiring.qr.getDetails({ qrId: "XJ_DiM4rTd5V" });
+
+if (details.invoiceId !== undefined) {
+  console.log(details.invoiceId, details.amount, details.ccy);
 }
 ```
 
@@ -779,6 +852,9 @@ preserved.
 | Export                                 | Validates                           |
 | -------------------------------------- | ----------------------------------- |
 | `accountSchema`                        | One Personal account                |
+| `acquiringQrCashierListSchema`         | Acquiring QR cashier-list response  |
+| `acquiringQrCashierSchema`             | One Acquiring QR cashier            |
+| `acquiringQrDetailsSchema`             | Acquiring QR cashier details        |
 | `acquiringStatementSchema`             | Acquiring statement response        |
 | `acquiringStatementItemSchema`         | One Acquiring transaction           |
 | `acquiringStatementCancellationSchema` | Nested Acquiring cancellation       |
@@ -856,6 +932,7 @@ const cashbackType: CashbackTypeValue = CashbackType.UAH;
 | --------------------------- | ---------------------------------------------------------------------------- |
 | `InvoicePaymentType`        | `debit`, `hold`                                                              |
 | `AcquiringPaymentScheme`    | `full`, `bnpl_later_30`, `bnpl_parts_4`                                      |
+| `AcquiringQrAmountType`     | `client`, `fix`, `merchant`                                                  |
 | `AcquiringStatementStatus`  | `hold`, `processing`, `success`, `failure`                                   |
 | `InvoiceStatus`             | `created`, `processing`, `hold`, `success`, `failure`, `reversed`, `expired` |
 | `InvoiceCancellationStatus` | `processing`, `success`, `failure`                                           |
@@ -938,6 +1015,33 @@ both the response wrapper and each item.
 | `iban`     | `string` | Yes      | Terminal owner IBAN             |
 | `edrpou`   | `string` | No       | Terminal owner EDRPOU           |
 | `owner`    | `string` | No       | Terminal owner name             |
+
+### AcquiringQrCashierList
+
+`AcquiringQrCashierList.list` is a readonly array of QR cashiers registered for
+the configured merchant. Loose schemas preserve additive upstream fields on
+both the response wrapper and each item.
+
+| Item field   | Type                    | Required | Notes                                  |
+| ------------ | ----------------------- | -------- | -------------------------------------- |
+| `shortQrId`  | `string`                | Yes      | Short identifier printed on the QR     |
+| `qrId`       | `string`                | Yes      | Identifier accepted by `getDetails()`  |
+| `amountType` | `AcquiringQrAmountType` | Yes      | Who sets the amount for this cashier   |
+| `pageUrl`    | `string`                | Yes      | Hosted payment page for the QR cashier |
+
+### AcquiringQrDetails
+
+Monobank answers `acquiring.qr.getDetails()` only for activated QR cashiers.
+`invoiceId` is documented as present only while an amount is set on the
+cashier, and `amount` and `ccy` may be omitted for the same reason. The loose
+schema preserves additive upstream fields.
+
+| Field       | Type     | Required | Notes                                  |
+| ----------- | -------- | -------- | -------------------------------------- |
+| `shortQrId` | `string` | Yes      | Short identifier printed on the QR     |
+| `invoiceId` | `string` | No       | Invoice created for the current amount |
+| `amount`    | `number` | No       | Integer amount in minor currency units |
+| `ccy`       | `number` | No       | Numeric ISO 4217 currency code         |
 
 ### AcquiringWebhookPublicKey
 
@@ -1057,6 +1161,7 @@ object containing the target `account` identifier and validated
 | `UnixTimeInput`                          | `Date \| number` statement timestamp input                     |
 | `GetAcquiringStatementsInput`            | Acquiring time window and optional submerchant terminal        |
 | `AcquiringStatementUnixTimeInput`        | `Date \| number` Acquiring statement timestamp input           |
+| `GetAcquiringQrDetailsInput`             | QR cashier identifier for details lookup                       |
 | `SetWebhookInput`                        | Webhook URL request body                                       |
 | `VerifyAcquiringWebhookSignatureInput`   | Raw body, public key, and signature verification inputs        |
 | `CreateInvoiceInput`                     | Invoice amount, order, redirect, webhook, and payment controls |
@@ -1081,7 +1186,8 @@ object containing the target `account` identifier and validated
 
 Response types are inferred from their runtime schemas and exported from the
 package root, including the Personal models plus `MerchantDetails`,
-`AcquiringSubmerchant`, `AcquiringSubmerchantList`,
+`AcquiringSubmerchant`, `AcquiringSubmerchantList`, `AcquiringQrCashier`,
+`AcquiringQrCashierList`, `AcquiringQrDetails`,
 `AcquiringWebhookPublicKey`, `AcquiringStatement`, `AcquiringStatementItem`,
 `AcquiringStatementCancellation`, `NewInvoice`, `Invoice`,
 `InvoiceCancellation`, `InvoiceFinalization`, `InvoiceReceipt`, and
