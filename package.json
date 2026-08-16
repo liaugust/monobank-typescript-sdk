@@ -1,6 +1,6 @@
 {
   "name": "@liaugust/monobank-sdk",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Strict, runtime-validated TypeScript SDK for Monobank APIs",
   "license": "MIT",
   "type": "module",
