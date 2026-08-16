@@ -110,6 +110,7 @@ for (const memberName of [
   "invoices",
   "merchant",
   "statements",
+  "submerchants",
   "webhooks",
 ]) {
   assert.ok(
@@ -125,6 +126,7 @@ const resourceContracts = [
   ["MonobankPersonalStatements", ["constructor", "get"]],
   ["MonobankPersonalWebhooks", ["constructor", "set"]],
   ["MonobankAcquiringStatements", ["constructor", "get"]],
+  ["MonobankAcquiringSubmerchants", ["constructor", "list"]],
   ["MonobankAcquiringWebhooks", ["constructor", "getPublicKey"]],
 ];
 

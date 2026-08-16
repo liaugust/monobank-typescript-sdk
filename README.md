@@ -83,6 +83,7 @@ example focused; production code should validate the environment value first.
 | `personal.webhooks.set(input)`              | Personal token  | `void`                      | Mutating request; never retried automatically  |
 | `acquiring.merchant.getDetails()`           | Acquiring token | `MerchantDetails`           | Merchant identity for the supplied token       |
 | `acquiring.statements.get(input)`           | Acquiring token | `AcquiringStatement`        | Transaction statement ordered newest first     |
+| `acquiring.submerchants.list()`             | Acquiring token | `AcquiringSubmerchantList`  | Terminals available to supported merchants     |
 | `acquiring.webhooks.getPublicKey()`         | Acquiring token | `AcquiringWebhookPublicKey` | Key used to authenticate webhook signatures    |
 | `acquiring.invoices.create(input)`          | Acquiring token | `NewInvoice`                | Creates a hosted payment page                  |
 | `acquiring.invoices.getStatus(input)`       | Acquiring token | `Invoice`                   | Safe GET; eligible for configured retries      |
@@ -114,6 +115,22 @@ console.log(merchant.merchantId, merchant.merchantName, merchant.edrpou);
 ```
 
 The Acquiring token is sent only to authenticated `/api/merchant/*` methods.
+
+### Acquiring submerchants
+
+Merchants enabled for marketplace or agent integrations can load the terminal
+codes accepted by invoice creation and statement filtering:
+
+```ts
+const submerchants = await acquiring.submerchants.list();
+
+for (const submerchant of submerchants.list) {
+  console.log(submerchant.code, submerchant.iban);
+}
+```
+
+The response list is readonly. Every item has a terminal `code` and owner
+`iban`; `edrpou` and `owner` are optional because Monobank may omit them.
 
 ### Acquiring statements
 
@@ -363,6 +380,8 @@ same validation boundary:
 import {
   acquiringStatementItemSchema,
   acquiringStatementSchema,
+  acquiringSubmerchantListSchema,
+  acquiringSubmerchantSchema,
   acquiringWebhookPublicKeySchema,
   clientInfoSchema,
   currencyRatesSchema,

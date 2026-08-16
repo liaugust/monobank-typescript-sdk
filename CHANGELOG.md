@@ -7,6 +7,8 @@ All notable changes to this package are documented here.
 - Add authenticated Acquiring statements with validated time windows,
   submerchant filtering, retry and cancellation support, response schemas, and
   importable transaction status and payment-scheme values.
+- Add authenticated Acquiring submerchant discovery with validated terminal
+  ownership data, safe retries, cancellation, schemas, and public types.
 
 ## 0.1.0 - 2026-08-16
 

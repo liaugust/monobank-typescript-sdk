@@ -1,6 +1,8 @@
 import type {
   Account,
   AcquiringStatement,
+  AcquiringSubmerchant,
+  AcquiringSubmerchantList,
   AcquiringWebhookPublicKey,
   BankSync,
   CancelInvoiceInput,
@@ -24,6 +26,7 @@ import {
   AccountType,
   AcquiringPaymentScheme,
   AcquiringStatementStatus,
+  acquiringSubmerchantListSchema,
   CashbackType,
   InvoicePaymentType,
   InvoiceStatus,
@@ -51,6 +54,10 @@ const acquiringStatementInput: GetAcquiringStatementsInput = {
 };
 const acquiringStatements: Promise<AcquiringStatement> =
   acquiringClient.statements.get(acquiringStatementInput);
+const acquiringSubmerchants: Promise<AcquiringSubmerchantList> =
+  acquiringClient.submerchants.list();
+const parsedSubmerchants: AcquiringSubmerchantList =
+  acquiringSubmerchantListSchema.parse({ list: [] });
 const webhookPublicKey: Promise<AcquiringWebhookPublicKey> =
   acquiringClient.webhooks.getPublicKey();
 const signatureInput: VerifyAcquiringWebhookSignatureInput = {
@@ -111,6 +118,7 @@ const cashbackTypesAreExact = {
   UAH: true,
 } satisfies Record<CashbackType, true>;
 declare const account: Account;
+declare const acquiringSubmerchant: AcquiringSubmerchant;
 declare const untrustedWebhookPayload: unknown;
 const webhookEvent: PersonalWebhookEvent = parsePersonalWebhookEvent(
   untrustedWebhookPayload,
@@ -122,6 +130,8 @@ void clientInfo;
 void rates;
 void merchantDetails;
 void acquiringStatements;
+void acquiringSubmerchants;
+void parsedSubmerchants;
 void webhookPublicKey;
 void signatureMatches;
 void newInvoice;
@@ -140,6 +150,7 @@ void accountTypesAreExact;
 void cashbackType;
 void cashbackTypesAreExact;
 void account;
+void acquiringSubmerchant;
 void webhookEvent;
 
 const removedPersonalPublicMethod: Exclude<
@@ -175,6 +186,10 @@ void client.statements.get({ account: "0", from: "2026-08-01" });
 
 // @ts-expect-error -- Acquiring statement start time must be a Date or Unix number.
 void acquiringClient.statements.get({ from: "2026-08-01" });
+
+// @ts-expect-error -- The validated submerchant list is not assignable to a mutable array.
+const mutableSubmerchantList: AcquiringSubmerchant[] = parsedSubmerchants.list;
+void mutableSubmerchantList;
 
 // @ts-expect-error -- Account types are limited to documented wire values.
 const invalidAccountType: AccountType = "gold";
