@@ -1,11 +1,16 @@
 # @liaugust/monobank-sdk
 
-Private, unofficial TypeScript SDK for the Monobank APIs. This package is not
-published to npm yet and is not endorsed by Monobank.
+Unofficial TypeScript SDK for the Monobank APIs. This package is not endorsed
+by Monobank.
 
 The SDK supports Node.js 20.19.5+ and modern browsers that provide the standard
-Fetch API. Until publication is approved, install it only from the private
-repository or workspace where it is developed.
+Fetch API.
+
+## Installation
+
+```sh
+pnpm add @liaugust/monobank-sdk
+```
 
 ## Personal Client
 

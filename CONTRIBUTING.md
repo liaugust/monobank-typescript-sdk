@@ -26,3 +26,16 @@ pnpm verify
 Commits follow the Lore protocol: start with an intent line that explains why
 the change exists, then add useful `Constraint:`, `Rejected:`, `Confidence:`,
 `Scope-risk:`, `Directive:`, `Tested:`, and `Not-tested:` trailers.
+
+## Releasing
+
+Create a GitHub Release from the default branch when you want to publish the
+package. The `release` workflow in `.github/workflows/release.yml` runs on
+`release: published`, verifies the repository, and publishes with npm trusted
+publishing through GitHub OIDC. No `NODE_AUTH_TOKEN` secret is required for
+that workflow.
+
+The package is configured for public scoped publication with
+`publishConfig.access = public`. Because this repository is private, npm
+provenance will not be generated until the repository itself is public; that
+is an npm platform constraint, not a workflow bug.
