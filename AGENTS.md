@@ -74,8 +74,9 @@ The root entry point exports:
 - `MonobankApiError`, `MonobankNetworkError`,
   `MonobankResponseValidationError`, and `MonobankValidationError`
 
-Read `src/index.ts` for the authoritative export list. Read the generated
-declarations or source JSDoc before generating calls; do not guess arguments.
+Read `docs/API.md` for the complete consumer reference and `src/index.ts` for
+the authoritative export list. Read the generated declarations or source JSDoc
+before generating calls; do not guess arguments.
 
 ## Repository Map
 
@@ -135,7 +136,7 @@ For every new or changed public export:
 - add declaration/type tests for TypeScript consumers
 - keep ESM, CommonJS, and browser-bundler compatibility
 - verify the packed tarball, not only the source tree
-- update `README.md` and `llms.txt`
+- update `README.md`, `docs/API.md`, and `llms.txt`
 
 ## Verification Standard
 
@@ -166,8 +167,8 @@ make verification pass.
 - State security boundaries next to sensitive examples.
 - Explain wire units and unusual upstream casing.
 - Avoid promises the SDK does not implement.
-- Keep `README.md` human-friendly, `llms.txt` compact and discoverable, and
-  this file operational.
+- Keep `README.md` human-friendly, `docs/API.md` complete, `llms.txt` compact
+  and discoverable, and this file operational.
 
 ## Commits and Releases
 

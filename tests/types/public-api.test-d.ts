@@ -1,5 +1,6 @@
 import type {
   Account,
+  BankSync,
   ClientInfo,
   CurrencyRate,
   GetStatementsInput,
@@ -9,13 +10,16 @@ import {
   AccountType,
   CashbackType,
   MonobankPersonalClient,
+  parsePersonalWebhookEvent,
 } from "@liaugust/monobank-sdk";
 
 const client = new MonobankPersonalClient({ token: "token" });
 const input: GetStatementsInput = { from: new Date(0) };
+const bankSync: Promise<BankSync> = client.getBankSync();
 const statements = client.getStatements(input);
 const clientInfo: Promise<ClientInfo> = client.getClientInfo();
 const rates: Promise<readonly CurrencyRate[]> = client.getCurrencyRates();
+const webhookUpdate: Promise<void> = client.setWebhook({ webHookUrl: "" });
 const accountType: AccountType = AccountType.Black;
 const cashbackType: CashbackType = CashbackType.UAH;
 const accountTypesAreExact = {
@@ -33,11 +37,16 @@ const cashbackTypesAreExact = {
   UAH: true,
 } satisfies Record<CashbackType, true>;
 declare const account: Account;
-declare const webhookEvent: PersonalWebhookEvent;
+declare const untrustedWebhookPayload: unknown;
+const webhookEvent: PersonalWebhookEvent = parsePersonalWebhookEvent(
+  untrustedWebhookPayload,
+);
 
+void bankSync;
 void statements;
 void clientInfo;
 void rates;
+void webhookUpdate;
 void accountType;
 void accountTypesAreExact;
 void cashbackType;

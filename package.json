@@ -37,6 +37,7 @@
     "AGENTS.md",
     "README.md",
     "SECURITY.md",
+    "docs/API.md",
     "llms.txt"
   ],
   "scripts": {

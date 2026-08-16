@@ -51,11 +51,11 @@ const extractedManifest = JSON.parse(
   readFileSync(join(extractedPackage, "package.json"), "utf8"),
 );
 
-for (const agentGuide of ["AGENTS.md", "llms.txt"]) {
+for (const packageGuide of ["AGENTS.md", "docs/API.md", "llms.txt"]) {
   assert.equal(
-    existsSync(join(extractedPackage, agentGuide)),
+    existsSync(join(extractedPackage, packageGuide)),
     true,
-    `${agentGuide} must be available to agents using the packed SDK`,
+    `${packageGuide} must be available in the packed SDK`,
   );
 }
 
