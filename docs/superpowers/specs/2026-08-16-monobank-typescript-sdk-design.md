@@ -264,6 +264,20 @@ Next.js, React, JSX accessibility, Lingui, localization, feature-folder, and the
 reference repository's custom shared-type-guard rules will not be copied.
 Formatting rules will not be duplicated in ESLint.
 
+Every exported class, constructor, public method, error class, configuration
+interface and property, schema, parser, and other consumer-facing declaration
+will have meaningful JSDoc. Documentation must explain behavior that TypeScript
+types alone cannot express: authentication, retry eligibility, rate limits,
+units, validation, cancellation, and the public SDK errors an operation may
+throw. Examples belong on client classes and non-obvious operations; trivial
+comments that merely restate a symbol name or type are not acceptable.
+
+JSDoc coverage and content will be enforced for production exports with
+`eslint-plugin-jsdoc`. Private and protected members, internal transport
+helpers, tests, and fixtures are outside the coverage requirement. The package
+verification suite will also inspect the generated declaration bundle to prove
+that consumer-facing class and method documentation survives the build.
+
 Prettier will use its pinned conventional defaults, with a narrow ignore file
 for generated output and package-manager artifacts. `format` will write the
 canonical form; `format:check` will verify it without mutation.
@@ -331,6 +345,7 @@ Behavioral coverage will include:
 - Date and statement-window boundaries.
 - Webhook raw-body verification success and failure cases in PR 2.
 - Public export and declaration usability.
+- Presence of public API JSDoc in the generated declaration bundle.
 - ESM and CommonJS package consumption.
 
 Representative official examples may be converted into redacted fixtures.

@@ -6,7 +6,7 @@
 
 **Architecture:** `MonobankPersonalClient` owns the Personal token and exposes Promise-based endpoint methods. Focused Zod Mini schemas validate every successful response, while a shared Fetch-based transport owns timeouts, cancellation, safe opt-in retries, error normalization, and credential redaction without leaking transport details through the public API.
 
-**Tech Stack:** Node.js 20+, TypeScript 6.0.3, pnpm 11.22.0, Zod 4.4.3 (`zod/mini`), tsup 8.5.1, Vitest 4.1.10 with V8 coverage, ESLint 9.39.5, typescript-eslint 8.67.0, Prettier 3.9.6, Knip 6.32.2, JSCPD 5.0.15, publint 0.3.23, Are The Types Wrong 0.18.5, and GitHub Actions.
+**Tech Stack:** Node.js 20+, TypeScript 6.0.3, pnpm 11.22.0, Zod 4.4.3 (`zod/mini`), tsup 8.5.1, Vitest 4.1.10 with V8 coverage, ESLint 9.39.5, typescript-eslint 8.67.0, eslint-plugin-jsdoc 62.9.0, Prettier 3.9.6, Knip 6.32.2, JSCPD 5.0.15, publint 0.3.23, Are The Types Wrong 0.18.5, and GitHub Actions.
 
 **Spec:** `docs/superpowers/specs/2026-08-16-monobank-typescript-sdk-design.md`
 
@@ -24,6 +24,8 @@
 - Statement windows may not exceed 2,682,000 seconds; requests are not silently split or delayed in PR 1.
 - Coverage must remain at 100% for statements, branches, functions, and lines across maintained production source.
 - ESLint runs type-aware strict and stylistic presets with zero warnings; suppressions must be narrow and described.
+- Every exported class, constructor, public method, error class, configuration interface/property, schema, parser, and other consumer-facing declaration has meaningful JSDoc enforced by ESLint; private/protected members, internal helpers, tests, and fixtures are excluded.
+- JSDoc explains non-type behavior such as authentication, retry eligibility, rate limits, units, cancellation, validation, and thrown public errors. It must not merely restate names or TypeScript types.
 - JSCPD uses `threshold: 0`, `minLines: 5`, and `minTokens: 75` across `src` and `tests`.
 - Every task uses test-first implementation for runtime behavior and ends with a Lore-protocol commit.
 
@@ -68,6 +70,7 @@
 │   ├── consumers/
 │   │   ├── browser.ts
 │   │   ├── commonjs.cjs
+│   │   ├── declarations.mjs
 │   │   └── esm.mjs
 │   ├── fixtures/
 │   │   └── personal-api.ts                # Redacted official-shaped payload fixtures
@@ -172,7 +175,7 @@ Create `package.json` with this initial contract:
     "check:dead-code": "knip",
     "check:duplication": "jscpd",
     "build": "tsup",
-    "check:package": "publint && attw --pack . && node tests/consumers/esm.mjs && node tests/consumers/commonjs.cjs && tsup tests/consumers/browser.ts --format esm --platform browser --out-dir .tmp/browser-smoke --clean",
+    "check:package": "publint && attw --pack . && node tests/consumers/esm.mjs && node tests/consumers/commonjs.cjs && node tests/consumers/declarations.mjs && tsup tests/consumers/browser.ts --format esm --platform browser --out-dir .tmp/browser-smoke --clean",
     "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm test:types && pnpm check:dead-code && pnpm check:duplication && pnpm build && pnpm check:package"
   }
 }
@@ -182,7 +185,7 @@ Run:
 
 ```bash
 pnpm add zod@4.4.3
-pnpm add -D @arethetypeswrong/cli@0.18.5 @types/node@20.19.43 @vitest/coverage-v8@4.1.10 eslint@9.39.5 eslint-plugin-import-x@4.17.1 eslint-plugin-simple-import-sort@14.0.0 husky@9.1.7 jscpd@5.0.15 knip@6.32.2 prettier@3.9.6 publint@0.3.23 tsup@8.5.1 typescript@6.0.3 typescript-eslint@8.67.0 vitest@4.1.10
+pnpm add -D @arethetypeswrong/cli@0.18.5 @types/node@20.19.43 @vitest/coverage-v8@4.1.10 eslint@9.39.5 eslint-plugin-import-x@4.17.1 eslint-plugin-jsdoc@62.9.0 eslint-plugin-simple-import-sort@14.0.0 husky@9.1.7 jscpd@5.0.15 knip@6.32.2 prettier@3.9.6 publint@0.3.23 tsup@8.5.1 typescript@6.0.3 typescript-eslint@8.67.0 vitest@4.1.10
 ```
 
 Expected: `pnpm-lock.yaml` is created, `zod` is the only entry under `dependencies`, and Effect is absent.
@@ -277,9 +280,16 @@ Build `eslint.config.mjs` from these exact layers:
 ```js
 import { defineConfig, globalIgnores } from "eslint/config";
 import importX from "eslint-plugin-import-x";
+import jsdoc from "eslint-plugin-jsdoc";
 import simpleImportSort from "eslint-plugin-simple-import-sort";
 import tseslint from "typescript-eslint";
 
+const publicApiFiles = [
+  "src/errors/*.ts",
+  "src/personal/*.ts",
+  "src/transport/fetch-like.ts",
+  "src/transport/retry-options.ts"
+];
 const sourceFiles = ["**/*.{js,mjs,cjs,ts,mts,cts}"];
 const typedFiles = ["**/*.{ts,mts,cts}"];
 const defaultExportFiles = [
@@ -354,6 +364,38 @@ export default defineConfig([
       "simple-import-sort/imports": "error"
     }
   },
+  {
+    files: publicApiFiles,
+    ignores: ["**/*.test.ts"],
+    plugins: { jsdoc },
+    rules: {
+      ...jsdoc.configs["flat/recommended-typescript-error"].rules,
+      "jsdoc/informative-docs": "error",
+      "jsdoc/require-description": "error",
+      "jsdoc/require-jsdoc": ["error", {
+        "contexts": [
+          "VariableDeclaration",
+          "TSInterfaceDeclaration",
+          "TSTypeAliasDeclaration",
+          "TSMethodSignature",
+          "TSPropertySignature",
+          "MethodDefinition:not([accessibility='private']):not([accessibility='protected'])",
+          "PropertyDefinition:not([accessibility='private']):not([accessibility='protected'])"
+        ],
+        "publicOnly": { "ancestorsOnly": true, "cjs": false, "esm": true, "window": false },
+        "require": {
+          "ArrowFunctionExpression": true,
+          "ClassDeclaration": true,
+          "ClassExpression": true,
+          "FunctionDeclaration": true,
+          "FunctionExpression": true,
+          "MethodDefinition": false
+        }
+      }],
+      "jsdoc/require-param-description": "error",
+      "jsdoc/require-returns-description": "error"
+    }
+  },
   { files: defaultExportFiles, rules: { "import-x/no-default-export": "off" } },
   globalIgnores([".husky/**", ".tmp/**", "coverage/**", "dist/**", "node_modules/**"])
 ]);
@@ -425,6 +467,7 @@ Create `AGENTS.md` with this repository-local contract (the global workspace ins
 - Parse every successful upstream payload through its Zod Mini schema.
 - Keep Zod as the only runtime dependency unless a design change is explicitly approved.
 - Maintain 100% statements, branches, functions, and lines coverage.
+- Document every consumer-facing export and public class member with meaningful JSDoc.
 - Keep one primary reusable runtime abstraction per source file.
 - Never use broad lint suppressions, coverage ignores, or untyped `any` escapes.
 
@@ -574,6 +617,8 @@ export interface ResponseSchema<T> {
 ```
 
 Each error class extends `Error`, assigns a stable `name`, uses `override readonly cause` only where a cause is safe, and never stores a token, Request object, full response body, or raw Zod error.
+
+Add public JSDoc to every error class, constructor, options interface, and exposed property. Describe when consumers receive each error and which fields are safe for diagnostics; do not repeat the TypeScript type as prose.
 
 Implement `parseRetryAfter` as:
 
@@ -1003,6 +1048,8 @@ export type CurrencyRate = z.infer<typeof currencyRateSchema>;
 
 `bankSyncSchema` is a loose object with required `serverKeyId: string`, `serverPubKey: string`, and integer `serverTimeMsec`.
 
+Document each exported schema and inferred type with its wire-level purpose and units. In particular, identify currency codes as ISO 4217 numeric values, currency dates as Unix seconds, and `serverTimeMsec` as Unix milliseconds.
+
 - [ ] **Step 4: Write failing public endpoint tests**
 
 Assert exact requests and results:
@@ -1048,6 +1095,8 @@ export class MonobankPersonalClient {
 ```
 
 Both methods use `auth: false`, `retryable: true`, and their endpoint-specific schemas.
+
+Document the client constructor and both methods before running lint. The class-level JSDoc includes an injected-Fetch `@example`; method JSDoc states that these calls are public, safe-retry eligible only when the caller configures retries, cancellable through `RequestOptions.signal`, and capable of throwing the four applicable public SDK errors.
 
 - [ ] **Step 6: Run focused tests, coverage, and commit**
 
@@ -1154,6 +1203,8 @@ Expected: FAIL because the nested schemas are missing.
 - [ ] **Step 3: Implement schema composition with inferred types**
 
 Use `z.looseObject` for every API object and `z.array` for collections. The required account fields are `id`, `sendId`, `balance`, `creditLimit`, `type`, `currencyCode`, `cashbackType`, `maskedPan`, and `iban`. The required client fields are `clientId`, `name`, `webHookUrl`, `permissions`, `accounts`, and `jars`; `managedClients` is optional because it is a newly documented capability that is not present for every Personal account. Infer each exported type from its schema; do not duplicate interfaces by hand.
+
+Add meaningful JSDoc for every exported schema/type and for `getClientInfo`. Document integer monetary values as minor currency units, permission characters as upstream capability flags, the authenticated 60-second rate limit, configured safe-retry behavior, cancellation, and applicable public SDK errors.
 
 Representative account definition:
 
@@ -1297,6 +1348,8 @@ export const statementItemsSchema = z.array(statementItemSchema);
 
 `parsePersonalWebhookEvent(input: unknown)` must use `safeParse` and throw `MonobankResponseValidationError` with endpoint context `"personal-webhook-event"`; it must not retain the raw webhook payload.
 
+Document all exported statement/webhook schemas and input types. `parsePersonalWebhookEvent` gets a focused `@example`, explicitly states that parsing does not authenticate the sender, and documents its validation error without implying webhook signature verification.
+
 - [ ] **Step 4: Write failing method-input and endpoint tests**
 
 Cover `Date | number` conversion and boundaries:
@@ -1352,6 +1405,8 @@ setWebhook(
 
 `getStatements` calls authenticated retryable GET. `setWebhook` calls authenticated non-retryable POST with `{ webHookUrl }` and accepts an empty successful body. Input failures throw `MonobankValidationError` before Fetch is called.
 
+Both methods require focused JSDoc `@example` blocks. `getStatements` documents Unix-second normalization, the 2,682,000-second maximum window, the 60-second endpoint rate limit, safe configured retries, cancellation, and applicable errors. `setWebhook` documents authentication, cancellation, validation, and its invariant that automatic retries never apply.
+
 - [ ] **Step 6: Run complete behavior verification and commit**
 
 Run:
@@ -1387,6 +1442,7 @@ Tested: Full 100% coverage suite, lint, typecheck, and zero-duplication check."
 - Create: `tests/types/tsconfig.json`
 - Create: `tests/consumers/esm.mjs`
 - Create: `tests/consumers/commonjs.cjs`
+- Create: `tests/consumers/declarations.mjs`
 - Create: `tests/consumers/browser.ts`
 - Create: `README.md`
 - Create: `SECURITY.md`
@@ -1396,7 +1452,7 @@ Tested: Full 100% coverage suite, lint, typecheck, and zero-duplication check."
 
 **Interfaces:**
 - Consumes: All PR 1 public clients, errors, schemas, types, and built artifacts.
-- Produces: The deliberate package API, compile-time usage contract, ESM/CommonJS/browser smoke coverage, and user documentation.
+- Produces: The deliberate package API, compile-time usage contract, retained declaration JSDoc, ESM/CommonJS/browser smoke coverage, and user documentation.
 
 - [ ] **Step 1: Write failing public export and type-contract tests**
 
@@ -1498,6 +1554,10 @@ Update `knip.json` now that all test and consumer entry points exist:
 
 `tests/consumers/esm.mjs` imports from `../../dist/index.js`; `commonjs.cjs` requires `../../dist/index.cjs`; both instantiate the client with an injected Fetch stub and assert exported constructors exist without calling Monobank. `browser.ts` imports the package self-reference and instantiates the client with browser Fetch types so tsup proves there is no Node-only runtime import.
 
+Create `tests/consumers/declarations.mjs` using `node:assert/strict`, `node:fs/promises`, and the existing `typescript` dev dependency. Parse `dist/index.d.ts` with `ts.createSourceFile`, locate `MonobankPersonalClient`, and assert that the class, constructor, `getBankSync`, `getCurrencyRates`, `getClientInfo`, `getStatements`, and `setWebhook` each retain at least one `JSDocComment` node. Also assert that all four exported error classes retain class-level JSDoc. Fail with the missing declaration name in the assertion message; do not use fragile whole-file snapshots.
+
+All public source JSDoc must use descriptions rather than duplicate TypeScript types. The client class has a runnable `@example`; each endpoint method documents authentication, retry eligibility, cancellation, relevant rate/window limits, and its possible public SDK errors with `@throws`. `getStatements`, `setWebhook`, and `parsePersonalWebhookEvent` include focused `@example` blocks because their boundary behavior is not obvious from their signatures.
+
 Run:
 
 ```bash
@@ -1505,7 +1565,7 @@ pnpm build
 pnpm check:package
 ```
 
-Expected: publint and Are The Types Wrong pass, Node ESM/CommonJS consumers exit zero, and the browser bundle builds successfully.
+Expected: publint and Are The Types Wrong pass, Node ESM/CommonJS consumers exit zero, declaration JSDoc is present in the built `.d.ts`, and the browser bundle builds successfully.
 
 - [ ] **Step 5: Write user and contributor documentation**
 
@@ -1519,8 +1579,9 @@ Expected: publint and Are The Types Wrong pass, Node ESM/CommonJS consumers exit
 6. Retry-disabled-by-default behavior and safe GET-only opt-in example.
 7. Error narrowing examples for all four error classes.
 8. Raw credential handling and no-live-token CI policy.
+9. A note that exported JSDoc is available through editor IntelliSense and the generated declarations.
 
-`SECURITY.md` must instruct private vulnerability reporting through GitHub Security Advisories and prohibit issues containing tokens or personal payloads. `CONTRIBUTING.md` must require Node 20+, pnpm 11.22.0, test-first changes, Lore commits, `pnpm verify`, and official Monobank documentation evidence for contract changes.
+`SECURITY.md` must instruct private vulnerability reporting through GitHub Security Advisories and prohibit issues containing tokens or personal payloads. `CONTRIBUTING.md` must require Node 20+, pnpm 11.22.0, test-first changes, public JSDoc for every consumer-facing API change, Lore commits, `pnpm verify`, and official Monobank documentation evidence for contract changes.
 
 - [ ] **Step 6: Run the authoritative verification and commit**
 
@@ -1531,7 +1592,7 @@ pnpm format
 pnpm verify
 ```
 
-Expected: every gate passes, including 100% coverage, type consumers, zero duplication, build, publint, Are The Types Wrong, and runtime/browser smoke checks.
+Expected: every gate passes, including 100% coverage, JSDoc lint/declaration checks, type consumers, zero duplication, build, publint, Are The Types Wrong, and runtime/browser smoke checks.
 
 ```bash
 git add src/index.ts src/index.test.ts tests README.md SECURITY.md CONTRIBUTING.md knip.json .prettierignore
@@ -1541,7 +1602,7 @@ Rejected: Wildcard exports | They make accidental internals part of the compatib
 Confidence: high
 Scope-risk: moderate
 Directive: Treat index exports and README examples as versioned public API.
-Tested: pnpm verify including 100% coverage, type tests, package analysis, and consumer smoke builds."
+Tested: pnpm verify including 100% coverage, JSDoc declaration checks, type tests, package analysis, and consumer smoke builds."
 ```
 
 ---
@@ -1699,6 +1760,7 @@ Before requesting PR review, record all of the following in the PR description:
 - JSCPD reports zero clones at the configured five-line/75-token boundary.
 - publint and Are The Types Wrong pass against the packed package.
 - Node ESM, Node CommonJS, and browser bundle smoke consumers pass.
+- ESLint reports complete meaningful JSDoc coverage for the public API, and the generated declaration consumer confirms class/method documentation is retained.
 - CI passes on Node 20, 22, and 24.
 - Public `/bank/currency` and `/bank/sync` requests omit `X-Token`.
 - Authenticated Personal requests include `X-Token` without exposing it in errors.
