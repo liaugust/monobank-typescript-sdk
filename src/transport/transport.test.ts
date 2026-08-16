@@ -58,7 +58,47 @@ function firstRequestUrl(fetch: ReturnType<typeof createFetchSequence>): URL {
 
 async function expectRejectsWithoutSecret(request: Promise<unknown>) {
   await expect(request).rejects.not.toSatisfy((error: unknown) =>
-    JSON.stringify(error).includes("secret-token"),
+    containsStringRecursively(error, "secret-token"),
+  );
+}
+
+async function captureRejection(request: Promise<unknown>): Promise<unknown> {
+  try {
+    await request;
+  } catch (error) {
+    return error;
+  }
+
+  throw new Error("Expected request to reject");
+}
+
+function containsStringRecursively(
+  value: unknown,
+  needle: string,
+  seen = new Set<object>(),
+): boolean {
+  if (typeof value === "string") {
+    return value.includes(needle);
+  }
+
+  if (value instanceof Error) {
+    return (
+      value.message.includes(needle) ||
+      containsStringRecursively(value.cause, needle, seen)
+    );
+  }
+
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  if (seen.has(value)) {
+    return false;
+  }
+  seen.add(value);
+
+  return Object.values(value).some((item) =>
+    containsStringRecursively(item, needle, seen),
   );
 }
 
@@ -206,8 +246,10 @@ describe("MonobankTransport", () => {
       }),
     ]);
     const transport = new MonobankTransport({ fetch, token: "secret-token" });
+    const error = await captureRejection(getBankSync(transport));
 
-    await expect(getBankSync(transport)).rejects.toMatchObject({
+    expect(error).toBeInstanceOf(MonobankResponseValidationError);
+    expect(error).toMatchObject({
       endpoint: "/bank/sync",
       issues: [
         {
@@ -221,12 +263,25 @@ describe("MonobankTransport", () => {
   });
 
   it("turns schema failures into safe response validation errors", async () => {
-    const fetch = createFetchSequence([jsonResponse({ ok: "yes" })]);
+    const fetch = createFetchSequence([
+      jsonResponse({ ok: "secret-token", rawAccountPayload: true }),
+    ]);
     const transport = new MonobankTransport({ fetch, token: "secret-token" });
+    const error = await captureRejection(getBankSync(transport));
 
-    await expect(getBankSync(transport)).rejects.toBeInstanceOf(
-      MonobankResponseValidationError,
-    );
+    expect(error).toBeInstanceOf(MonobankResponseValidationError);
+    expect(error).toMatchObject({
+      endpoint: "/bank/sync",
+      issues: [
+        {
+          code: "invalid_type",
+          path: ["ok"],
+        },
+      ],
+      name: "MonobankResponseValidationError",
+    });
+    expect(containsStringRecursively(error, "secret-token")).toBe(false);
+    expect(containsStringRecursively(error, "rawAccountPayload")).toBe(false);
   });
 
   it("uses errorDescription from JSON error responses", async () => {
@@ -318,6 +373,25 @@ describe("MonobankTransport", () => {
     const transport = new MonobankTransport({ fetch, token: "secret-token" });
 
     await expectRejectsWithoutSecret(getPersonalClientInfo(transport));
+  });
+
+  it.each([
+    ["absolute", "https://evil.test/personal/client-info"],
+    ["protocol-relative", "//evil.test/personal/client-info"],
+    ["relative", "personal/client-info"],
+    ["authenticated public", "/bank/sync"],
+  ])("rejects %s authenticated endpoint before Fetch", async (_, endpoint) => {
+    const fetch = createFetchSequence([jsonResponse({ ok: true })]);
+    const transport = new MonobankTransport({ fetch, token: "secret-token" });
+
+    await expect(
+      transport.getJson({
+        auth: true,
+        endpoint,
+        schema: passthroughSchema,
+      }),
+    ).rejects.toBeInstanceOf(MonobankValidationError);
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("wraps non-Error Fetch rejections as network failures without a cause", async () => {
