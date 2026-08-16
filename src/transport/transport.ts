@@ -71,33 +71,36 @@ export class MonobankTransport {
   }
 
   public async postEmpty(request: EmptyRequest): Promise<void> {
-    await this.execute("POST", request);
-    emptyResponseSchema.safeParse(undefined);
+    await this.execute("POST", request, () => {
+      emptyResponseSchema.safeParse(undefined);
+    });
   }
 
   private async executeJson<T>(
     method: "GET" | "POST",
     request: JsonRequest<T>,
   ): Promise<T> {
-    const response = await this.execute(method, request);
-    const payload = await parseSuccessJson(response, request.endpoint);
-    const parsed = request.schema.safeParse(payload);
+    return this.execute(method, request, async (response) => {
+      const payload = await parseSuccessJson(response, request.endpoint);
+      const parsed = request.schema.safeParse(payload);
 
-    if (!parsed.success) {
-      throw new MonobankResponseValidationError({
-        endpoint: request.endpoint,
-        issues: parsed.error.issues,
-        message: "Monobank response did not match the expected schema.",
-      });
-    }
+      if (!parsed.success) {
+        throw new MonobankResponseValidationError({
+          endpoint: request.endpoint,
+          issues: parsed.error.issues,
+          message: "Monobank response did not match the expected schema.",
+        });
+      }
 
-    return parsed.data;
+      return parsed.data;
+    });
   }
 
-  private async execute(
+  private async execute<T>(
     method: "GET" | "POST",
     request: EmptyRequest,
-  ): Promise<Response> {
+    consumeResponse: (response: Response) => Promise<T> | T,
+  ): Promise<T> {
     const endpointUrl = validateEndpointUrl(
       request.endpoint,
       this.options.baseUrl,
@@ -125,11 +128,56 @@ export class MonobankTransport {
 
     let attempt = 1;
     for (;;) {
-      let response: Response;
+      if (request.signal?.aborted) {
+        throw createAbortedError(request.endpoint);
+      }
+
+      const attemptSignal = createAttemptSignal(
+        this.options.timeoutMs,
+        request.signal,
+      );
       try {
-        response = await this.fetchAttempt(endpointUrl, init, request);
+        const response = await this.options.fetch(endpointUrl, {
+          ...init,
+          signal: attemptSignal.signal,
+        });
+
+        if (response.ok) {
+          return await consumeResponse(response);
+        }
+
+        const error = await createApiError(
+          response,
+          request.endpoint,
+          this.options.token,
+        );
+        const delayMs = retryDelayForApiError(
+          error,
+          method,
+          request,
+          this.options.retry,
+          attempt,
+        );
+        if (delayMs === undefined) {
+          throw error;
+        }
+
+        attemptSignal.cleanup();
+        await delayBeforeRetry(delayMs, request.endpoint, request.signal);
+        attempt += 1;
       } catch (error) {
-        const networkError = error as MonobankNetworkError;
+        if (isNonNetworkTransportError(error)) {
+          throw error;
+        }
+
+        const networkError =
+          error instanceof MonobankNetworkError
+            ? error
+            : createNetworkErrorFromUnknown(
+                error,
+                request.endpoint,
+                attemptSignal.reason(),
+              );
         const delayMs = retryDelayForNetworkError(
           networkError,
           method,
@@ -144,60 +192,9 @@ export class MonobankTransport {
         await delayBeforeRetry(delayMs, request.endpoint, request.signal);
         attempt += 1;
         continue;
+      } finally {
+        attemptSignal.cleanup();
       }
-
-      if (response.ok) {
-        return response;
-      }
-
-      const error = await createApiError(
-        response,
-        request.endpoint,
-        this.options.token,
-      );
-      const delayMs = retryDelayForApiError(
-        error,
-        method,
-        request,
-        this.options.retry,
-        attempt,
-      );
-      if (delayMs === undefined) {
-        throw error;
-      }
-
-      await delayBeforeRetry(delayMs, request.endpoint, request.signal);
-      attempt += 1;
-    }
-  }
-
-  private async fetchAttempt(
-    endpointUrl: URL,
-    init: RequestInit,
-    request: EmptyRequest,
-  ): Promise<Response> {
-    if (request.signal?.aborted) {
-      throw createAbortedError(request.endpoint);
-    }
-
-    const attemptSignal = createAttemptSignal(
-      this.options.timeoutMs,
-      request.signal,
-    );
-
-    try {
-      return await this.options.fetch(endpointUrl, {
-        ...init,
-        signal: attemptSignal.signal,
-      });
-    } catch {
-      throw new MonobankNetworkError({
-        endpoint: request.endpoint,
-        message: "Monobank request failed before receiving a response.",
-        reason: attemptSignal.reason(),
-      });
-    } finally {
-      attemptSignal.cleanup();
     }
   }
 }
@@ -235,6 +232,29 @@ function createAttemptSignal(
     },
     signal: controller.signal,
   };
+}
+
+function isNonNetworkTransportError(
+  error: unknown,
+): error is
+  MonobankApiError | MonobankResponseValidationError | MonobankValidationError {
+  return (
+    error instanceof MonobankApiError ||
+    error instanceof MonobankResponseValidationError ||
+    error instanceof MonobankValidationError
+  );
+}
+
+function createNetworkErrorFromUnknown(
+  _error: unknown,
+  endpoint: string,
+  reason: "aborted" | "network" | "timeout",
+): MonobankNetworkError {
+  return new MonobankNetworkError({
+    endpoint,
+    message: "Monobank request failed before receiving a response.",
+    reason,
+  });
 }
 
 function retryDelayForApiError(
@@ -502,9 +522,17 @@ async function createApiError(
 async function readResponseText(response: Response): Promise<string> {
   try {
     return await response.text();
-  } catch {
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw error;
+    }
+
     return "";
   }
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "AbortError";
 }
 
 function sanitizeUpstreamMessage(
