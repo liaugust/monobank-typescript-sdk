@@ -60,3 +60,32 @@ export const clientInfoFixture = {
   permissions: "psfj",
   webHookUrl: "https://example.test/mono-hook",
 } as const;
+
+export const statementItemFixture = {
+  amount: -12_345,
+  balance: 9_987_655,
+  cashbackAmount: 123,
+  comment: "Redacted lunch",
+  commissionRate: 0,
+  counterEdrpou: "12345678",
+  counterIban: "UA213220010000026007233566001",
+  counterName: "Redacted Merchant",
+  currencyCode: 980,
+  description: "Redacted card payment",
+  hold: false,
+  id: "statement-item-id",
+  invoiceId: "invoice-id",
+  mcc: 5812,
+  operationAmount: -12_345,
+  originalMcc: 5812,
+  receiptId: "receipt-id",
+  time: 1_785_542_400,
+} as const;
+
+export const personalWebhookEventFixture = {
+  data: {
+    account: "account-id",
+    statementItem: statementItemFixture,
+  },
+  type: "StatementItem",
+} as const;
