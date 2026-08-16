@@ -210,27 +210,76 @@ The package manager will be pnpm. The project will use:
 - JSCPD for duplication detection.
 - tsup for ESM, CommonJS, and declaration builds.
 
-The TypeScript configuration will enable, at minimum:
+The TypeScript configuration will adapt the strict baseline from the private
+`liaugust/launch-with-vibe` repository. It will enable, at minimum:
 
 - `strict`
 - `noUncheckedIndexedAccess`
 - `exactOptionalPropertyTypes`
+- `erasableSyntaxOnly`
+- `moduleDetection: "force"`
+- `noImplicitReturns`
+- `noFallthroughCasesInSwitch`
 - `noImplicitOverride`
 - `noPropertyAccessFromIndexSignature`
-- safe modern module-resolution and declaration settings
+- `noUncheckedSideEffectImports`
+- `noUnusedLocals`
+- `noUnusedParameters`
+- `useUnknownInCatchVariables`
+- `forceConsistentCasingInFileNames`
+- `allowUnreachableCode: false`
+- `allowUnusedLabels: false`
+- `isolatedModules`
+- `verbatimModuleSyntax`
 
-ESLint will enforce type-aware correctness, promise safety, and import hygiene.
-Formatting rules will not be duplicated in ESLint. Prettier will be checked in
-CI rather than run as an implicit mutating lint step.
+The library-specific module baseline will use `target: "ES2022"`, the `ES2022`,
+`DOM`, and `DOM.Iterable` libraries, `module: "ESNext"`, and
+`moduleResolution: "Bundler"`. Application type checking will use `noEmit`;
+tsup will own ESM, CommonJS, source-map, and declaration output. `skipLibCheck`
+will remain enabled only for dependency declaration internals and must not
+conceal errors in repository-owned declarations.
+
+Next.js plugins, JSX settings, application path aliases, and framework-generated
+include paths from the reference repository will not be copied.
+
+ESLint will use flat configuration, the TypeScript project service,
+`strictTypeChecked`, and `stylisticTypeChecked`. It will report unused disable
+directives and unused inline configuration as errors and run with
+`--max-warnings 0`. The baseline will additionally enforce:
+
+- Described `@ts-expect-error` directives and rejection of `@ts-ignore` and
+  `@ts-nocheck`.
+- No explicit `any`, deprecated APIs, or import-type side effects.
+- Consistent type imports and exports.
+- Exhaustive union switches without redundant default cases.
+- Curly braces, strict equality, and rejection of eval-like execution, script
+  URLs, nested ternaries, and production `console` calls.
+- Named exports by default, with narrow tool-entry exceptions.
+- Deterministic import and export ordering.
+- No direct `process.env` access in SDK source; credentials and runtime options
+  must enter through validated client configuration.
+
+Next.js, React, JSX accessibility, Lingui, localization, feature-folder, and the
+reference repository's custom shared-type-guard rules will not be copied.
+Formatting rules will not be duplicated in ESLint.
+
+Prettier will use its pinned conventional defaults, with a narrow ignore file
+for generated output and package-manager artifacts. `format` will write the
+canonical form; `format:check` will verify it without mutation.
 
 Knip must fail CI for unintended unused production surface. Intentional public
 exports and tool entry points will be configured explicitly rather than ignored
 globally.
 
-JSCPD will exclude dependencies, build output, generated artifacts, and test
-fixtures. Its threshold will be strict enough to catch copied implementation
-logic without punishing unavoidable repetition in declarative schemas. Any
-schema-specific exclusions must be narrow and documented.
+JSCPD will scan production source and tests with a zero-duplication threshold,
+`minLines: 5`, and `minTokens: 75`. It will exclude only dependencies, build
+output, and generated artifacts. Test fixtures are not excluded wholesale.
+Any unavoidable declarative-schema exclusion must be narrow, documented, and
+approved in review.
+
+One authoritative `pnpm verify` script will compose every non-mutating quality
+gate. Local completion checks, the pre-push hook, and GitHub Actions will invoke
+that same script so the enforced contract cannot drift across environments.
 
 ## 11. Build and Package Contract
 
