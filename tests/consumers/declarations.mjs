@@ -105,7 +105,13 @@ assert.ok(
   "MonobankAcquiringClient JSDoc is missing",
 );
 
-for (const memberName of ["constructor", "invoices", "merchant", "webhooks"]) {
+for (const memberName of [
+  "constructor",
+  "invoices",
+  "merchant",
+  "statements",
+  "webhooks",
+]) {
   assert.ok(
     hasJSDoc(findClassMember(acquiringClientClass, memberName)),
     `MonobankAcquiringClient.${memberName} JSDoc is missing`,
@@ -118,6 +124,7 @@ const resourceContracts = [
   ["MonobankPersonalClientInfo", ["constructor", "getInfo"]],
   ["MonobankPersonalStatements", ["constructor", "get"]],
   ["MonobankPersonalWebhooks", ["constructor", "set"]],
+  ["MonobankAcquiringStatements", ["constructor", "get"]],
   ["MonobankAcquiringWebhooks", ["constructor", "getPublicKey"]],
 ];
 

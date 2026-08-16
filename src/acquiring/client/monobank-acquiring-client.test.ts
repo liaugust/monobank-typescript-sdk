@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { merchantDetailsFixture } from "../../../tests/fixtures/acquiring/merchant.js";
+import { acquiringStatementFixture } from "../../../tests/fixtures/acquiring/statements.js";
 import { acquiringWebhookPublicKeyFixture } from "../../../tests/fixtures/acquiring/webhooks.js";
+import { createAbortableFetch } from "../../../tests/support/create-abortable-fetch.js";
 import {
   createFetchSequence,
   jsonResponse,
@@ -134,6 +136,29 @@ describe("MonobankAcquiringClient resources", () => {
     expect(typeof client.webhooks.getPublicKey).toBe("function");
   });
 
+  it("loads Acquiring statements through a dedicated authenticated resource", async () => {
+    const fetch = createFetchSequence([
+      jsonResponse(acquiringStatementFixture),
+    ]);
+    const client = new MonobankAcquiringClient({
+      fetch,
+      token: "acquiring-token",
+    });
+
+    await expect(
+      client.statements.get({
+        code: "terminal / 42",
+        from: new Date("2026-08-16T00:00:00Z"),
+        to: 1_786_924_800,
+      }),
+    ).resolves.toEqual(acquiringStatementFixture);
+    expect(firstRequestUrl(fetch).href).toBe(
+      "https://api.monobank.ua/api/merchant/statement?from=1786838400&to=1786924800&code=terminal+%2F+42",
+    );
+    expect(fetch.mock.calls[0]?.[1]?.method).toBe("GET");
+    expect(firstRequestHeaders(fetch).get("X-Token")).toBe("acquiring-token");
+  });
+
   it("loads the webhook public key through the authenticated resource", async () => {
     const fetch = createFetchSequence([
       jsonResponse(acquiringWebhookPublicKeyFixture),
@@ -166,16 +191,7 @@ describe("MonobankAcquiringClient resources", () => {
   });
 
   it("passes caller cancellation to webhook public-key requests", async () => {
-    let requestSignal: AbortSignal | undefined;
-    const fetch = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
-      requestSignal = init?.signal ?? undefined;
-
-      return new Promise<Response>((_resolve, reject) => {
-        init?.signal?.addEventListener("abort", () => {
-          reject(new DOMException("Request aborted", "AbortError"));
-        });
-      });
-    });
+    const { fetch, requestSignal } = createAbortableFetch();
     const client = new MonobankAcquiringClient({
       fetch,
       token: "acquiring-token",
@@ -187,7 +203,7 @@ describe("MonobankAcquiringClient resources", () => {
     await Promise.resolve();
     controller.abort();
 
-    expect(requestSignal?.aborted).toBe(true);
+    expect(requestSignal()?.aborted).toBe(true);
     await expect(request).rejects.toMatchObject({ reason: "aborted" });
   });
 

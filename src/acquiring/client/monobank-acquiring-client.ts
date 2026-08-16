@@ -1,6 +1,7 @@
 import { MonobankTransport } from "../../transport/transport.js";
 import { MonobankAcquiringInvoices } from "../invoices/monobank-acquiring-invoices.js";
 import { MonobankAcquiringMerchant } from "../merchant/monobank-acquiring-merchant.js";
+import { MonobankAcquiringStatements } from "../statements/monobank-acquiring-statements.js";
 import { MonobankAcquiringWebhooks } from "../webhooks/monobank-acquiring-webhooks.js";
 import type { MonobankAcquiringClientOptions } from "./monobank-acquiring-client-options.js";
 
@@ -11,6 +12,7 @@ import type { MonobankAcquiringClientOptions } from "./monobank-acquiring-client
  * const client = new MonobankAcquiringClient({ token: "acquiring-token" });
  * const merchant = await client.merchant.getDetails();
  * const invoice = await client.invoices.create({ amount: 4_200 });
+ * const statement = await client.statements.get({ from: new Date(0) });
  * ```
  */
 export class MonobankAcquiringClient {
@@ -19,6 +21,9 @@ export class MonobankAcquiringClient {
 
   /** Merchant operations sharing this client's credentials and transport settings. */
   public readonly merchant: MonobankAcquiringMerchant;
+
+  /** Transaction statement operations sharing this client's credentials and transport settings. */
+  public readonly statements: MonobankAcquiringStatements;
 
   /** Webhook authentication operations sharing this client's credentials and transport settings. */
   public readonly webhooks: MonobankAcquiringWebhooks;
@@ -36,6 +41,7 @@ export class MonobankAcquiringClient {
 
     this.invoices = new MonobankAcquiringInvoices(transport);
     this.merchant = new MonobankAcquiringMerchant(transport);
+    this.statements = new MonobankAcquiringStatements(transport);
     this.webhooks = new MonobankAcquiringWebhooks(transport);
   }
 }

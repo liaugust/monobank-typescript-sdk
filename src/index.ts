@@ -59,6 +59,22 @@ export type {
 export type { RemoveInvoiceInput } from "./acquiring/invoices/remove-invoice/remove-invoice.js";
 export type { MerchantDetails } from "./acquiring/merchant/get-merchant-details/get-merchant-details.js";
 export { merchantDetailsSchema } from "./acquiring/merchant/get-merchant-details/get-merchant-details.js";
+export type {
+  AcquiringStatementUnixTimeInput,
+  GetAcquiringStatementsInput,
+} from "./acquiring/statements/get-statements/get-acquiring-statements.js";
+export type {
+  AcquiringStatement,
+  AcquiringStatementCancellation,
+  AcquiringStatementItem,
+} from "./acquiring/statements/models/acquiring-statement.js";
+export {
+  AcquiringPaymentScheme,
+  acquiringStatementCancellationSchema,
+  acquiringStatementItemSchema,
+  acquiringStatementSchema,
+  AcquiringStatementStatus,
+} from "./acquiring/statements/models/acquiring-statement.js";
 export type { AcquiringWebhookPublicKey } from "./acquiring/webhooks/get-public-key/get-public-key.js";
 export { acquiringWebhookPublicKeySchema } from "./acquiring/webhooks/get-public-key/get-public-key.js";
 export type { VerifyAcquiringWebhookSignatureInput } from "./acquiring/webhooks/verify-signature/verify-acquiring-webhook-signature.js";

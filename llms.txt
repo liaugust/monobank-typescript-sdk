@@ -50,6 +50,10 @@ Use `MonobankAcquiringClient` with a separate Acquiring token.
   authenticate the sender.
 - `acquiring.merchant.getDetails(options?)`: authenticated
   `/api/merchant/details`; returns `Promise<MerchantDetails>`.
+- `acquiring.statements.get(input, options?)`: authenticated
+  `/api/merchant/statement`; accepts required `from`, optional `to`, and
+  optional submerchant terminal `code`; returns `Promise<AcquiringStatement>`
+  whose readonly `list` is ordered newest first.
 - `acquiring.webhooks.getPublicKey(options?)`: authenticated
   `/api/merchant/pubkey`; returns `Promise<AcquiringWebhookPublicKey>`; caller
   owns caching and refresh after signature verification fails.
@@ -101,7 +105,8 @@ objects, or raw API payloads.
 
 ## Exported runtime values
 
-- Enum-like const objects: `AccountType`, `CashbackType`, `InvoicePaymentType`,
+- Enum-like const objects: `AccountType`, `CashbackType`,
+  `AcquiringPaymentScheme`, `AcquiringStatementStatus`, `InvoicePaymentType`,
   `InvoiceStatus`, `InvoiceCancellationStatus`, `InvoicePaymentSystem`,
   `InvoicePaymentMethod`, `InvoiceWalletStatus`, `DiscountType`, `DiscountMode`,
   `FiscalCheckType`, `FiscalCheckStatus`, `FiscalizationSource`.
@@ -109,7 +114,9 @@ objects, or raw API payloads.
   `currencyRateSchema`, `currencyRatesSchema`, `jarSchema`,
   `managedAccountSchema`, `managedClientSchema`, `statementItemSchema`,
   `statementItemsSchema`, `personalWebhookEventSchema`,
-  `merchantDetailsSchema`, `acquiringWebhookPublicKeySchema`,
+  `merchantDetailsSchema`, `acquiringStatementSchema`,
+  `acquiringStatementItemSchema`, `acquiringStatementCancellationSchema`,
+  `acquiringWebhookPublicKeySchema`,
   `newInvoiceSchema`, `invoiceStatusSchema`,
   `cancelInvoiceResponseSchema`, `finalizeInvoiceResponseSchema`,
   `receiptSchema`, `invoiceFiscalChecksSchema`.
@@ -126,7 +133,8 @@ See `src/index.ts` for the complete authoritative export list, including types.
 
 - Monetary integers use the currency's minor units.
 - Currency codes are numeric ISO 4217 codes.
-- Rate and statement timestamps are Unix seconds.
+- Rate and Personal statement timestamps are Unix seconds; Acquiring statement
+  request inputs use Unix seconds while response `date` fields use RFC-3339.
 - `BankSync.serverTimeMsec` is Unix milliseconds.
 - Response schemas preserve unknown additive fields.
 - Upstream field spelling is preserved, including `webHookUrl`.
@@ -143,8 +151,8 @@ See `src/index.ts` for the complete authoritative export list, including types.
 - Never retry `personal.webhooks.set()`, `acquiring.invoices.create()`,
   `acquiring.invoices.cancel()`, `acquiring.invoices.remove()`, or
   `acquiring.invoices.finalize()` automatically.
-- Do not invent Acquiring APIs beyond the implemented merchant-details and
-  invoice-lifecycle methods.
+- Do not invent Acquiring APIs beyond the implemented merchant-details,
+  statement, webhook-trust, and invoice-lifecycle methods.
 - Prefer exported SDK types, schemas, value objects, and error classes over
   duplicate local definitions.
 - Validate environment configuration before constructing the client.

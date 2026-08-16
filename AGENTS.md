@@ -18,11 +18,12 @@ claim endorsement by Monobank.
 - Construct `MonobankAcquiringClient` with a separate validated Acquiring token.
 - Never hardcode, log, serialize, or commit real tokens or API payloads.
 - Treat all monetary integers as minor currency units.
-- Treat statement and rate timestamps as Unix seconds; `serverTimeMsec` is Unix
-  milliseconds.
+- Treat rate and Personal statement timestamps as Unix seconds. Acquiring
+  statement request inputs use Unix seconds and response dates use RFC-3339;
+  `serverTimeMsec` is Unix milliseconds.
 - Use `AccountType` and `CashbackType` instead of repeating their wire strings.
-- Use the exported invoice, payment, cancellation, discount, wallet, and fiscal
-  enum-like values instead of repeating their wire strings.
+- Use the exported statement, invoice, payment, cancellation, discount, wallet,
+  and fiscal enum-like values instead of repeating their wire strings.
 - Pass an `AbortSignal` when a caller needs cancellation.
 - Configure retries only when the application accepts repeated safe GET calls.
   Mutating Personal and Acquiring methods are never retried by the SDK.
@@ -36,9 +37,9 @@ claim endorsement by Monobank.
   infrastructure and refresh it only after verification with the cached key
   fails; the SDK intentionally does not own cache policy.
 - Use only documented Acquiring methods. The current surface contains merchant
-  details plus invoice creation, status, cancellation, removal, finalization,
-  receipt, and fiscal-check operations. Do not invent unimplemented payment
-  calls.
+  details and statements plus invoice creation, status, cancellation, removal,
+  finalization, receipt, and fiscal-check operations. Do not invent
+  unimplemented payment calls.
 
 ## Minimal Correct Usage
 
@@ -79,11 +80,12 @@ The root entry point exports:
 - `MonobankPersonalClient`
 - `MonobankPublicClient`
 - `MonobankAcquiringClient`
-- eight resource properties exposed through the three parent clients: `bank`,
-  `currency`, `client`, `statements`, Personal `webhooks`, `merchant`,
-  `invoices`, and Acquiring `webhooks`
+- nine resource properties exposed through the three parent clients: `bank`,
+  `currency`, `client`, Personal `statements`, Personal `webhooks`, `merchant`,
+  `invoices`, Acquiring `statements`, and Acquiring `webhooks`
 - Personal and Acquiring enum-like const values, including `AccountType`,
-  `CashbackType`, `InvoicePaymentType`, and `InvoiceStatus`
+  `CashbackType`, `AcquiringPaymentScheme`, `AcquiringStatementStatus`,
+  `InvoicePaymentType`, and `InvoiceStatus`
 - response schemas for accounts, bank sync, client info, currency rates, jars,
   managed clients, merchant details, invoices, receipts, fiscal checks,
   statements, and Personal webhook events
@@ -104,6 +106,7 @@ src/index.ts                    public package boundary
 src/acquiring/client/           Acquiring parent client and options
 src/acquiring/merchant/         merchant resource and endpoint slice
 src/acquiring/invoices/         invoice endpoints, models, and request helpers
+src/acquiring/statements/       statement resource, endpoint, and models
 src/acquiring/webhooks/         trust-key endpoint and signature verification
 src/public/client/              token-free Public parent client and options
 src/public/bank/                bank resource and sync endpoint
