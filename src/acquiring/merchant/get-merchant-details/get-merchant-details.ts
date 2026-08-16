@@ -12,5 +12,5 @@ export const merchantDetailsSchema = z.looseObject({
   merchantName: z.string(),
 });
 
-/** Monobank Acquiring merchant identity associated with the supplied token. */
+/** Monobank Acquiring merchant identity associated with the configured token. */
 export type MerchantDetails = z.infer<typeof merchantDetailsSchema>;

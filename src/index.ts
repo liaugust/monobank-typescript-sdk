@@ -1,3 +1,5 @@
+export { MonobankAcquiringClient } from "./acquiring/client/monobank-acquiring-client.js";
+export type { MonobankAcquiringClientOptions } from "./acquiring/client/monobank-acquiring-client-options.js";
 export type {
   Invoice,
   InvoiceCancellation,
@@ -39,10 +41,9 @@ export type {
   MerchantPaymentInfo,
   RemoveInvoiceInput,
 } from "./acquiring/invoice-input.js";
-export type { MerchantDetails } from "./acquiring/merchant-details.js";
-export { merchantDetailsSchema } from "./acquiring/merchant-details.js";
-export { MonobankAcquiringClient } from "./acquiring/monobank-acquiring-client.js";
-export type { MonobankAcquiringClientOptions } from "./acquiring/monobank-acquiring-client-options.js";
+export type { MerchantDetails } from "./acquiring/merchant/get-merchant-details/get-merchant-details.js";
+export { merchantDetailsSchema } from "./acquiring/merchant/get-merchant-details/get-merchant-details.js";
+export { MonobankAcquiringMerchant } from "./acquiring/merchant/monobank-acquiring-merchant.js";
 export type { MonobankApiErrorOptions } from "./errors/monobank-api-error.js";
 export { MonobankApiError } from "./errors/monobank-api-error.js";
 export type {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { merchantDetailsFixture } from "../../tests/fixtures/acquiring-api.js";
-import { merchantDetailsSchema } from "./merchant-details.js";
+import { merchantDetailsFixture } from "../../../../tests/fixtures/acquiring-api.js";
+import { merchantDetailsSchema } from "./get-merchant-details.js";
 
 describe("merchant details schema", () => {
   it("accepts complete merchant identity data", () => {

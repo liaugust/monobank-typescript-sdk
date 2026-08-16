@@ -1,16 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { merchantDetailsFixture } from "../../tests/fixtures/acquiring-api.js";
+import { merchantDetailsFixture } from "../../../tests/fixtures/acquiring-api.js";
 import {
   createFetchSequence,
   jsonResponse,
-} from "../../tests/support/create-fetch-sequence.js";
+} from "../../../tests/support/create-fetch-sequence.js";
 import {
   firstRequestHeaders,
   firstRequestUrl,
-} from "../../tests/support/fetch-request-inspection.js";
-import { MonobankResponseValidationError } from "../errors/monobank-response-validation-error.js";
-import { MonobankValidationError } from "../errors/monobank-validation-error.js";
+} from "../../../tests/support/fetch-request-inspection.js";
+import { MonobankResponseValidationError } from "../../errors/monobank-response-validation-error.js";
+import { MonobankValidationError } from "../../errors/monobank-validation-error.js";
 import { MonobankAcquiringClient } from "./monobank-acquiring-client.js";
 
 describe("MonobankAcquiringClient merchant details", () => {
@@ -25,7 +25,7 @@ describe("MonobankAcquiringClient merchant details", () => {
       token: "acquiring-token",
     });
 
-    await expect(client.getMerchantDetails()).resolves.toEqual(
+    await expect(client.merchant.getDetails()).resolves.toEqual(
       merchantDetailsFixture,
     );
     expect(firstRequestUrl(fetch).href).toBe(
@@ -44,7 +44,7 @@ describe("MonobankAcquiringClient merchant details", () => {
     });
     const controller = new AbortController();
 
-    await client.getMerchantDetails({ signal: controller.signal });
+    await client.merchant.getDetails({ signal: controller.signal });
 
     expect(firstRequestUrl(fetch).href).toBe(
       "https://gateway.example.test/api/merchant/details",
@@ -61,7 +61,7 @@ describe("MonobankAcquiringClient merchant details", () => {
       token: "acquiring-token",
     });
 
-    await expect(client.getMerchantDetails()).rejects.toBeInstanceOf(
+    await expect(client.merchant.getDetails()).rejects.toBeInstanceOf(
       MonobankResponseValidationError,
     );
   });
@@ -75,7 +75,7 @@ describe("MonobankAcquiringClient merchant details", () => {
       token: "acquiring-token",
     });
 
-    await expect(client.getMerchantDetails()).rejects.toMatchObject({
+    await expect(client.merchant.getDetails()).rejects.toMatchObject({
       endpoint: "/api/merchant/details",
       status: 403,
       upstreamMessage: "[redacted] denied",
@@ -94,7 +94,7 @@ describe("MonobankAcquiringClient merchant details", () => {
       token: "acquiring-token",
     });
 
-    const result = client.getMerchantDetails();
+    const result = client.merchant.getDetails();
     result.catch(() => undefined);
     await vi.advanceTimersByTimeAsync(99);
     expect(fetch).toHaveBeenCalledTimes(1);

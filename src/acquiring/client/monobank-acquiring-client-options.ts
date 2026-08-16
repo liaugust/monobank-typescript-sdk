@@ -1,5 +1,5 @@
-import type { FetchLike } from "../transport/fetch-like.js";
-import type { RetryOptions } from "../transport/retry-options.js";
+import type { FetchLike } from "../../transport/fetch-like.js";
+import type { RetryOptions } from "../../transport/retry-options.js";
 
 /** Configuration for the Acquiring client and its shared Fetch transport. */
 export interface MonobankAcquiringClientOptions {

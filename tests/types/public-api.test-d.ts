@@ -36,7 +36,7 @@ const statements = client.getStatements(input);
 const clientInfo: Promise<ClientInfo> = client.getClientInfo();
 const rates: Promise<readonly CurrencyRate[]> = publicClient.getCurrencyRates();
 const merchantDetails: Promise<MerchantDetails> =
-  acquiringClient.getMerchantDetails();
+  acquiringClient.merchant.getDetails();
 const createInvoiceInput: CreateInvoiceInput = {
   amount: 4_200,
   paymentType: InvoicePaymentType.Hold,
@@ -115,6 +115,11 @@ const removedPersonalPublicMethod: Exclude<
   keyof MonobankPersonalClient
 > = "getCurrencyRates";
 void removedPersonalPublicMethod;
+const removedFlatMerchantMethod: Exclude<
+  "getMerchantDetails",
+  keyof MonobankAcquiringClient
+> = "getMerchantDetails";
+void removedFlatMerchantMethod;
 
 // @ts-expect-error -- Personal token is required by the public constructor.
 new MonobankPersonalClient({});

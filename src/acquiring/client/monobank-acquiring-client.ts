@@ -1,5 +1,5 @@
-import type { RequestOptions } from "../shared/request-options.js";
-import { MonobankTransport } from "../transport/transport.js";
+import type { RequestOptions } from "../../shared/request-options.js";
+import { MonobankTransport } from "../../transport/transport.js";
 import type {
   Invoice,
   InvoiceCancellation,
@@ -7,7 +7,7 @@ import type {
   InvoiceFiscalChecks,
   InvoiceReceipt,
   NewInvoice,
-} from "./invoice.js";
+} from "../invoice.js";
 import {
   cancelInvoiceResponseSchema,
   finalizeInvoiceResponseSchema,
@@ -15,7 +15,7 @@ import {
   invoiceStatusSchema,
   newInvoiceSchema,
   receiptSchema,
-} from "./invoice.js";
+} from "../invoice.js";
 import type {
   CancelInvoiceInput,
   CreateInvoiceInput,
@@ -25,7 +25,7 @@ import type {
   GetInvoiceReceiptInput,
   GetInvoiceStatusInput,
   RemoveInvoiceInput,
-} from "./invoice-input.js";
+} from "../invoice-input.js";
 import {
   createCancelInvoiceBody,
   createFinalizeInvoiceBody,
@@ -35,9 +35,8 @@ import {
   createInvoiceReceiptEndpoint,
   createInvoiceStatusEndpoint,
   createRemoveInvoiceBody,
-} from "./invoice-input.js";
-import type { MerchantDetails } from "./merchant-details.js";
-import { merchantDetailsSchema } from "./merchant-details.js";
+} from "../invoice-input.js";
+import { MonobankAcquiringMerchant } from "../merchant/monobank-acquiring-merchant.js";
 import type { MonobankAcquiringClientOptions } from "./monobank-acquiring-client-options.js";
 
 /**
@@ -47,10 +46,13 @@ import type { MonobankAcquiringClientOptions } from "./monobank-acquiring-client
  * const client = new MonobankAcquiringClient({
  *   token: "acquiring-token",
  * });
- * const merchant = await client.getMerchantDetails();
+ * const merchant = await client.merchant.getDetails();
  * ```
  */
 export class MonobankAcquiringClient {
+  /** Merchant operations sharing this client's Acquiring credentials and transport settings. */
+  public readonly merchant: MonobankAcquiringMerchant;
+
   private readonly transport: MonobankTransport;
 
   /**
@@ -63,30 +65,7 @@ export class MonobankAcquiringClient {
       ...options,
       authenticatedPathPrefix: "/api/merchant/",
     });
-  }
-
-  /**
-   * Loads the merchant identity associated with the configured Acquiring token.
-   *
-   * This authenticated GET is eligible for the configured safe retry policy.
-   * A provided `RequestOptions.signal` cancels the active Fetch attempt and any retry delay.
-   * @param options Optional cancellation controls for this request.
-   * @returns Validated merchant identifier, display name, and EDRPOU registration number.
-   * @throws {MonobankApiError} When Monobank returns a non-success HTTP status.
-   * @throws {MonobankNetworkError} When Fetch fails, times out, or the caller aborts.
-   * @throws {MonobankResponseValidationError} When the successful payload does not match the merchant-details schema.
-   * @throws {MonobankValidationError} When request configuration is invalid before Fetch runs.
-   */
-  public getMerchantDetails(
-    options?: RequestOptions,
-  ): Promise<MerchantDetails> {
-    return this.transport.getJson({
-      auth: true,
-      endpoint: "/api/merchant/details",
-      retryable: true,
-      schema: merchantDetailsSchema,
-      ...requestSignal(options),
-    });
+    this.merchant = new MonobankAcquiringMerchant(this.transport);
   }
 
   /**

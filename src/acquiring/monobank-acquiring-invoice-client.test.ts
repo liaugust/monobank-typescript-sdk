@@ -18,8 +18,8 @@ import {
 } from "../../tests/support/fetch-request-inspection.js";
 import { MonobankResponseValidationError } from "../errors/monobank-response-validation-error.js";
 import { MonobankValidationError } from "../errors/monobank-validation-error.js";
+import { MonobankAcquiringClient } from "./client/monobank-acquiring-client.js";
 import { InvoicePaymentType } from "./invoice.js";
-import { MonobankAcquiringClient } from "./monobank-acquiring-client.js";
 
 function firstRequestBody(fetch: ReturnType<typeof createFetchSequence>) {
   const body = fetch.mock.calls[0]?.[1]?.body;
