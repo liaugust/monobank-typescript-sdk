@@ -1,5 +1,6 @@
 import type {
   Account,
+  AcquiringStatement,
   AcquiringWebhookPublicKey,
   BankSync,
   CancelInvoiceInput,
@@ -7,6 +8,7 @@ import type {
   CreateInvoiceInput,
   CreateInvoiceOptions,
   CurrencyRate,
+  GetAcquiringStatementsInput,
   GetStatementsInput,
   Invoice,
   InvoiceCancellation,
@@ -20,6 +22,8 @@ import type {
 } from "@liaugust/monobank-sdk";
 import {
   AccountType,
+  AcquiringPaymentScheme,
+  AcquiringStatementStatus,
   CashbackType,
   InvoicePaymentType,
   InvoiceStatus,
@@ -41,6 +45,12 @@ const rates: Promise<readonly CurrencyRate[]> =
   publicClient.currency.getRates();
 const merchantDetails: Promise<MerchantDetails> =
   acquiringClient.merchant.getDetails();
+const acquiringStatementInput: GetAcquiringStatementsInput = {
+  code: "terminal-42",
+  from: new Date(0),
+};
+const acquiringStatements: Promise<AcquiringStatement> =
+  acquiringClient.statements.get(acquiringStatementInput);
 const webhookPublicKey: Promise<AcquiringWebhookPublicKey> =
   acquiringClient.webhooks.getPublicKey();
 const signatureInput: VerifyAcquiringWebhookSignatureInput = {
@@ -79,6 +89,10 @@ const removal: Promise<void> = acquiringClient.invoices.remove({
   invoiceId: "invoice-42",
 });
 const invoiceStatus: InvoiceStatus = InvoiceStatus.Success;
+const acquiringStatementStatus: AcquiringStatementStatus =
+  AcquiringStatementStatus.Success;
+const acquiringPaymentScheme: AcquiringPaymentScheme =
+  AcquiringPaymentScheme.Full;
 const webhookUpdate: Promise<void> = client.webhooks.set({ webHookUrl: "" });
 const accountType: AccountType = AccountType.Black;
 const cashbackType: CashbackType = CashbackType.UAH;
@@ -107,6 +121,7 @@ void statements;
 void clientInfo;
 void rates;
 void merchantDetails;
+void acquiringStatements;
 void webhookPublicKey;
 void signatureMatches;
 void newInvoice;
@@ -117,6 +132,8 @@ void receipt;
 void fiscalChecks;
 void removal;
 void invoiceStatus;
+void acquiringStatementStatus;
+void acquiringPaymentScheme;
 void webhookUpdate;
 void accountType;
 void accountTypesAreExact;
@@ -155,6 +172,9 @@ new MonobankAcquiringClient({});
 
 // @ts-expect-error -- Statement start time must be a Date or Unix number.
 void client.statements.get({ account: "0", from: "2026-08-01" });
+
+// @ts-expect-error -- Acquiring statement start time must be a Date or Unix number.
+void acquiringClient.statements.get({ from: "2026-08-01" });
 
 // @ts-expect-error -- Account types are limited to documented wire values.
 const invalidAccountType: AccountType = "gold";

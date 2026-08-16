@@ -38,4 +38,5 @@ assert.equal(typeof client.statements.get, "function");
 assert.equal(typeof client.webhooks.set, "function");
 assert.equal(typeof acquiringClient.merchant.getDetails, "function");
 assert.equal(typeof acquiringClient.invoices.create, "function");
+assert.equal(typeof acquiringClient.statements.get, "function");
 assert.equal(typeof acquiringClient.webhooks.getPublicKey, "function");

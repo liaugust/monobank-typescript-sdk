@@ -42,6 +42,7 @@ const resourceMethods = [
   client.webhooks.set,
   acquiringClient.merchant.getDetails,
   acquiringClient.invoices.create,
+  acquiringClient.statements.get,
   acquiringClient.webhooks.getPublicKey,
 ];
 

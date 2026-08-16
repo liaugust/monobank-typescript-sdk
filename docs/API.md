@@ -15,6 +15,7 @@ supported contract.
 - [acquiring.webhooks.getPublicKey](#acquiringwebhooksgetpublickey)
 - [verifyAcquiringWebhookSignature](#verifyacquiringwebhooksignature)
 - [merchant.getDetails](#merchantgetdetails)
+- [acquiring.statements.get](#acquiringstatementsget)
 - [invoices.create](#invoicescreate)
 - [invoices.getStatus](#invoicesgetstatus)
 - [invoices.cancel](#invoicescancel)
@@ -38,7 +39,8 @@ supported contract.
 
 - Monetary integers use the currency's minor units.
 - Currency codes are numeric ISO 4217 codes.
-- Rate and statement timestamps are Unix seconds.
+- Rate and Personal statement timestamps are Unix seconds. Acquiring statement
+  request inputs use Unix seconds and response dates use RFC-3339.
 - `BankSync.serverTimeMsec` is Unix milliseconds.
 - Successful JSON responses are parsed through Zod Mini schemas.
 - Response objects preserve unknown additive fields from Monobank.
@@ -169,6 +171,7 @@ The client groups operations into resource objects:
 
 - `acquiring.merchant`: merchant identity operations
 - `acquiring.invoices`: invoice lifecycle operations
+- `acquiring.statements`: transaction statement operations
 - `acquiring.webhooks`: webhook trust-material operations
 
 ## acquiring.webhooks.getPublicKey
@@ -267,6 +270,44 @@ Throws `MonobankApiError`, `MonobankNetworkError`,
 ```ts
 const merchant = await acquiring.merchant.getDetails();
 console.log(merchant.merchantId, merchant.merchantName, merchant.edrpou);
+```
+
+## acquiring.statements.get
+
+```ts
+acquiring.statements.get(
+  input: GetAcquiringStatementsInput,
+  options?: RequestOptions,
+): Promise<AcquiringStatement>
+```
+
+Loads `GET /api/merchant/statement`. `from` is required; `to` and the
+submerchant terminal `code` are optional. Dates are normalized to nonnegative
+integer Unix seconds, `from` cannot be later than `to`, and a supplied code
+must be nonempty without surrounding whitespace.
+
+| Property       | Value                                                      |
+| -------------- | ---------------------------------------------------------- |
+| Authentication | Acquiring token in `X-Token`                               |
+| Retries        | Eligible when a retry policy is configured                 |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds   |
+| Cancellation   | `options.signal` cancels the active request or retry delay |
+| Returns        | `AcquiringStatement` with readonly newest-first `list`     |
+
+Throws `MonobankApiError`, `MonobankNetworkError`,
+`MonobankResponseValidationError`, or `MonobankValidationError`. Validation
+runs before Fetch.
+
+```ts
+const statement = await acquiring.statements.get({
+  code: "terminal-42",
+  from: new Date("2026-08-01T00:00:00Z"),
+  to: new Date("2026-08-16T00:00:00Z"),
+});
+
+for (const item of statement.list) {
+  console.log(item.invoiceId, item.status, item.amount, item.ccy);
+}
 ```
 
 ## invoices.create
@@ -700,27 +741,30 @@ All schemas expose Zod Mini's standard parsing interface. Object schemas are
 loose: documented fields are validated and unknown additive fields are
 preserved.
 
-| Export                            | Validates                         |
-| --------------------------------- | --------------------------------- |
-| `accountSchema`                   | One Personal account              |
-| `acquiringWebhookPublicKeySchema` | Acquiring webhook key response    |
-| `bankSyncSchema`                  | `/bank/sync` response             |
-| `clientInfoSchema`                | `/personal/client-info` response  |
-| `currencyRateSchema`              | One exchange-rate item            |
-| `currencyRatesSchema`             | `/bank/currency` response array   |
-| `jarSchema`                       | One Personal jar                  |
-| `managedAccountSchema`            | One delegated FOP account         |
-| `managedClientSchema`             | One delegated FOP client          |
-| `merchantDetailsSchema`           | `/api/merchant/details` response  |
-| `newInvoiceSchema`                | Create-invoice response           |
-| `invoiceStatusSchema`             | Invoice status or webhook payload |
-| `cancelInvoiceResponseSchema`     | Invoice cancellation response     |
-| `finalizeInvoiceResponseSchema`   | Hold finalization response        |
-| `receiptSchema`                   | Invoice receipt response          |
-| `invoiceFiscalChecksSchema`       | Invoice fiscal checks response    |
-| `statementItemSchema`             | One statement item                |
-| `statementItemsSchema`            | Statement response array          |
-| `personalWebhookEventSchema`      | Incoming Personal statement event |
+| Export                                 | Validates                         |
+| -------------------------------------- | --------------------------------- |
+| `accountSchema`                        | One Personal account              |
+| `acquiringStatementSchema`             | Acquiring statement response      |
+| `acquiringStatementItemSchema`         | One Acquiring transaction         |
+| `acquiringStatementCancellationSchema` | Nested Acquiring cancellation     |
+| `acquiringWebhookPublicKeySchema`      | Acquiring webhook key response    |
+| `bankSyncSchema`                       | `/bank/sync` response             |
+| `clientInfoSchema`                     | `/personal/client-info` response  |
+| `currencyRateSchema`                   | One exchange-rate item            |
+| `currencyRatesSchema`                  | `/bank/currency` response array   |
+| `jarSchema`                            | One Personal jar                  |
+| `managedAccountSchema`                 | One delegated FOP account         |
+| `managedClientSchema`                  | One delegated FOP client          |
+| `merchantDetailsSchema`                | `/api/merchant/details` response  |
+| `newInvoiceSchema`                     | Create-invoice response           |
+| `invoiceStatusSchema`                  | Invoice status or webhook payload |
+| `cancelInvoiceResponseSchema`          | Invoice cancellation response     |
+| `finalizeInvoiceResponseSchema`        | Hold finalization response        |
+| `receiptSchema`                        | Invoice receipt response          |
+| `invoiceFiscalChecksSchema`            | Invoice fiscal checks response    |
+| `statementItemSchema`                  | One statement item                |
+| `statementItemsSchema`                 | Statement response array          |
+| `personalWebhookEventSchema`           | Incoming Personal statement event |
 
 ```ts
 import { currencyRatesSchema } from "@liaugust/monobank-sdk";
@@ -774,6 +818,8 @@ const cashbackType: CashbackTypeValue = CashbackType.UAH;
 | Export                      | Wire values                                                                  |
 | --------------------------- | ---------------------------------------------------------------------------- |
 | `InvoicePaymentType`        | `debit`, `hold`                                                              |
+| `AcquiringPaymentScheme`    | `full`, `bnpl_later_30`, `bnpl_parts_4`                                      |
+| `AcquiringStatementStatus`  | `hold`, `processing`, `success`, `failure`                                   |
 | `InvoiceStatus`             | `created`, `processing`, `hold`, `success`, `failure`, `reversed`, `expired` |
 | `InvoiceCancellationStatus` | `processing`, `success`, `failure`                                           |
 | `InvoicePaymentSystem`      | `visa`, `mastercard`                                                         |
@@ -862,6 +908,14 @@ validation.
 - `InvoiceFiscalChecks` optionally contains `checks`; check records use the
   exported fiscal enum-like values and may include a tax URL or base64 PDF.
 
+### AcquiringStatement
+
+`AcquiringStatement.list` is a readonly newest-first array. Each item contains
+required `invoiceId`, `status`, `maskedPan`, RFC-3339 `date`, `paymentScheme`,
+integer `amount`, and numeric ISO 4217 `ccy`. Optional fields include merchant
+profit, reference, destination, authorization data, QR identifier, and nested
+cancellations. Loose schemas preserve additive upstream fields.
+
 ### Jar
 
 | Field          | Type     | Notes                  |
@@ -923,6 +977,8 @@ object containing the target `account` identifier and validated
 | `RetryOptions`                           | Safe GET retry policy                                          |
 | `GetStatementsInput`                     | Statement account and time window                              |
 | `UnixTimeInput`                          | `Date \| number` statement timestamp input                     |
+| `GetAcquiringStatementsInput`            | Acquiring time window and optional submerchant terminal        |
+| `AcquiringStatementUnixTimeInput`        | `Date \| number` Acquiring statement timestamp input           |
 | `SetWebhookInput`                        | Webhook URL request body                                       |
 | `VerifyAcquiringWebhookSignatureInput`   | Raw body, public key, and signature verification inputs        |
 | `CreateInvoiceInput`                     | Invoice amount, order, redirect, webhook, and payment controls |
@@ -947,5 +1003,6 @@ object containing the target `account` identifier and validated
 
 Response types are inferred from their runtime schemas and exported from the
 package root, including the Personal models plus `MerchantDetails`,
-`AcquiringWebhookPublicKey`, `NewInvoice`, `Invoice`, `InvoiceCancellation`,
+`AcquiringWebhookPublicKey`, `AcquiringStatement`, `AcquiringStatementItem`,
+`AcquiringStatementCancellation`, `NewInvoice`, `Invoice`, `InvoiceCancellation`,
 `InvoiceFinalization`, `InvoiceReceipt`, and `InvoiceFiscalChecks`.

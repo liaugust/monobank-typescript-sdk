@@ -2,6 +2,12 @@
 
 All notable changes to this package are documented here.
 
+## Unreleased
+
+- Add authenticated Acquiring statements with validated time windows,
+  submerchant filtering, retry and cancellation support, response schemas, and
+  importable transaction status and payment-scheme values.
+
 ## 0.1.0 - 2026-08-16
 
 - Organize Public, Personal, and Acquiring APIs into focused resource clients.

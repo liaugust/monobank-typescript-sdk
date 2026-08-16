@@ -6,6 +6,8 @@ describe("public package surface", () => {
   it("exports only the deliberate runtime API", () => {
     expect(Object.keys(sdk).sort()).toStrictEqual([
       "AccountType",
+      "AcquiringPaymentScheme",
+      "AcquiringStatementStatus",
       "CashbackType",
       "DiscountMode",
       "DiscountType",
@@ -26,6 +28,9 @@ describe("public package surface", () => {
       "MonobankResponseValidationError",
       "MonobankValidationError",
       "accountSchema",
+      "acquiringStatementCancellationSchema",
+      "acquiringStatementItemSchema",
+      "acquiringStatementSchema",
       "acquiringWebhookPublicKeySchema",
       "bankSyncSchema",
       "cancelInvoiceResponseSchema",

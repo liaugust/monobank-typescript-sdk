@@ -1,4 +1,6 @@
 import { MonobankValidationError } from "../../../errors/monobank-validation-error.js";
+import type { UnixTimeInput } from "../../../shared/unix-time.js";
+import { normalizeUnixTime } from "../../../shared/unix-time.js";
 
 const statementWindowMaxSeconds = 2_682_000;
 const statementsEndpoint = "/personal/statement";
@@ -9,7 +11,7 @@ const statementsEndpoint = "/personal/statement";
  * Numbers must already be finite nonnegative Unix-second integers. `Date`
  * values are normalized to integer Unix seconds at the request boundary.
  */
-export type UnixTimeInput = Date | number;
+export type { UnixTimeInput } from "../../../shared/unix-time.js";
 
 /**
  * Input for fetching Personal account or jar statements.
@@ -35,9 +37,11 @@ export interface GetStatementsInput {
  */
 export function createStatementsEndpoint(input: GetStatementsInput): string {
   const account = resolveStatementAccount(input.account);
-  const from = normalizeUnixTime(input.from, "from");
+  const from = normalizePersonalStatementUnixTime(input.from, "from");
   const to =
-    input.to === undefined ? undefined : normalizeUnixTime(input.to, "to");
+    input.to === undefined
+      ? undefined
+      : normalizePersonalStatementUnixTime(input.to, "to");
   const issues: string[] = [];
 
   if (
@@ -79,28 +83,23 @@ function resolveStatementAccount(account: string | undefined): string {
   return account;
 }
 
-function normalizeUnixTime(value: UnixTimeInput, name: "from" | "to"): number {
-  if (value instanceof Date) {
-    const milliseconds = value.getTime();
+function normalizePersonalStatementUnixTime(
+  value: UnixTimeInput,
+  name: "from" | "to",
+): number {
+  const normalized = normalizeUnixTime(value);
 
-    if (!Number.isFinite(milliseconds)) {
-      throw new MonobankValidationError({
-        endpoint: statementsEndpoint,
-        issues: [`${name} must be a valid Date or Unix-second integer`],
-        message: "Invalid Personal statement request.",
-      });
-    }
-
-    return Math.floor(milliseconds / 1_000);
-  }
-
-  if (!Number.isFinite(value) || !Number.isInteger(value) || value < 0) {
+  if (normalized === undefined) {
     throw new MonobankValidationError({
       endpoint: statementsEndpoint,
-      issues: [`${name} must be a finite nonnegative Unix-second integer`],
+      issues: [
+        value instanceof Date
+          ? `${name} must be a valid Date or Unix-second integer`
+          : `${name} must be a finite nonnegative Unix-second integer`,
+      ],
       message: "Invalid Personal statement request.",
     });
   }
 
-  return value;
+  return normalized;
 }

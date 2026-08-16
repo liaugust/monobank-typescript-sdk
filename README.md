@@ -82,6 +82,7 @@ example focused; production code should validate the environment value first.
 | `personal.statements.get(input)`            | Personal token  | `readonly StatementItem[]`  | Maximum window: 2,682,000 seconds              |
 | `personal.webhooks.set(input)`              | Personal token  | `void`                      | Mutating request; never retried automatically  |
 | `acquiring.merchant.getDetails()`           | Acquiring token | `MerchantDetails`           | Merchant identity for the supplied token       |
+| `acquiring.statements.get(input)`           | Acquiring token | `AcquiringStatement`        | Transaction statement ordered newest first     |
 | `acquiring.webhooks.getPublicKey()`         | Acquiring token | `AcquiringWebhookPublicKey` | Key used to authenticate webhook signatures    |
 | `acquiring.invoices.create(input)`          | Acquiring token | `NewInvoice`                | Creates a hosted payment page                  |
 | `acquiring.invoices.getStatus(input)`       | Acquiring token | `Invoice`                   | Safe GET; eligible for configured retries      |
@@ -113,6 +114,34 @@ console.log(merchant.merchantId, merchant.merchantName, merchant.edrpou);
 ```
 
 The Acquiring token is sent only to authenticated `/api/merchant/*` methods.
+
+### Acquiring statements
+
+Load transactions for a Unix-second time window, optionally scoped to a
+submerchant terminal:
+
+```ts
+import {
+  AcquiringPaymentScheme,
+  AcquiringStatementStatus,
+} from "@liaugust/monobank-sdk";
+
+const statement = await acquiring.statements.get({
+  code: "terminal-42",
+  from: new Date("2026-08-01T00:00:00.000Z"),
+  to: new Date("2026-08-16T00:00:00.000Z"),
+});
+
+const successfulFullPayments = statement.list.filter(
+  (item) =>
+    item.status === AcquiringStatementStatus.Success &&
+    item.paymentScheme === AcquiringPaymentScheme.Full,
+);
+```
+
+`statement.list` is readonly and ordered newest first. Monetary values use
+minor currency units; transaction and cancellation `date` fields are RFC-3339
+strings. The method is a safe GET eligible for configured retries.
 
 Create a debit invoice and inspect its status:
 
@@ -332,8 +361,10 @@ same validation boundary:
 
 ```ts
 import {
-  clientInfoSchema,
+  acquiringStatementItemSchema,
+  acquiringStatementSchema,
   acquiringWebhookPublicKeySchema,
+  clientInfoSchema,
   currencyRatesSchema,
   invoiceStatusSchema,
   merchantDetailsSchema,
@@ -350,7 +381,8 @@ while unknown additive fields are preserved for forward compatibility.
 
 - Monetary integers are expressed in the currency's minor units.
 - Currency codes are numeric ISO 4217 codes.
-- Statement and rate timestamps are Unix seconds.
+- Rate and Personal statement timestamps are Unix seconds. Acquiring statement
+  request inputs use Unix seconds and response dates use RFC-3339.
 - `BankSync.serverTimeMsec` is Unix milliseconds.
 - Upstream field names, including `webHookUrl`, are preserved.
 
