@@ -27,7 +27,7 @@ describe("release readiness", () => {
         type: "git",
         url: "git+https://github.com/liaugust/monobank-typescript-sdk.git",
       },
-      version: "0.0.1",
+      version: "0.1.0",
     });
     expect(packageJson).not.toHaveProperty("private");
   });
@@ -58,7 +58,7 @@ describe("release readiness", () => {
   });
 
   it("accepts only a release tag matching the package version", () => {
-    const matching = spawnSync("pnpm", ["check:release-tag", "--", "v0.0.1"], {
+    const matching = spawnSync("pnpm", ["check:release-tag", "--", "v0.1.0"], {
       cwd: repositoryRoot,
       encoding: "utf8",
     });
@@ -74,7 +74,7 @@ describe("release readiness", () => {
     expect(matching.status).toBe(0);
     expect(mismatching.status).not.toBe(0);
     expect(mismatching.stderr).toContain(
-      'Release tag "v9.9.9" must match package version "0.0.1".',
+      'Release tag "v9.9.9" must match package version "0.1.0".',
     );
   });
 
@@ -85,7 +85,7 @@ describe("release readiness", () => {
     });
     const extra = spawnSync(
       "pnpm",
-      ["check:release-tag", "--", "v0.0.1", "unexpected"],
+      ["check:release-tag", "--", "v0.1.0", "unexpected"],
       {
         cwd: repositoryRoot,
         encoding: "utf8",
@@ -100,13 +100,18 @@ describe("release readiness", () => {
     expect(readRepositoryFile("README.md")).toContain(
       "pnpm add @liaugust/monobank-sdk",
     );
-    expect(readRepositoryFile("CHANGELOG.md")).toContain("## 0.0.1");
+    const changelog = readRepositoryFile("CHANGELOG.md");
+    expect(changelog).toContain("## 0.1.0");
+    expect(changelog).toContain("## 0.0.1");
     const releasing = readRepositoryFile("RELEASING.md");
     expect(releasing).toContain(
       "Publish version `0.0.1` interactively as the one-time bootstrap release",
     );
     expect(releasing).toContain(
       "The first trusted-publishing release should be `0.1.0`",
+    );
+    expect(releasing).toContain(
+      "The current GitHub plan does not support required reviewers",
     );
     expect(releasing).toContain(
       "Private GitHub repositories do not receive npm provenance attestations",
