@@ -365,6 +365,22 @@ describe("MonobankPersonalClient statements", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it("rejects dot-segment statement accounts before Fetch", async () => {
+    const fetch = createFetchSequence([jsonResponse([statementItemFixture])]);
+    const client = new MonobankPersonalClient({
+      fetch,
+      token: "personal-token",
+    });
+
+    await expect(
+      client.getStatements({ account: ".", from: 1_000 }),
+    ).rejects.toBeInstanceOf(MonobankValidationError);
+    await expect(
+      client.getStatements({ account: "..", from: 1_000 }),
+    ).rejects.toBeInstanceOf(MonobankValidationError);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("turns malformed statement payloads into safe response validation errors", async () => {
     const fetch = createFetchSequence([
       jsonResponse([{ ...statementItemFixture, amount: "-12345" }]),
