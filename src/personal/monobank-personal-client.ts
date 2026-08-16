@@ -1,6 +1,8 @@
 import { MonobankTransport } from "../transport/transport.js";
 import type { BankSync } from "./bank-sync.js";
 import { bankSyncSchema } from "./bank-sync.js";
+import type { ClientInfo } from "./client-info.js";
+import { clientInfoSchema } from "./client-info.js";
 import type { CurrencyRate } from "./currency-rate.js";
 import { currencyRatesSchema } from "./currency-rate.js";
 import type { MonobankPersonalClientOptions } from "./monobank-personal-client-options.js";
@@ -73,6 +75,30 @@ export class MonobankPersonalClient {
       endpoint: "/bank/currency",
       retryable: true,
       schema: currencyRatesSchema,
+      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+    });
+  }
+
+  /**
+   * Loads authenticated Personal client profile, accounts, jars, and delegated FOP clients.
+   *
+   * Monobank limits this authenticated endpoint to one request per 60 seconds.
+   * This safe GET is retried only when a bounded retry policy is supplied to
+   * the constructor. A provided `RequestOptions.signal` cancels the active
+   * Fetch attempt and any retry delay.
+   * @param options Optional cancellation controls for this request.
+   * @returns Validated Personal client information with monetary values in minor currency units.
+   * @throws {MonobankApiError} When Monobank returns a non-success HTTP status.
+   * @throws {MonobankNetworkError} When Fetch fails, times out, or the caller aborts.
+   * @throws {MonobankResponseValidationError} When the successful payload does not match the client-info schema.
+   * @throws {MonobankValidationError} When request configuration is invalid before Fetch runs.
+   */
+  public getClientInfo(options?: RequestOptions): Promise<ClientInfo> {
+    return this.transport.getJson({
+      auth: true,
+      endpoint: "/personal/client-info",
+      retryable: true,
+      schema: clientInfoSchema,
       ...(options?.signal === undefined ? {} : { signal: options.signal }),
     });
   }
