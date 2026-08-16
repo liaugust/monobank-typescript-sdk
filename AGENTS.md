@@ -149,6 +149,12 @@ tests/consumers/                ESM, CJS, browser, declaration, and tarball chec
   approved.
 - Keep transport failures credential-safe: never retain tokens, authorization
   headers, Request objects, or raw API response bodies.
+- Never follow HTTP redirects. Fetch preserves custom headers such as
+  `X-Token` across a cross-origin redirect and replays the method and body on
+  307/308, and endpoint validation only vets the initial URL, so the transport
+  sets `redirect: "error"` and surfaces a redirect as a network failure. An
+  injected `FetchLike` that ignores `RequestInit.redirect` voids this
+  protection, so document the requirement wherever `fetch` is offered.
 - Keep webhook verification failures material-safe: never retain raw body,
   public-key, or signature input in public errors.
 - Verify Acquiring signatures against the exact wire bytes with standard Web

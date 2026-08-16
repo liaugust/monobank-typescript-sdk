@@ -4,6 +4,8 @@ All notable changes to this package are documented here.
 
 ## Unreleased
 
+- Stop following HTTP redirects so a redirected request can never replay the
+  `X-Token` header or a mutating request body to an unvalidated origin.
 - Add authenticated Acquiring statements with validated time windows,
   submerchant filtering, retry and cancellation support, response schemas, and
   importable transaction status and payment-scheme values.

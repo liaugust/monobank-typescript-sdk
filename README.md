@@ -426,6 +426,18 @@ try {
 Public errors retain only bounded diagnostic data. They intentionally exclude
 tokens, authorization headers, request objects, and raw API payloads.
 
+The SDK sets `redirect: "error"` on every request, so it never follows HTTP
+redirects when using the runtime's built-in Fetch. Fetch keeps custom headers
+such as `X-Token` across a cross-origin redirect and replays the body on
+`307`/`308`, so a redirected request fails with `MonobankNetworkError` instead
+of sending credentials or repeating a mutation somewhere the SDK never
+validated. A custom `fetch` must honor `RequestInit.redirect`; an
+implementation that ignores it reintroduces cross-origin token replay.
+
+A blocked redirect is reported as `reason: "network"`, indistinguishable from a
+transient failure, so a retry-eligible safe GET consumes its configured
+attempts before failing. Mutating requests are never retried.
+
 ## Runtime schemas
 
 The package exports its Zod Mini schemas for applications that need the exact
