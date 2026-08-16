@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { merchantDetailsFixture } from "../../../tests/fixtures/acquiring-api.js";
+import { merchantDetailsFixture } from "../../../tests/fixtures/acquiring/merchant.js";
 import {
   createFetchSequence,
   jsonResponse,

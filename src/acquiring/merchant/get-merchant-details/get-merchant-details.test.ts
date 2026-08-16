@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { merchantDetailsFixture } from "../../../../tests/fixtures/acquiring-api.js";
+import { merchantDetailsFixture } from "../../../../tests/fixtures/acquiring/merchant.js";
 import { merchantDetailsSchema } from "./get-merchant-details.js";
 
 describe("merchant details schema", () => {

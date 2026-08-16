@@ -1,9 +1,3 @@
-export const merchantDetailsFixture = {
-  edrpou: "4242424242",
-  merchantId: "12o4Vv7EWy",
-  merchantName: "Your Favourite Company",
-} as const;
-
 export const newInvoiceFixture = {
   invoiceId: "invoice-42",
   pageUrl: "https://pay.example.test/invoice-42",

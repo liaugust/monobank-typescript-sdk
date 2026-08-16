@@ -7,7 +7,7 @@ import {
   invoiceStatusFixture,
   newInvoiceFixture,
   receiptFixture,
-} from "../../../tests/fixtures/acquiring-api.js";
+} from "../../../tests/fixtures/acquiring/invoice.js";
 import {
   createFetchSequence,
   jsonResponse,

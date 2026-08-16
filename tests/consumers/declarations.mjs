@@ -41,7 +41,8 @@ function findClassMember(classNode, name) {
     }
 
     return (
-      ts.isMethodDeclaration(member) && member.name.getText(sourceFile) === name
+      (ts.isMethodDeclaration(member) || ts.isPropertyDeclaration(member)) &&
+      member.name.getText(sourceFile) === name
     );
   });
 
@@ -66,8 +67,6 @@ assert.ok(hasJSDoc(clientClass), "MonobankPersonalClient JSDoc is missing");
 
 for (const memberName of [
   "constructor",
-  "getBankSync",
-  "getCurrencyRates",
   "getClientInfo",
   "getStatements",
   "setWebhook",
@@ -78,15 +77,60 @@ for (const memberName of [
   );
 }
 
+const publicClientClass = findClass("MonobankPublicClient");
+assert.ok(hasJSDoc(publicClientClass), "MonobankPublicClient JSDoc is missing");
+
+for (const memberName of ["constructor", "getBankSync", "getCurrencyRates"]) {
+  assert.ok(
+    hasJSDoc(findClassMember(publicClientClass, memberName)),
+    `MonobankPublicClient.${memberName} JSDoc is missing`,
+  );
+}
+
 const acquiringClientClass = findClass("MonobankAcquiringClient");
 assert.ok(
   hasJSDoc(acquiringClientClass),
   "MonobankAcquiringClient JSDoc is missing",
 );
 
-for (const memberName of ["constructor", "getMerchantDetails"]) {
+for (const memberName of ["constructor", "invoices", "merchant"]) {
   assert.ok(
     hasJSDoc(findClassMember(acquiringClientClass, memberName)),
     `MonobankAcquiringClient.${memberName} JSDoc is missing`,
+  );
+}
+
+const merchantClass = findClass("MonobankAcquiringMerchant");
+assert.ok(
+  hasJSDoc(merchantClass),
+  "MonobankAcquiringMerchant JSDoc is missing",
+);
+
+for (const memberName of ["constructor", "getDetails"]) {
+  assert.ok(
+    hasJSDoc(findClassMember(merchantClass, memberName)),
+    `MonobankAcquiringMerchant.${memberName} JSDoc is missing`,
+  );
+}
+
+const invoicesClass = findClass("MonobankAcquiringInvoices");
+assert.ok(
+  hasJSDoc(invoicesClass),
+  "MonobankAcquiringInvoices JSDoc is missing",
+);
+
+for (const memberName of [
+  "constructor",
+  "cancel",
+  "create",
+  "finalize",
+  "getFiscalChecks",
+  "getReceipt",
+  "getStatus",
+  "remove",
+]) {
+  assert.ok(
+    hasJSDoc(findClassMember(invoicesClass, memberName)),
+    `MonobankAcquiringInvoices.${memberName} JSDoc is missing`,
   );
 }
