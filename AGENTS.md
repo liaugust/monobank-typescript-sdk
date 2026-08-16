@@ -30,6 +30,11 @@ claim endorsement by Monobank.
   failure is an HTTP error.
 - Treat `parsePersonalWebhookEvent()` as shape validation only. Authenticate
   webhook delivery separately before acting on it.
+- Authenticate Acquiring webhooks with `verifyAcquiringWebhookSignature()`
+  over the exact raw request bytes before parsing or transforming the body.
+- Cache the result of `acquiring.webhooks.getPublicKey()` in application
+  infrastructure and refresh it only after verification with the cached key
+  fails; the SDK intentionally does not own cache policy.
 - Use only documented Acquiring methods. The current surface contains merchant
   details plus invoice creation, status, cancellation, removal, finalization,
   receipt, and fiscal-check operations. Do not invent unimplemented payment
@@ -74,14 +79,16 @@ The root entry point exports:
 - `MonobankPersonalClient`
 - `MonobankPublicClient`
 - `MonobankAcquiringClient`
-- seven resource properties exposed through the three parent clients: `bank`,
-  `currency`, `client`, `statements`, `webhooks`, `merchant`, and `invoices`
+- eight resource properties exposed through the three parent clients: `bank`,
+  `currency`, `client`, `statements`, Personal `webhooks`, `merchant`,
+  `invoices`, and Acquiring `webhooks`
 - Personal and Acquiring enum-like const values, including `AccountType`,
   `CashbackType`, `InvoicePaymentType`, and `InvoiceStatus`
 - response schemas for accounts, bank sync, client info, currency rates, jars,
   managed clients, merchant details, invoices, receipts, fiscal checks,
   statements, and Personal webhook events
 - `parsePersonalWebhookEvent`
+- `verifyAcquiringWebhookSignature`
 - Personal and Acquiring request, response, transport, retry, and error types
 - `MonobankApiError`, `MonobankNetworkError`,
   `MonobankResponseValidationError`, and `MonobankValidationError`
@@ -97,6 +104,7 @@ src/index.ts                    public package boundary
 src/acquiring/client/           Acquiring parent client and options
 src/acquiring/merchant/         merchant resource and endpoint slice
 src/acquiring/invoices/         invoice endpoints, models, and request helpers
+src/acquiring/webhooks/         trust-key endpoint and signature verification
 src/public/client/              token-free Public parent client and options
 src/public/bank/                bank resource and sync endpoint
 src/public/currency/            currency resource and rates endpoint
@@ -129,6 +137,10 @@ tests/consumers/                ESM, CJS, browser, declaration, and tarball chec
   approved.
 - Keep transport failures credential-safe: never retain tokens, authorization
   headers, Request objects, or raw API response bodies.
+- Keep webhook verification failures material-safe: never retain raw body,
+  public-key, or signature input in public errors.
+- Verify Acquiring signatures against the exact wire bytes with standard Web
+  Crypto; do not introduce Node-only crypto imports into the browser surface.
 - Retry only safe GET requests. Never retry mutating requests automatically.
 - Keep endpoint input validation ahead of Fetch.
 - Keep one primary reusable runtime abstraction per source file.

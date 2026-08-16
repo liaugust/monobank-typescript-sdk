@@ -2,6 +2,7 @@ import {
   MonobankAcquiringClient,
   MonobankPersonalClient,
   MonobankPublicClient,
+  verifyAcquiringWebhookSignature,
 } from "@liaugust/monobank-sdk";
 
 const browserFetch = async (...args) => await fetch(...args);
@@ -23,3 +24,5 @@ void client.statements;
 void client.webhooks;
 void acquiringClient.invoices;
 void acquiringClient.merchant;
+void acquiringClient.webhooks;
+void verifyAcquiringWebhookSignature;

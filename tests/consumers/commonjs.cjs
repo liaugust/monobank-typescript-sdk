@@ -8,6 +8,7 @@ const {
   MonobankPublicClient,
   MonobankResponseValidationError,
   MonobankValidationError,
+  verifyAcquiringWebhookSignature,
 } = require("../../dist/index.cjs");
 
 const fetchStub = async () => new Response("{}", { status: 200 });
@@ -28,6 +29,7 @@ assert.equal(typeof MonobankPersonalClient, "function");
 assert.equal(typeof MonobankPublicClient, "function");
 assert.equal(typeof MonobankResponseValidationError, "function");
 assert.equal(typeof MonobankValidationError, "function");
+assert.equal(typeof verifyAcquiringWebhookSignature, "function");
 assert.ok(client instanceof MonobankPersonalClient);
 assert.ok(publicApi instanceof MonobankPublicClient);
 assert.ok(acquiringClient instanceof MonobankAcquiringClient);
@@ -40,6 +42,7 @@ const resourceMethods = [
   client.webhooks.set,
   acquiringClient.merchant.getDetails,
   acquiringClient.invoices.create,
+  acquiringClient.webhooks.getPublicKey,
 ];
 
 for (const method of resourceMethods) {

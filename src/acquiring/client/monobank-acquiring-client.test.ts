@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { merchantDetailsFixture } from "../../../tests/fixtures/acquiring/merchant.js";
+import { acquiringWebhookPublicKeyFixture } from "../../../tests/fixtures/acquiring/webhooks.js";
 import {
   createFetchSequence,
   jsonResponse,
@@ -115,5 +116,98 @@ describe("MonobankAcquiringClient merchant details", () => {
         }),
     ).toThrow(MonobankValidationError);
     expect(fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("MonobankAcquiringClient resources", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("exposes webhook trust operations through a dedicated resource", () => {
+    const client = new MonobankAcquiringClient({
+      fetch: createFetchSequence([]),
+      token: "acquiring-token",
+    });
+
+    expect(client).toHaveProperty("webhooks");
+    expect(typeof client.webhooks.getPublicKey).toBe("function");
+  });
+
+  it("loads the webhook public key through the authenticated resource", async () => {
+    const fetch = createFetchSequence([
+      jsonResponse(acquiringWebhookPublicKeyFixture),
+    ]);
+    const client = new MonobankAcquiringClient({
+      fetch,
+      token: "acquiring-token",
+    });
+
+    await expect(client.webhooks.getPublicKey()).resolves.toEqual(
+      acquiringWebhookPublicKeyFixture,
+    );
+    expect(firstRequestUrl(fetch).href).toBe(
+      "https://api.monobank.ua/api/merchant/pubkey",
+    );
+    expect(fetch.mock.calls[0]?.[1]?.method).toBe("GET");
+    expect(firstRequestHeaders(fetch).get("X-Token")).toBe("acquiring-token");
+  });
+
+  it("rejects malformed webhook public-key responses", async () => {
+    const fetch = createFetchSequence([jsonResponse({ key: 42 })]);
+    const client = new MonobankAcquiringClient({
+      fetch,
+      token: "acquiring-token",
+    });
+
+    await expect(client.webhooks.getPublicKey()).rejects.toBeInstanceOf(
+      MonobankResponseValidationError,
+    );
+  });
+
+  it("passes caller cancellation to webhook public-key requests", async () => {
+    let requestSignal: AbortSignal | undefined;
+    const fetch = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+      requestSignal = init?.signal ?? undefined;
+
+      return new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          reject(new DOMException("Request aborted", "AbortError"));
+        });
+      });
+    });
+    const client = new MonobankAcquiringClient({
+      fetch,
+      token: "acquiring-token",
+    });
+    const controller = new AbortController();
+
+    const request = client.webhooks.getPublicKey({ signal: controller.signal });
+    request.catch(() => undefined);
+    await Promise.resolve();
+    controller.abort();
+
+    expect(requestSignal?.aborted).toBe(true);
+    await expect(request).rejects.toMatchObject({ reason: "aborted" });
+  });
+
+  it("retries webhook public-key requests with the configured safe policy", async () => {
+    vi.useFakeTimers();
+    const fetch = createFetchSequence([
+      new Response(null, { status: 503 }),
+      jsonResponse(acquiringWebhookPublicKeyFixture),
+    ]);
+    const client = new MonobankAcquiringClient({
+      fetch,
+      retry: { baseDelayMs: 100, maxAttempts: 2, maxDelayMs: 200 },
+      token: "acquiring-token",
+    });
+
+    const result = client.webhooks.getPublicKey();
+    result.catch(() => undefined);
+    await vi.advanceTimersByTimeAsync(100);
+
+    await expect(result).resolves.toEqual(acquiringWebhookPublicKeyFixture);
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 });

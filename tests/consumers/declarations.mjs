@@ -50,6 +50,23 @@ function findClassMember(classNode, name) {
   return result;
 }
 
+function findFunction(name) {
+  let result;
+
+  function visit(node) {
+    if (ts.isFunctionDeclaration(node) && node.name?.text === name) {
+      result = node;
+      return;
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  assert.ok(result, `${name} declaration is missing`);
+  return result;
+}
+
 for (const errorClassName of [
   "MonobankApiError",
   "MonobankNetworkError",
@@ -88,7 +105,7 @@ assert.ok(
   "MonobankAcquiringClient JSDoc is missing",
 );
 
-for (const memberName of ["constructor", "invoices", "merchant"]) {
+for (const memberName of ["constructor", "invoices", "merchant", "webhooks"]) {
   assert.ok(
     hasJSDoc(findClassMember(acquiringClientClass, memberName)),
     `MonobankAcquiringClient.${memberName} JSDoc is missing`,
@@ -101,6 +118,7 @@ const resourceContracts = [
   ["MonobankPersonalClientInfo", ["constructor", "getInfo"]],
   ["MonobankPersonalStatements", ["constructor", "get"]],
   ["MonobankPersonalWebhooks", ["constructor", "set"]],
+  ["MonobankAcquiringWebhooks", ["constructor", "getPublicKey"]],
 ];
 
 for (const [className, memberNames] of resourceContracts) {
@@ -114,6 +132,11 @@ for (const [className, memberNames] of resourceContracts) {
     );
   }
 }
+
+assert.ok(
+  hasJSDoc(findFunction("verifyAcquiringWebhookSignature")),
+  "verifyAcquiringWebhookSignature JSDoc is missing",
+);
 
 const merchantClass = findClass("MonobankAcquiringMerchant");
 assert.ok(

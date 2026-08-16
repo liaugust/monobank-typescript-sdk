@@ -26,6 +26,7 @@ describe("public package surface", () => {
       "MonobankResponseValidationError",
       "MonobankValidationError",
       "accountSchema",
+      "acquiringWebhookPublicKeySchema",
       "bankSyncSchema",
       "cancelInvoiceResponseSchema",
       "clientInfoSchema",
@@ -44,6 +45,7 @@ describe("public package surface", () => {
       "receiptSchema",
       "statementItemSchema",
       "statementItemsSchema",
+      "verifyAcquiringWebhookSignature",
     ]);
   });
 });

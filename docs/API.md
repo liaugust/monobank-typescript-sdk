@@ -12,6 +12,8 @@ supported contract.
 - [MonobankPublicClient](#monobankpublicclient)
 - [MonobankPersonalClient](#monobankpersonalclient)
 - [MonobankAcquiringClient](#monobankacquiringclient)
+- [acquiring.webhooks.getPublicKey](#acquiringwebhooksgetpublickey)
+- [verifyAcquiringWebhookSignature](#verifyacquiringwebhooksignature)
 - [merchant.getDetails](#merchantgetdetails)
 - [invoices.create](#invoicescreate)
 - [invoices.getStatus](#invoicesgetstatus)
@@ -167,6 +169,78 @@ The client groups operations into resource objects:
 
 - `acquiring.merchant`: merchant identity operations
 - `acquiring.invoices`: invoice lifecycle operations
+- `acquiring.webhooks`: webhook trust-material operations
+
+## acquiring.webhooks.getPublicKey
+
+```ts
+acquiring.webhooks.getPublicKey(
+  options?: RequestOptions,
+): Promise<AcquiringWebhookPublicKey>
+```
+
+Loads the current webhook verification key from
+`GET /api/merchant/pubkey`. The request sends the Acquiring token in
+`X-Token`, validates the successful response with
+`acquiringWebhookPublicKeySchema`, and returns `{ key: string }`. The `key`
+field is Monobank's base64-encoded X.509 ECDSA public key.
+
+| Property       | Value                                                      |
+| -------------- | ---------------------------------------------------------- |
+| Authentication | Acquiring token in `X-Token`                               |
+| Retries        | Eligible when a retry policy is configured                 |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds   |
+| Cancellation   | `options.signal` cancels the active request or retry delay |
+| Returns        | `AcquiringWebhookPublicKey`                                |
+
+Throws `MonobankApiError`, `MonobankNetworkError`,
+`MonobankResponseValidationError`, or `MonobankValidationError`.
+
+Monobank recommends caching the returned key and loading it again only after
+verification with the cached key fails. The SDK deliberately leaves cache
+storage, lifetime, and refresh coordination to the application.
+
+## verifyAcquiringWebhookSignature
+
+```ts
+verifyAcquiringWebhookSignature(
+  input: VerifyAcquiringWebhookSignatureInput,
+): Promise<boolean>
+```
+
+Authenticates an Acquiring webhook with built-in Web Crypto in supported Node
+and browser runtimes. No Node-only crypto import or additional runtime
+dependency is required.
+
+| Input       | Type                        | Contract                                                     |
+| ----------- | --------------------------- | ------------------------------------------------------------ |
+| `body`      | `ArrayBuffer \| Uint8Array` | Exact raw request body bytes                                 |
+| `publicKey` | `string`                    | Base64-encoded X.509 ECDSA key from `getPublicKey()`         |
+| `signature` | `string`                    | Base64-encoded ASN.1 DER value from the `X-Sign` HTTP header |
+
+Returns `true` when the P-256 ECDSA/SHA-256 signature authenticates the exact
+body bytes and `false` when a structurally valid signature does not match.
+Malformed key or signature input throws `MonobankValidationError` with safe
+diagnostics that do not retain the supplied cryptographic material.
+
+```ts
+const { key: publicKey } = await acquiring.webhooks.getPublicKey();
+const signature = request.headers.get("X-Sign");
+
+if (signature === null) {
+  throw new Error("Missing Monobank X-Sign header");
+}
+
+const body = await request.arrayBuffer();
+const trusted = await verifyAcquiringWebhookSignature({
+  body,
+  publicKey,
+  signature,
+});
+```
+
+The signature covers the raw wire bytes. Do not parse and reserialize JSON,
+change whitespace, or decode the body before verification.
 
 ## merchant.getDetails
 
@@ -626,26 +700,27 @@ All schemas expose Zod Mini's standard parsing interface. Object schemas are
 loose: documented fields are validated and unknown additive fields are
 preserved.
 
-| Export                          | Validates                         |
-| ------------------------------- | --------------------------------- |
-| `accountSchema`                 | One Personal account              |
-| `bankSyncSchema`                | `/bank/sync` response             |
-| `clientInfoSchema`              | `/personal/client-info` response  |
-| `currencyRateSchema`            | One exchange-rate item            |
-| `currencyRatesSchema`           | `/bank/currency` response array   |
-| `jarSchema`                     | One Personal jar                  |
-| `managedAccountSchema`          | One delegated FOP account         |
-| `managedClientSchema`           | One delegated FOP client          |
-| `merchantDetailsSchema`         | `/api/merchant/details` response  |
-| `newInvoiceSchema`              | Create-invoice response           |
-| `invoiceStatusSchema`           | Invoice status or webhook payload |
-| `cancelInvoiceResponseSchema`   | Invoice cancellation response     |
-| `finalizeInvoiceResponseSchema` | Hold finalization response        |
-| `receiptSchema`                 | Invoice receipt response          |
-| `invoiceFiscalChecksSchema`     | Invoice fiscal checks response    |
-| `statementItemSchema`           | One statement item                |
-| `statementItemsSchema`          | Statement response array          |
-| `personalWebhookEventSchema`    | Incoming Personal statement event |
+| Export                            | Validates                         |
+| --------------------------------- | --------------------------------- |
+| `accountSchema`                   | One Personal account              |
+| `acquiringWebhookPublicKeySchema` | Acquiring webhook key response    |
+| `bankSyncSchema`                  | `/bank/sync` response             |
+| `clientInfoSchema`                | `/personal/client-info` response  |
+| `currencyRateSchema`              | One exchange-rate item            |
+| `currencyRatesSchema`             | `/bank/currency` response array   |
+| `jarSchema`                       | One Personal jar                  |
+| `managedAccountSchema`            | One delegated FOP account         |
+| `managedClientSchema`             | One delegated FOP client          |
+| `merchantDetailsSchema`           | `/api/merchant/details` response  |
+| `newInvoiceSchema`                | Create-invoice response           |
+| `invoiceStatusSchema`             | Invoice status or webhook payload |
+| `cancelInvoiceResponseSchema`     | Invoice cancellation response     |
+| `finalizeInvoiceResponseSchema`   | Hold finalization response        |
+| `receiptSchema`                   | Invoice receipt response          |
+| `invoiceFiscalChecksSchema`       | Invoice fiscal checks response    |
+| `statementItemSchema`             | One statement item                |
+| `statementItemsSchema`            | Statement response array          |
+| `personalWebhookEventSchema`      | Incoming Personal statement event |
 
 ```ts
 import { currencyRatesSchema } from "@liaugust/monobank-sdk";
@@ -768,6 +843,12 @@ validation.
 | `merchantName` | `string` | Merchant display name             |
 | `edrpou`       | `string` | Ukrainian registration identifier |
 
+### AcquiringWebhookPublicKey
+
+| Field | Type     | Notes                                         |
+| ----- | -------- | --------------------------------------------- |
+| `key` | `string` | Base64-encoded X.509 ECDSA webhook public key |
+
 ### Acquiring invoice models
 
 - `NewInvoice` contains the Monobank `invoiceId` and hosted `pageUrl`.
@@ -843,6 +924,7 @@ object containing the target `account` identifier and validated
 | `GetStatementsInput`                     | Statement account and time window                              |
 | `UnixTimeInput`                          | `Date \| number` statement timestamp input                     |
 | `SetWebhookInput`                        | Webhook URL request body                                       |
+| `VerifyAcquiringWebhookSignatureInput`   | Raw body, public key, and signature verification inputs        |
 | `CreateInvoiceInput`                     | Invoice amount, order, redirect, webhook, and payment controls |
 | `CreateInvoiceOptions`                   | Cancellation and optional CMS attribution headers              |
 | `GetInvoiceStatusInput`                  | Invoice identifier for status lookup                           |
@@ -865,5 +947,5 @@ object containing the target `account` identifier and validated
 
 Response types are inferred from their runtime schemas and exported from the
 package root, including the Personal models plus `MerchantDetails`,
-`NewInvoice`, `Invoice`, `InvoiceCancellation`, `InvoiceFinalization`,
-`InvoiceReceipt`, and `InvoiceFiscalChecks`.
+`AcquiringWebhookPublicKey`, `NewInvoice`, `Invoice`, `InvoiceCancellation`,
+`InvoiceFinalization`, `InvoiceReceipt`, and `InvoiceFiscalChecks`.
