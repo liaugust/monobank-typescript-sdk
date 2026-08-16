@@ -3,7 +3,7 @@
 **Date:** 2026-08-16  
 **Status:** Approved in conversation; awaiting written-spec review  
 **Repository:** `monobank-typescript-sdk` (private GitHub repository)  
-**Package:** `@liaugust/monobank` (private until publication is explicitly approved)
+**Package:** `@liaugust/monobank-sdk` (private until publication is explicitly approved)
 
 ## 1. Purpose
 
@@ -50,7 +50,7 @@ The SDK will be one npm package with two explicit clients:
 import {
   MonobankAcquiringClient,
   MonobankPersonalClient,
-} from "@liaugust/monobank";
+} from "@liaugust/monobank-sdk";
 ```
 
 `MonobankPersonalClient` and `MonobankAcquiringClient` will share internal
