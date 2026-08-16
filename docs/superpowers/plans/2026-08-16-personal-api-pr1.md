@@ -105,6 +105,7 @@ Files may be split further only when a file would otherwise own more than one in
 ### Task 1: Strict Package Foundation
 
 **Files:**
+
 - Create: `package.json`
 - Create: `.node-version`
 - Create: `.nvmrc`
@@ -122,6 +123,7 @@ Files may be split further only when a file would otherwise own more than one in
 - Create: `pnpm-lock.yaml` through pnpm
 
 **Interfaces:**
+
 - Consumes: Approved design specification and the strict configuration policy adapted from `liaugust/launch-with-vibe`.
 - Produces: A buildable private package, one authoritative `pnpm verify` command, and a stable toolchain for every later task.
 
@@ -246,7 +248,7 @@ export default defineConfig({
   sourcemap: true,
   splitting: false,
   target: "es2022",
-  treeshake: true
+  treeshake: true,
 });
 ```
 
@@ -288,14 +290,14 @@ const publicApiFiles = [
   "src/errors/*.ts",
   "src/personal/*.ts",
   "src/transport/fetch-like.ts",
-  "src/transport/retry-options.ts"
+  "src/transport/retry-options.ts",
 ];
 const sourceFiles = ["**/*.{js,mjs,cjs,ts,mts,cts}"];
 const typedFiles = ["**/*.{ts,mts,cts}"];
 const defaultExportFiles = [
   "eslint.config.mjs",
   "tsup.config.ts",
-  "vitest.config.ts"
+  "vitest.config.ts",
 ];
 
 function rulesFrom(configurations) {
@@ -306,8 +308,8 @@ export default defineConfig([
   {
     linterOptions: {
       reportUnusedDisableDirectives: "error",
-      reportUnusedInlineConfigs: "error"
-    }
+      reportUnusedInlineConfigs: "error",
+    },
   },
   {
     files: typedFiles,
@@ -315,31 +317,43 @@ export default defineConfig([
       parser: tseslint.parser,
       parserOptions: {
         projectService: true,
-        tsconfigRootDir: import.meta.dirname
-      }
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
     plugins: { "@typescript-eslint": tseslint.plugin },
     rules: {
       ...rulesFrom(tseslint.configs.strictTypeChecked),
       ...rulesFrom(tseslint.configs.stylisticTypeChecked),
-      "@typescript-eslint/ban-ts-comment": ["error", {
-        "minimumDescriptionLength": 10,
-        "ts-check": false,
-        "ts-expect-error": "allow-with-description",
-        "ts-ignore": true,
-        "ts-nocheck": true
-      }],
-      "@typescript-eslint/consistent-type-exports": ["error", { "fixMixedExportsWithInlineTypeSpecifier": true }],
-      "@typescript-eslint/consistent-type-imports": ["error", { "fixStyle": "separate-type-imports", "prefer": "type-imports" }],
+      "@typescript-eslint/ban-ts-comment": [
+        "error",
+        {
+          minimumDescriptionLength: 10,
+          "ts-check": false,
+          "ts-expect-error": "allow-with-description",
+          "ts-ignore": true,
+          "ts-nocheck": true,
+        },
+      ],
+      "@typescript-eslint/consistent-type-exports": [
+        "error",
+        { fixMixedExportsWithInlineTypeSpecifier: true },
+      ],
+      "@typescript-eslint/consistent-type-imports": [
+        "error",
+        { fixStyle: "separate-type-imports", prefer: "type-imports" },
+      ],
       "@typescript-eslint/no-deprecated": "error",
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-import-type-side-effects": "error",
-      "@typescript-eslint/switch-exhaustiveness-check": ["error", {
-        "allowDefaultCaseForExhaustiveSwitch": false,
-        "considerDefaultExhaustiveForUnions": false,
-        "requireDefaultForNonUnion": true
-      }],
-    }
+      "@typescript-eslint/switch-exhaustiveness-check": [
+        "error",
+        {
+          allowDefaultCaseForExhaustiveSwitch: false,
+          considerDefaultExhaustiveForUnions: false,
+          requireDefaultForNonUnion: true,
+        },
+      ],
+    },
   },
   {
     files: sourceFiles,
@@ -354,15 +368,18 @@ export default defineConfig([
       "no-implied-eval": "error",
       "no-new-func": "error",
       "no-nested-ternary": "error",
-      "no-restricted-properties": ["error", {
-        "object": "process",
-        "property": "env",
-        "message": "Pass validated runtime configuration into the SDK instead."
-      }],
+      "no-restricted-properties": [
+        "error",
+        {
+          object: "process",
+          property: "env",
+          message: "Pass validated runtime configuration into the SDK instead.",
+        },
+      ],
       "no-script-url": "error",
       "simple-import-sort/exports": "error",
-      "simple-import-sort/imports": "error"
-    }
+      "simple-import-sort/imports": "error",
+    },
   },
   {
     files: publicApiFiles,
@@ -372,32 +389,46 @@ export default defineConfig([
       ...jsdoc.configs["flat/recommended-typescript-error"].rules,
       "jsdoc/informative-docs": "error",
       "jsdoc/require-description": "error",
-      "jsdoc/require-jsdoc": ["error", {
-        "contexts": [
-          "VariableDeclaration",
-          "TSInterfaceDeclaration",
-          "TSTypeAliasDeclaration",
-          "TSMethodSignature",
-          "TSPropertySignature",
-          "MethodDefinition:not([accessibility='private']):not([accessibility='protected'])",
-          "PropertyDefinition:not([accessibility='private']):not([accessibility='protected'])"
-        ],
-        "publicOnly": { "ancestorsOnly": true, "cjs": false, "esm": true, "window": false },
-        "require": {
-          "ArrowFunctionExpression": true,
-          "ClassDeclaration": true,
-          "ClassExpression": true,
-          "FunctionDeclaration": true,
-          "FunctionExpression": true,
-          "MethodDefinition": false
-        }
-      }],
+      "jsdoc/require-jsdoc": [
+        "error",
+        {
+          contexts: [
+            "VariableDeclaration",
+            "TSInterfaceDeclaration",
+            "TSTypeAliasDeclaration",
+            "TSMethodSignature",
+            "TSPropertySignature",
+            "MethodDefinition:not([accessibility='private']):not([accessibility='protected'])",
+            "PropertyDefinition:not([accessibility='private']):not([accessibility='protected'])",
+          ],
+          publicOnly: {
+            ancestorsOnly: true,
+            cjs: false,
+            esm: true,
+            window: false,
+          },
+          require: {
+            ArrowFunctionExpression: true,
+            ClassDeclaration: true,
+            ClassExpression: true,
+            FunctionDeclaration: true,
+            FunctionExpression: true,
+            MethodDefinition: false,
+          },
+        },
+      ],
       "jsdoc/require-param-description": "error",
-      "jsdoc/require-returns-description": "error"
-    }
+      "jsdoc/require-returns-description": "error",
+    },
   },
   { files: defaultExportFiles, rules: { "import-x/no-default-export": "off" } },
-  globalIgnores([".husky/**", ".tmp/**", "coverage/**", "dist/**", "node_modules/**"])
+  globalIgnores([
+    ".husky/**",
+    ".tmp/**",
+    "coverage/**",
+    "dist/**",
+    "node_modules/**",
+  ]),
 ]);
 ```
 
@@ -430,12 +461,12 @@ export default defineConfig({
         branches: 100,
         functions: 100,
         lines: 100,
-        statements: 100
-      }
+        statements: 100,
+      },
     },
     environment: "node",
-    include: ["src/**/*.test.ts"]
-  }
+    include: ["src/**/*.test.ts"],
+  },
 });
 ```
 
@@ -444,11 +475,7 @@ Create `knip.json`:
 ```json
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": [
-    "src/index.ts",
-    "tsup.config.ts",
-    "vitest.config.ts"
-  ],
+  "entry": ["src/index.ts", "tsup.config.ts", "vitest.config.ts"],
   "project": ["src/**/*.ts", "*.ts"]
 }
 ```
@@ -524,6 +551,7 @@ Not-tested: Runtime package surface; endpoint implementation has not started."
 ### Task 2: Public Error Model and Response Boundary
 
 **Files:**
+
 - Create: `src/errors/monobank-api-error.ts`
 - Create: `src/errors/monobank-network-error.ts`
 - Create: `src/errors/monobank-response-validation-error.ts`
@@ -534,6 +562,7 @@ Not-tested: Runtime package surface; endpoint implementation has not started."
 - Create: `src/transport/parse-retry-after.test.ts`
 
 **Interfaces:**
+
 - Consumes: Standard `Error`, `Headers`, and a structural schema contract.
 - Produces: `MonobankApiError`, `MonobankNetworkError`, `MonobankResponseValidationError`, `MonobankValidationError`, `ResponseSchema<T>`, and `parseRetryAfter(value, nowMs)` for the transport.
 
@@ -548,14 +577,14 @@ it("keeps API metadata without including credentials", () => {
     headers: { "retry-after": "60" },
     message: "Too many requests",
     retryAfterMs: 60_000,
-    status: 429
+    status: 429,
   });
 
   expect(error).toMatchObject({
     name: "MonobankApiError",
     endpoint: "/personal/client-info",
     status: 429,
-    retryAfterMs: 60_000
+    retryAfterMs: 60_000,
   });
   expect(JSON.stringify(error)).not.toContain("X-Token");
 });
@@ -564,7 +593,7 @@ it.each([
   ["60", Date.UTC(2026, 7, 16), 60_000],
   ["Sun, 16 Aug 2026 12:01:00 GMT", Date.UTC(2026, 7, 16, 12), 60_000],
   ["invalid", Date.UTC(2026, 7, 16), undefined],
-  [null, Date.UTC(2026, 7, 16), undefined]
+  [null, Date.UTC(2026, 7, 16), undefined],
 ])("parses Retry-After %s", (value, nowMs, expected) => {
   expect(parseRetryAfter(value, nowMs)).toBe(expected);
 });
@@ -625,7 +654,7 @@ Implement `parseRetryAfter` as:
 ```ts
 export function parseRetryAfter(
   value: string | null,
-  nowMs: number
+  nowMs: number,
 ): number | undefined {
   if (value === null) {
     return undefined;
@@ -669,6 +698,7 @@ Tested: Focused Vitest suite with 100% coverage."
 ### Task 3: Fetch Transport, Parsing, and Authentication Isolation
 
 **Files:**
+
 - Create: `src/transport/fetch-like.ts`
 - Create: `src/transport/retry-options.ts`
 - Create: `src/transport/transport.ts`
@@ -676,6 +706,7 @@ Tested: Focused Vitest suite with 100% coverage."
 - Create: `tests/support/create-fetch-sequence.ts`
 
 **Interfaces:**
+
 - Consumes: `ResponseSchema<T>`, the four public errors, `parseRetryAfter`, global Fetch types, and optional Personal token.
 - Produces: internal `MonobankTransport`, public `RetryOptions`, and `FetchLike` used by `MonobankPersonalClient`.
 
@@ -688,9 +719,7 @@ import { vi } from "vitest";
 
 import type { FetchLike } from "../../src/transport/fetch-like.js";
 
-export function createFetchSequence(
-  results: readonly (Error | Response)[]
-) {
+export function createFetchSequence(results: readonly (Error | Response)[]) {
   const queue = [...results];
 
   return vi.fn<FetchLike>(async () => {
@@ -708,7 +737,7 @@ export function createFetchSequence(
 
 export function jsonResponse(
   value: unknown,
-  init: ResponseInit = {}
+  init: ResponseInit = {},
 ): Response {
   const headers = new Headers(init.headers);
   headers.set("Content-Type", "application/json");
@@ -735,7 +764,7 @@ it("never sends the token to public endpoints", async () => {
   await transport.getJson({
     auth: false,
     endpoint: "/bank/sync",
-    schema: passthroughSchema
+    schema: passthroughSchema,
   });
 
   const [, init] = fetch.mock.calls[0] ?? [];
@@ -749,7 +778,7 @@ it("sends the token only for authenticated requests", async () => {
   await transport.getJson({
     auth: true,
     endpoint: "/personal/client-info",
-    schema: passthroughSchema
+    schema: passthroughSchema,
   });
 
   const [, init] = fetch.mock.calls[0] ?? [];
@@ -776,7 +805,7 @@ Use these transport contracts:
 ```ts
 export type FetchLike = (
   input: RequestInfo | URL,
-  init?: RequestInit
+  init?: RequestInit,
 ) => Promise<Response>;
 
 export interface RetryOptions {
@@ -858,10 +887,12 @@ Tested: Transport unit suite with 100% coverage, lint, and typecheck."
 ### Task 4: Timeout, Cancellation, and Safe Opt-in Retries
 
 **Files:**
+
 - Modify: `src/transport/transport.ts`
 - Modify: `src/transport/transport.test.ts`
 
 **Interfaces:**
+
 - Consumes: `RetryOptions`, `parseRetryAfter`, request `retryable`, caller `AbortSignal`, and Fetch failures.
 - Produces: bounded retry timing and stable `MonobankNetworkError` reasons without changing endpoint APIs.
 
@@ -875,7 +906,7 @@ function requestSafeGet(transport: MonobankTransport) {
     auth: true,
     endpoint: "/personal/client-info",
     retryable: true,
-    schema: passthroughSchema
+    schema: passthroughSchema,
   });
 }
 ```
@@ -887,7 +918,9 @@ it("does not retry unless a retry policy is configured", async () => {
   const fetch = createFetchSequence([new Response(null, { status: 503 })]);
   const transport = new MonobankTransport({ fetch, token: "token" });
 
-  await expect(requestSafeGet(transport)).rejects.toMatchObject({ status: 503 });
+  await expect(requestSafeGet(transport)).rejects.toMatchObject({
+    status: 503,
+  });
   expect(fetch).toHaveBeenCalledTimes(1);
 });
 
@@ -895,12 +928,12 @@ it("honors Retry-After for a configured safe GET", async () => {
   vi.useFakeTimers();
   const fetch = createFetchSequence([
     new Response(null, { headers: { "Retry-After": "2" }, status: 429 }),
-    jsonResponse({ ok: true })
+    jsonResponse({ ok: true }),
   ]);
   const transport = new MonobankTransport({
     fetch,
     retry: { baseDelayMs: 100, maxAttempts: 2, maxDelayMs: 5_000 },
-    token: "token"
+    token: "token",
   });
 
   const result = requestSafeGet(transport);
@@ -933,7 +966,7 @@ const RETRYABLE_STATUS_CODES = new Set([429, 500, 502, 503, 504]);
 function retryDelayMs(
   attempt: number,
   retryAfterMs: number | undefined,
-  policy: RetryOptions
+  policy: RetryOptions,
 ): number | undefined {
   if (retryAfterMs !== undefined) {
     return retryAfterMs <= policy.maxDelayMs ? retryAfterMs : undefined;
@@ -974,6 +1007,7 @@ Tested: Fake-timer reliability suite and full 100% coverage run."
 ### Task 5: Public Currency and Bank Synchronization Endpoints
 
 **Files:**
+
 - Create: `src/personal/currency-rate.ts`
 - Create: `src/personal/currency-rate.test.ts`
 - Create: `src/personal/bank-sync.ts`
@@ -985,6 +1019,7 @@ Tested: Fake-timer reliability suite and full 100% coverage run."
 - Create: `tests/fixtures/personal-api.ts`
 
 **Interfaces:**
+
 - Consumes: `MonobankTransport`, `FetchLike`, `RetryOptions`, and Zod Mini.
 - Produces: `CurrencyRate`, `BankSync`, `MonobankPersonalClientOptions`, `RequestOptions`, `MonobankPersonalClient#getCurrencyRates`, and `MonobankPersonalClient#getBankSync`.
 
@@ -998,13 +1033,14 @@ export const currencyRateFixture = {
   currencyCodeB: 980,
   date: 1_552_392_228,
   rateBuy: 27.2,
-  rateSell: 27
+  rateSell: 27,
 } as const;
 
 export const bankSyncFixture = {
   serverKeyId: "2626ff34473bb66260b930af946fa9641a06bcd4",
-  serverPubKey: "BNDZP+AGoRC+ER1plDSUCHOw2/aBNIocmD2gS/v34/b0iQ1HBo+oS3/f402e3OXA5uCxakSjuxGMP6X0XP9VIUk=",
-  serverTimeMsec: 1_755_509_467_397
+  serverPubKey:
+    "BNDZP+AGoRC+ER1plDSUCHOw2/aBNIocmD2gS/v34/b0iQ1HBo+oS3/f402e3OXA5uCxakSjuxGMP6X0XP9VIUk=",
+  serverTimeMsec: 1_755_509_467_397,
 } as const;
 ```
 
@@ -1034,13 +1070,17 @@ export const currencyRateSchema = z
     date: z.int(),
     rateBuy: z.optional(z.number()),
     rateCross: z.optional(z.number()),
-    rateSell: z.optional(z.number())
+    rateSell: z.optional(z.number()),
   })
-  .check(z.refine(
-    ({ rateBuy, rateCross, rateSell }) =>
-      rateBuy !== undefined || rateCross !== undefined || rateSell !== undefined,
-    { message: "At least one exchange rate is required" }
-  ));
+  .check(
+    z.refine(
+      ({ rateBuy, rateCross, rateSell }) =>
+        rateBuy !== undefined ||
+        rateCross !== undefined ||
+        rateSell !== undefined,
+      { message: "At least one exchange rate is required" },
+    ),
+  );
 
 export const currencyRatesSchema = z.array(currencyRateSchema);
 export type CurrencyRate = z.infer<typeof currencyRateSchema>;
@@ -1059,12 +1099,16 @@ it("loads public currency rates without X-Token", async () => {
   const fetch = createFetchSequence([jsonResponse([currencyRateFixture])]);
   const client = new MonobankPersonalClient({ fetch, token: "personal-token" });
 
-  await expect(client.getCurrencyRates()).resolves.toEqual([currencyRateFixture]);
+  await expect(client.getCurrencyRates()).resolves.toEqual([
+    currencyRateFixture,
+  ]);
   expect(fetch).toHaveBeenCalledWith(
     new URL("https://api.monobank.ua/bank/currency"),
-    expect.objectContaining({ method: "GET" })
+    expect.objectContaining({ method: "GET" }),
   );
-  expect(new Headers(fetch.mock.calls[0]?.[1]?.headers).has("X-Token")).toBe(false);
+  expect(new Headers(fetch.mock.calls[0]?.[1]?.headers).has("X-Token")).toBe(
+    false,
+  );
 });
 ```
 
@@ -1126,6 +1170,7 @@ Tested: Endpoint/schema suites with 100% coverage, lint, and typecheck."
 ### Task 6: Client Information, Accounts, Jars, and Managed Clients
 
 **Files:**
+
 - Create: `src/personal/account.ts`
 - Create: `src/personal/account.test.ts`
 - Create: `src/personal/jar.ts`
@@ -1139,6 +1184,7 @@ Tested: Endpoint/schema suites with 100% coverage, lint, and typecheck."
 - Modify: `tests/fixtures/personal-api.ts`
 
 **Interfaces:**
+
 - Consumes: Personal transport authentication and Zod Mini.
 - Produces: `accountSchema`/`Account`, `jarSchema`/`Jar`, `managedAccountSchema`/`ManagedAccount`, `managedClientSchema`/`ManagedClient`, `clientInfoSchema`/`ClientInfo`, and `MonobankPersonalClient#getClientInfo`.
 
@@ -1148,43 +1194,51 @@ The fixture must include all documented shapes:
 
 ```ts
 export const clientInfoFixture = {
-  accounts: [{
-    balance: 10_000_000,
-    cashbackType: "UAH",
-    creditLimit: 10_000_000,
-    currencyCode: 980,
-    iban: "UA733220010000026201234567890",
-    id: "account-id",
-    maskedPan: ["537541******1234"],
-    sendId: "send-id",
-    type: "black"
-  }],
-  clientId: "client-id",
-  jars: [{
-    balance: 1_000_000,
-    currencyCode: 980,
-    description: "Redacted goal",
-    goal: 10_000_000,
-    id: "jar-id",
-    sendId: "jar-send-id",
-    title: "Redacted jar"
-  }],
-  managedClients: [{
-    accounts: [{
+  accounts: [
+    {
       balance: 10_000_000,
-      creditLimit: 0,
+      cashbackType: "UAH",
+      creditLimit: 10_000_000,
       currencyCode: 980,
-      iban: "UA733220010000026201234567891",
-      id: "managed-account-id",
-      type: "fop"
-    }],
-    clientId: "managed-client-id",
-    name: "Redacted Person",
-    tin: "1234567890"
-  }],
+      iban: "UA733220010000026201234567890",
+      id: "account-id",
+      maskedPan: ["537541******1234"],
+      sendId: "send-id",
+      type: "black",
+    },
+  ],
+  clientId: "client-id",
+  jars: [
+    {
+      balance: 1_000_000,
+      currencyCode: 980,
+      description: "Redacted goal",
+      goal: 10_000_000,
+      id: "jar-id",
+      sendId: "jar-send-id",
+      title: "Redacted jar",
+    },
+  ],
+  managedClients: [
+    {
+      accounts: [
+        {
+          balance: 10_000_000,
+          creditLimit: 0,
+          currencyCode: 980,
+          iban: "UA733220010000026201234567891",
+          id: "managed-account-id",
+          type: "fop",
+        },
+      ],
+      clientId: "managed-client-id",
+      name: "Redacted Person",
+      tin: "1234567890",
+    },
+  ],
   name: "Redacted Person",
   permissions: "psfj",
-  webHookUrl: "https://example.test/mono-hook"
+  webHookUrl: "https://example.test/mono-hook",
 } as const;
 ```
 
@@ -1218,7 +1272,7 @@ export const accountSchema = z.looseObject({
   id: z.string(),
   maskedPan: z.array(z.string()),
   sendId: z.string(),
-  type: z.enum(["black", "white", "platinum", "iron", "fop", "yellow", "eAid"])
+  type: z.enum(["black", "white", "platinum", "iron", "fop", "yellow", "eAid"]),
 });
 ```
 
@@ -1232,8 +1286,9 @@ it("gets client info with X-Token and validates nested data", async () => {
   const client = new MonobankPersonalClient({ fetch, token: "personal-token" });
 
   await expect(client.getClientInfo()).resolves.toEqual(clientInfoFixture);
-  expect(new Headers(fetch.mock.calls[0]?.[1]?.headers).get("X-Token"))
-    .toBe("personal-token");
+  expect(new Headers(fetch.mock.calls[0]?.[1]?.headers).get("X-Token")).toBe(
+    "personal-token",
+  );
 });
 ```
 
@@ -1273,6 +1328,7 @@ Tested: Full suite at 100% coverage, lint, and typecheck."
 ### Task 7: Statements and Personal Webhooks
 
 **Files:**
+
 - Create: `src/personal/statement-item.ts`
 - Create: `src/personal/statement-item.test.ts`
 - Create: `src/personal/get-statements-input.ts`
@@ -1286,6 +1342,7 @@ Tested: Full suite at 100% coverage, lint, and typecheck."
 - Modify: `tests/fixtures/personal-api.ts`
 
 **Interfaces:**
+
 - Consumes: `MonobankTransport`, `RequestOptions`, Zod Mini, and the client token.
 - Produces: `StatementItem`, `GetStatementsInput`, `SetWebhookInput`, `PersonalWebhookEvent`, `parsePersonalWebhookEvent`, `getStatements`, and `setWebhook`.
 
@@ -1299,9 +1356,9 @@ Define the webhook fixture shape exactly:
 export const personalWebhookEventFixture = {
   data: {
     account: "account-id",
-    statementItem: statementItemFixture
+    statementItem: statementItemFixture,
   },
-  type: "StatementItem"
+  type: "StatementItem",
 } as const;
 ```
 
@@ -1340,7 +1397,7 @@ export const statementItemSchema = z.looseObject({
   operationAmount: z.int(),
   originalMcc: z.int(),
   receiptId: z.optional(z.string()),
-  time: z.int()
+  time: z.int(),
 });
 
 export const statementItemsSchema = z.array(statementItemSchema);
@@ -1362,11 +1419,11 @@ it("builds an encoded statement path from Date inputs", async () => {
   await client.getStatements({
     account: "jar/id",
     from: new Date("2026-08-01T00:00:00.000Z"),
-    to: new Date("2026-08-02T00:00:00.000Z")
+    to: new Date("2026-08-02T00:00:00.000Z"),
   });
 
   expect(fetch.mock.calls[0]?.[0].toString()).toBe(
-    "https://api.monobank.ua/personal/statement/jar%2Fid/1785542400/1785628800"
+    "https://api.monobank.ua/personal/statement/jar%2Fid/1785542400/1785628800",
   );
 });
 ```
@@ -1436,6 +1493,7 @@ Tested: Full 100% coverage suite, lint, typecheck, and zero-duplication check."
 ### Task 8: Public Exports, Consumer Contracts, and Documentation
 
 **Files:**
+
 - Modify: `src/index.ts`
 - Create: `src/index.test.ts`
 - Create: `tests/types/public-api.test-d.ts`
@@ -1451,6 +1509,7 @@ Tested: Full 100% coverage suite, lint, typecheck, and zero-duplication check."
 - Modify: `.prettierignore`
 
 **Interfaces:**
+
 - Consumes: All PR 1 public clients, errors, schemas, types, and built artifacts.
 - Produces: The deliberate package API, compile-time usage contract, retained declaration JSDoc, ESM/CommonJS/browser smoke coverage, and user documentation.
 
@@ -1467,7 +1526,7 @@ import {
   type ClientInfo,
   type CurrencyRate,
   type GetStatementsInput,
-  type PersonalWebhookEvent
+  type PersonalWebhookEvent,
 } from "@liaugust/monobank-sdk";
 
 const client = new MonobankPersonalClient({ token: "token" });
@@ -1610,11 +1669,13 @@ Tested: pnpm verify including 100% coverage, JSDoc declaration checks, type test
 ### Task 9: CI, Pre-push Enforcement, and Draft PR
 
 **Files:**
+
 - Create: `.husky/pre-push`
 - Create: `.github/workflows/ci.yml`
 - Modify: `README.md` only if CI badge/result wording is added after the workflow exists
 
 **Interfaces:**
+
 - Consumes: `pnpm verify`, exact Node/pnpm versions, and GitHub repository permissions.
 - Produces: Identical local and remote completion gates plus the sequential PR 1 review surface.
 
