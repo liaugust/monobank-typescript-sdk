@@ -19,6 +19,7 @@ validation boundary before it reaches your code.
 - Runtime validation for successful API responses and webhook payloads
 - Strict TypeScript types with preserved JSDoc in published declarations
 - ESM, CommonJS, and modern browser-bundler support
+- Built-in Web Crypto authentication for Acquiring webhook signatures
 - Fetch injection for tests, proxies, observability, and alternative runtimes
 - Explicit cancellation, timeouts, and bounded retries for safe GET requests
 - Credential-safe errors that do not retain tokens or raw Personal payloads
@@ -26,7 +27,7 @@ validation boundary before it reaches your code.
 
 ## Requirements
 
-- Node.js 20.19.5 or newer, or a modern browser with the standard Fetch API
+- Node.js 20.19.5 or newer, or a modern browser with standard Fetch and Web Crypto
 - No token for `MonobankPublicClient`
 - A Monobank Personal API token for `MonobankPersonalClient`
 - A Monobank Acquiring token for `MonobankAcquiringClient`
@@ -73,21 +74,22 @@ example focused; production code should validate the environment value first.
 
 ## API at a glance
 
-| Call                                        | Authentication  | Result                     | Notes                                          |
-| ------------------------------------------- | --------------- | -------------------------- | ---------------------------------------------- |
-| `publicApi.bank.getSync()`                  | None            | `BankSync`                 | Server time and public verification key        |
-| `publicApi.currency.getRates()`             | None            | `readonly CurrencyRate[]`  | Monobank may cache rates for five minutes      |
-| `personal.client.getInfo()`                 | Personal token  | `ClientInfo`               | Limited upstream to one request per 60 seconds |
-| `personal.statements.get(input)`            | Personal token  | `readonly StatementItem[]` | Maximum window: 2,682,000 seconds              |
-| `personal.webhooks.set(input)`              | Personal token  | `void`                     | Mutating request; never retried automatically  |
-| `acquiring.merchant.getDetails()`           | Acquiring token | `MerchantDetails`          | Merchant identity for the supplied token       |
-| `acquiring.invoices.create(input)`          | Acquiring token | `NewInvoice`               | Creates a hosted payment page                  |
-| `acquiring.invoices.getStatus(input)`       | Acquiring token | `Invoice`                  | Safe GET; eligible for configured retries      |
-| `acquiring.invoices.cancel(input)`          | Acquiring token | `InvoiceCancellation`      | Full or partial cancellation                   |
-| `acquiring.invoices.remove(input)`          | Acquiring token | `void`                     | Invalidates an unpaid invoice                  |
-| `acquiring.invoices.finalize(input)`        | Acquiring token | `InvoiceFinalization`      | Captures a held payment                        |
-| `acquiring.invoices.getReceipt(input)`      | Acquiring token | `InvoiceReceipt`           | Gets and optionally emails a receipt           |
-| `acquiring.invoices.getFiscalChecks(input)` | Acquiring token | `InvoiceFiscalChecks`      | Loads fiscalization results                    |
+| Call                                        | Authentication  | Result                      | Notes                                          |
+| ------------------------------------------- | --------------- | --------------------------- | ---------------------------------------------- |
+| `publicApi.bank.getSync()`                  | None            | `BankSync`                  | Server time and public verification key        |
+| `publicApi.currency.getRates()`             | None            | `readonly CurrencyRate[]`   | Monobank may cache rates for five minutes      |
+| `personal.client.getInfo()`                 | Personal token  | `ClientInfo`                | Limited upstream to one request per 60 seconds |
+| `personal.statements.get(input)`            | Personal token  | `readonly StatementItem[]`  | Maximum window: 2,682,000 seconds              |
+| `personal.webhooks.set(input)`              | Personal token  | `void`                      | Mutating request; never retried automatically  |
+| `acquiring.merchant.getDetails()`           | Acquiring token | `MerchantDetails`           | Merchant identity for the supplied token       |
+| `acquiring.webhooks.getPublicKey()`         | Acquiring token | `AcquiringWebhookPublicKey` | Key used to authenticate webhook signatures    |
+| `acquiring.invoices.create(input)`          | Acquiring token | `NewInvoice`                | Creates a hosted payment page                  |
+| `acquiring.invoices.getStatus(input)`       | Acquiring token | `Invoice`                   | Safe GET; eligible for configured retries      |
+| `acquiring.invoices.cancel(input)`          | Acquiring token | `InvoiceCancellation`       | Full or partial cancellation                   |
+| `acquiring.invoices.remove(input)`          | Acquiring token | `void`                      | Invalidates an unpaid invoice                  |
+| `acquiring.invoices.finalize(input)`        | Acquiring token | `InvoiceFinalization`       | Captures a held payment                        |
+| `acquiring.invoices.getReceipt(input)`      | Acquiring token | `InvoiceReceipt`            | Gets and optionally emails a receipt           |
+| `acquiring.invoices.getFiscalChecks(input)` | Acquiring token | `InvoiceFiscalChecks`       | Loads fiscalization results                    |
 
 See the [complete API reference](docs/API.md) for signatures, parameters,
 returns, errors, retry behavior, data models, and focused examples.
@@ -220,6 +222,46 @@ Parsing validates the documented payload shape. It does **not** authenticate
 the sender; verify the delivery channel and any signature material before
 acting on a webhook.
 
+Authenticate an Acquiring webhook before parsing or acting on it:
+
+```ts
+import {
+  MonobankAcquiringClient,
+  verifyAcquiringWebhookSignature,
+} from "@liaugust/monobank-sdk";
+
+const acquiring = new MonobankAcquiringClient({
+  token: process.env.MONOBANK_ACQUIRING_TOKEN!,
+});
+
+// Cache this response in application infrastructure.
+const { key: publicKey } = await acquiring.webhooks.getPublicKey();
+
+const signature = request.headers.get("X-Sign");
+if (signature === null) {
+  throw new Error("Missing Monobank X-Sign header");
+}
+
+const body = await request.arrayBuffer();
+const trusted = await verifyAcquiringWebhookSignature({
+  body,
+  publicKey,
+  signature,
+});
+
+if (!trusted) {
+  throw new Error("Untrusted Monobank webhook");
+}
+
+const event = JSON.parse(new TextDecoder().decode(body));
+```
+
+The signature covers the exact request bytes. Read the body once and do not
+parse, reserialize, trim, or otherwise transform it before verification.
+Monobank recommends caching the public key and fetching it again only after
+verification with the cached key fails; cache ownership remains with the
+application so storage and refresh policy stay explicit.
+
 ## Retries, timeouts, and cancellation
 
 Retries are disabled unless configured. A retry policy applies only to safe
@@ -291,6 +333,7 @@ same validation boundary:
 ```ts
 import {
   clientInfoSchema,
+  acquiringWebhookPublicKeySchema,
   currencyRatesSchema,
   invoiceStatusSchema,
   merchantDetailsSchema,

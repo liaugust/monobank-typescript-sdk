@@ -17,6 +17,7 @@ export interface VerifyAcquiringWebhookSignatureInput {
  * Authenticates the exact raw bytes of an Acquiring webhook using built-in Web Crypto.
  * @param input Raw body bytes, cached public key, and `X-Sign` header value.
  * @returns Whether the signature authenticates the supplied body.
+ * @throws {MonobankValidationError} When the public key or signature is malformed.
  */
 export async function verifyAcquiringWebhookSignature(
   input: VerifyAcquiringWebhookSignatureInput,
@@ -48,9 +49,7 @@ async function importPublicKey(publicKey: string): Promise<CryptoKey> {
   } catch {
     throw new MonobankValidationError({
       endpoint: "verify-acquiring-webhook-signature",
-      issues: [
-        "publicKey must be a base64-encoded X.509 ECDSA public key",
-      ],
+      issues: ["publicKey must be a base64-encoded X.509 ECDSA public key"],
       message: "Invalid Acquiring webhook verification input.",
     });
   }

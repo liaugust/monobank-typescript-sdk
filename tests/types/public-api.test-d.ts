@@ -1,5 +1,6 @@
 import type {
   Account,
+  AcquiringWebhookPublicKey,
   BankSync,
   CancelInvoiceInput,
   ClientInfo,
@@ -15,6 +16,7 @@ import type {
   MerchantDetails,
   NewInvoice,
   PersonalWebhookEvent,
+  VerifyAcquiringWebhookSignatureInput,
 } from "@liaugust/monobank-sdk";
 import {
   AccountType,
@@ -25,6 +27,7 @@ import {
   MonobankPersonalClient,
   MonobankPublicClient,
   parsePersonalWebhookEvent,
+  verifyAcquiringWebhookSignature,
 } from "@liaugust/monobank-sdk";
 
 const client = new MonobankPersonalClient({ token: "token" });
@@ -38,6 +41,15 @@ const rates: Promise<readonly CurrencyRate[]> =
   publicClient.currency.getRates();
 const merchantDetails: Promise<MerchantDetails> =
   acquiringClient.merchant.getDetails();
+const webhookPublicKey: Promise<AcquiringWebhookPublicKey> =
+  acquiringClient.webhooks.getPublicKey();
+const signatureInput: VerifyAcquiringWebhookSignatureInput = {
+  body: new Uint8Array(),
+  publicKey: "base64-key",
+  signature: "base64-signature",
+};
+const signatureMatches: Promise<boolean> =
+  verifyAcquiringWebhookSignature(signatureInput);
 const createInvoiceInput: CreateInvoiceInput = {
   amount: 4_200,
   paymentType: InvoicePaymentType.Hold,
@@ -95,6 +107,8 @@ void statements;
 void clientInfo;
 void rates;
 void merchantDetails;
+void webhookPublicKey;
+void signatureMatches;
 void newInvoice;
 void invoice;
 void cancellation;

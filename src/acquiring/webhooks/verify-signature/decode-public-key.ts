@@ -5,9 +5,7 @@ import { decodeBase64 } from "./decode-base64.js";
  * @param publicKey Base64-encoded X.509 PEM public key.
  * @returns DER-encoded SPKI bytes suitable for Web Crypto import.
  */
-export function decodePublicKey(
-  publicKey: string,
-): Uint8Array<ArrayBuffer> {
+export function decodePublicKey(publicKey: string): Uint8Array<ArrayBuffer> {
   const pem = new TextDecoder().decode(decodeBase64(publicKey));
   const encodedKey = pem
     .replace("-----BEGIN PUBLIC KEY-----", "")

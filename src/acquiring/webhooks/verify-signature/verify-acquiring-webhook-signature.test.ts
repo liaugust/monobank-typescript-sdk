@@ -82,9 +82,7 @@ describe("verifyAcquiringWebhookSignature", () => {
       }),
     ).rejects.toMatchObject({
       endpoint: "verify-acquiring-webhook-signature",
-      issues: [
-        "publicKey must be a base64-encoded X.509 ECDSA public key",
-      ],
+      issues: ["publicKey must be a base64-encoded X.509 ECDSA public key"],
       name: MonobankValidationError.name,
     });
   });

@@ -50,6 +50,12 @@ Use `MonobankAcquiringClient` with a separate Acquiring token.
   authenticate the sender.
 - `acquiring.merchant.getDetails(options?)`: authenticated
   `/api/merchant/details`; returns `Promise<MerchantDetails>`.
+- `acquiring.webhooks.getPublicKey(options?)`: authenticated
+  `/api/merchant/pubkey`; returns `Promise<AcquiringWebhookPublicKey>`; caller
+  owns caching and refresh after signature verification fails.
+- `verifyAcquiringWebhookSignature(input)`: authenticates exact raw body bytes
+  against the `X-Sign` ASN.1 DER signature using built-in Web Crypto; returns
+  `Promise<boolean>` and requires no additional runtime dependency.
 - `acquiring.invoices.create(input, options?)`: creates a hosted Acquiring
   invoice; returns `Promise<NewInvoice>`; never retried automatically.
 - `acquiring.invoices.getStatus(input, options?)`: returns `Promise<Invoice>`
@@ -103,14 +109,16 @@ objects, or raw API payloads.
   `currencyRateSchema`, `currencyRatesSchema`, `jarSchema`,
   `managedAccountSchema`, `managedClientSchema`, `statementItemSchema`,
   `statementItemsSchema`, `personalWebhookEventSchema`,
-  `merchantDetailsSchema`, `newInvoiceSchema`, `invoiceStatusSchema`,
+  `merchantDetailsSchema`, `acquiringWebhookPublicKeySchema`,
+  `newInvoiceSchema`, `invoiceStatusSchema`,
   `cancelInvoiceResponseSchema`, `finalizeInvoiceResponseSchema`,
   `receiptSchema`, `invoiceFiscalChecksSchema`.
 - Errors: `MonobankApiError`, `MonobankNetworkError`,
   `MonobankResponseValidationError`, `MonobankValidationError`.
-- Clients/parser: `MonobankPublicClient`, `MonobankPersonalClient`,
-  `MonobankAcquiringClient`, `parsePersonalWebhookEvent`. Resource classes are
-  available through parent properties and are not root runtime exports.
+- Clients/helpers: `MonobankPublicClient`, `MonobankPersonalClient`,
+  `MonobankAcquiringClient`, `parsePersonalWebhookEvent`,
+  `verifyAcquiringWebhookSignature`. Resource classes are available through
+  parent properties and are not root runtime exports.
 
 See `src/index.ts` for the complete authoritative export list, including types.
 
@@ -129,6 +137,9 @@ See `src/index.ts` for the complete authoritative export list, including types.
 - Never mix Personal and Acquiring tokens or send `X-Token` to public
   `/bank/*` endpoints.
 - Never treat webhook parsing as sender authentication.
+- For Acquiring webhooks, verify the exact raw body bytes before parsing or
+  transforming them. Read `X-Sign`, use the key from
+  `acquiring.webhooks.getPublicKey()`, and reject a `false` result.
 - Never retry `personal.webhooks.set()`, `acquiring.invoices.create()`,
   `acquiring.invoices.cancel()`, `acquiring.invoices.remove()`, or
   `acquiring.invoices.finalize()` automatically.
