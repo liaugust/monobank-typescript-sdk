@@ -1,6 +1,5 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": ["src/index.ts", "tsup.config.ts", "vitest.config.ts"],
-  "ignoreDependencies": ["zod"],
   "project": ["src/**/*.ts", "*.ts"]
 }
