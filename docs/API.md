@@ -15,6 +15,7 @@ supported contract.
 - [acquiring.webhooks.getPublicKey](#acquiringwebhooksgetpublickey)
 - [verifyAcquiringWebhookSignature](#verifyacquiringwebhooksignature)
 - [merchant.getDetails](#merchantgetdetails)
+- [acquiring.submerchants.list](#acquiringsubmerchantslist)
 - [acquiring.statements.get](#acquiringstatementsget)
 - [invoices.create](#invoicescreate)
 - [invoices.getStatus](#invoicesgetstatus)
@@ -172,6 +173,7 @@ The client groups operations into resource objects:
 - `acquiring.merchant`: merchant identity operations
 - `acquiring.invoices`: invoice lifecycle operations
 - `acquiring.statements`: transaction statement operations
+- `acquiring.submerchants`: submerchant terminal operations
 - `acquiring.webhooks`: webhook trust-material operations
 
 ## acquiring.webhooks.getPublicKey
@@ -270,6 +272,39 @@ Throws `MonobankApiError`, `MonobankNetworkError`,
 ```ts
 const merchant = await acquiring.merchant.getDetails();
 console.log(merchant.merchantId, merchant.merchantName, merchant.edrpou);
+```
+
+## acquiring.submerchants.list
+
+```ts
+acquiring.submerchants.list(
+  options?: RequestOptions,
+): Promise<AcquiringSubmerchantList>
+```
+
+Loads `GET /api/merchant/submerchant/list`. Monobank exposes this endpoint to a
+limited set of merchants that must explicitly choose a terminal when creating
+an invoice. Each item provides the terminal `code` accepted by invoice and
+statement inputs plus the terminal owner's `iban`.
+
+| Property       | Value                                                      |
+| -------------- | ---------------------------------------------------------- |
+| Authentication | Acquiring token in `X-Token`                               |
+| Rate limit     | No endpoint-specific limit is encoded or enforced          |
+| Retries        | Eligible when a retry policy is configured                 |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds   |
+| Cancellation   | `options.signal` cancels the active request or retry delay |
+| Returns        | `AcquiringSubmerchantList` with readonly `list`            |
+
+Throws `MonobankApiError`, `MonobankNetworkError`,
+`MonobankResponseValidationError`, or `MonobankValidationError`.
+
+```ts
+const submerchants = await acquiring.submerchants.list();
+
+for (const submerchant of submerchants.list) {
+  console.log(submerchant.code, submerchant.iban);
+}
 ```
 
 ## acquiring.statements.get
@@ -741,30 +776,32 @@ All schemas expose Zod Mini's standard parsing interface. Object schemas are
 loose: documented fields are validated and unknown additive fields are
 preserved.
 
-| Export                                 | Validates                         |
-| -------------------------------------- | --------------------------------- |
-| `accountSchema`                        | One Personal account              |
-| `acquiringStatementSchema`             | Acquiring statement response      |
-| `acquiringStatementItemSchema`         | One Acquiring transaction         |
-| `acquiringStatementCancellationSchema` | Nested Acquiring cancellation     |
-| `acquiringWebhookPublicKeySchema`      | Acquiring webhook key response    |
-| `bankSyncSchema`                       | `/bank/sync` response             |
-| `clientInfoSchema`                     | `/personal/client-info` response  |
-| `currencyRateSchema`                   | One exchange-rate item            |
-| `currencyRatesSchema`                  | `/bank/currency` response array   |
-| `jarSchema`                            | One Personal jar                  |
-| `managedAccountSchema`                 | One delegated FOP account         |
-| `managedClientSchema`                  | One delegated FOP client          |
-| `merchantDetailsSchema`                | `/api/merchant/details` response  |
-| `newInvoiceSchema`                     | Create-invoice response           |
-| `invoiceStatusSchema`                  | Invoice status or webhook payload |
-| `cancelInvoiceResponseSchema`          | Invoice cancellation response     |
-| `finalizeInvoiceResponseSchema`        | Hold finalization response        |
-| `receiptSchema`                        | Invoice receipt response          |
-| `invoiceFiscalChecksSchema`            | Invoice fiscal checks response    |
-| `statementItemSchema`                  | One statement item                |
-| `statementItemsSchema`                 | Statement response array          |
-| `personalWebhookEventSchema`           | Incoming Personal statement event |
+| Export                                 | Validates                           |
+| -------------------------------------- | ----------------------------------- |
+| `accountSchema`                        | One Personal account                |
+| `acquiringStatementSchema`             | Acquiring statement response        |
+| `acquiringStatementItemSchema`         | One Acquiring transaction           |
+| `acquiringStatementCancellationSchema` | Nested Acquiring cancellation       |
+| `acquiringSubmerchantListSchema`       | Acquiring submerchant-list response |
+| `acquiringSubmerchantSchema`           | One Acquiring submerchant           |
+| `acquiringWebhookPublicKeySchema`      | Acquiring webhook key response      |
+| `bankSyncSchema`                       | `/bank/sync` response               |
+| `clientInfoSchema`                     | `/personal/client-info` response    |
+| `currencyRateSchema`                   | One exchange-rate item              |
+| `currencyRatesSchema`                  | `/bank/currency` response array     |
+| `jarSchema`                            | One Personal jar                    |
+| `managedAccountSchema`                 | One delegated FOP account           |
+| `managedClientSchema`                  | One delegated FOP client            |
+| `merchantDetailsSchema`                | `/api/merchant/details` response    |
+| `newInvoiceSchema`                     | Create-invoice response             |
+| `invoiceStatusSchema`                  | Invoice status or webhook payload   |
+| `cancelInvoiceResponseSchema`          | Invoice cancellation response       |
+| `finalizeInvoiceResponseSchema`        | Hold finalization response          |
+| `receiptSchema`                        | Invoice receipt response            |
+| `invoiceFiscalChecksSchema`            | Invoice fiscal checks response      |
+| `statementItemSchema`                  | One statement item                  |
+| `statementItemsSchema`                 | Statement response array            |
+| `personalWebhookEventSchema`           | Incoming Personal statement event   |
 
 ```ts
 import { currencyRatesSchema } from "@liaugust/monobank-sdk";
@@ -888,6 +925,19 @@ validation.
 | `merchantId`   | `string` | Acquiring merchant identifier     |
 | `merchantName` | `string` | Merchant display name             |
 | `edrpou`       | `string` | Ukrainian registration identifier |
+
+### AcquiringSubmerchantList
+
+`AcquiringSubmerchantList.list` is a readonly array of terminals available to
+the configured merchant. Loose schemas preserve additive upstream fields on
+both the response wrapper and each item.
+
+| Item field | Type     | Required | Notes                           |
+| ---------- | -------- | -------- | ------------------------------- |
+| `code`     | `string` | Yes      | Submerchant terminal identifier |
+| `iban`     | `string` | Yes      | Terminal owner IBAN             |
+| `edrpou`   | `string` | No       | Terminal owner EDRPOU           |
+| `owner`    | `string` | No       | Terminal owner name             |
 
 ### AcquiringWebhookPublicKey
 
@@ -1031,6 +1081,8 @@ object containing the target `account` identifier and validated
 
 Response types are inferred from their runtime schemas and exported from the
 package root, including the Personal models plus `MerchantDetails`,
+`AcquiringSubmerchant`, `AcquiringSubmerchantList`,
 `AcquiringWebhookPublicKey`, `AcquiringStatement`, `AcquiringStatementItem`,
-`AcquiringStatementCancellation`, `NewInvoice`, `Invoice`, `InvoiceCancellation`,
-`InvoiceFinalization`, `InvoiceReceipt`, and `InvoiceFiscalChecks`.
+`AcquiringStatementCancellation`, `NewInvoice`, `Invoice`,
+`InvoiceCancellation`, `InvoiceFinalization`, `InvoiceReceipt`, and
+`InvoiceFiscalChecks`.

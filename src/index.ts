@@ -75,6 +75,14 @@ export {
   acquiringStatementSchema,
   AcquiringStatementStatus,
 } from "./acquiring/statements/models/acquiring-statement.js";
+export type {
+  AcquiringSubmerchant,
+  AcquiringSubmerchantList,
+} from "./acquiring/submerchants/models/acquiring-submerchant.js";
+export {
+  acquiringSubmerchantListSchema,
+  acquiringSubmerchantSchema,
+} from "./acquiring/submerchants/models/acquiring-submerchant.js";
 export type { AcquiringWebhookPublicKey } from "./acquiring/webhooks/get-public-key/get-public-key.js";
 export { acquiringWebhookPublicKeySchema } from "./acquiring/webhooks/get-public-key/get-public-key.js";
 export type { VerifyAcquiringWebhookSignatureInput } from "./acquiring/webhooks/verify-signature/verify-acquiring-webhook-signature.js";

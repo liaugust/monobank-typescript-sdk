@@ -31,6 +31,8 @@ describe("public package surface", () => {
       "acquiringStatementCancellationSchema",
       "acquiringStatementItemSchema",
       "acquiringStatementSchema",
+      "acquiringSubmerchantListSchema",
+      "acquiringSubmerchantSchema",
       "acquiringWebhookPublicKeySchema",
       "bankSyncSchema",
       "cancelInvoiceResponseSchema",

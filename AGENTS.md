@@ -37,9 +37,9 @@ claim endorsement by Monobank.
   infrastructure and refresh it only after verification with the cached key
   fails; the SDK intentionally does not own cache policy.
 - Use only documented Acquiring methods. The current surface contains merchant
-  details and statements plus invoice creation, status, cancellation, removal,
-  finalization, receipt, and fiscal-check operations. Do not invent
-  unimplemented payment calls.
+  details, submerchant listing, and statements plus invoice creation, status,
+  cancellation, removal, finalization, receipt, and fiscal-check operations.
+  Do not invent unimplemented payment calls.
 
 ## Minimal Correct Usage
 
@@ -80,15 +80,15 @@ The root entry point exports:
 - `MonobankPersonalClient`
 - `MonobankPublicClient`
 - `MonobankAcquiringClient`
-- nine resource properties exposed through the three parent clients: `bank`,
+- ten resource properties exposed through the three parent clients: `bank`,
   `currency`, `client`, Personal `statements`, Personal `webhooks`, `merchant`,
-  `invoices`, Acquiring `statements`, and Acquiring `webhooks`
+  `invoices`, Acquiring `statements`, `submerchants`, and Acquiring `webhooks`
 - Personal and Acquiring enum-like const values, including `AccountType`,
   `CashbackType`, `AcquiringPaymentScheme`, `AcquiringStatementStatus`,
   `InvoicePaymentType`, and `InvoiceStatus`
 - response schemas for accounts, bank sync, client info, currency rates, jars,
-  managed clients, merchant details, invoices, receipts, fiscal checks,
-  statements, and Personal webhook events
+  managed clients, merchant details, submerchants, invoices, receipts, fiscal
+  checks, statements, and Personal webhook events
 - `parsePersonalWebhookEvent`
 - `verifyAcquiringWebhookSignature`
 - Personal and Acquiring request, response, transport, retry, and error types
@@ -107,6 +107,7 @@ src/acquiring/client/           Acquiring parent client and options
 src/acquiring/merchant/         merchant resource and endpoint slice
 src/acquiring/invoices/         invoice endpoints, models, and request helpers
 src/acquiring/statements/       statement resource, endpoint, and models
+src/acquiring/submerchants/     submerchant resource, endpoint, and models
 src/acquiring/webhooks/         trust-key endpoint and signature verification
 src/public/client/              token-free Public parent client and options
 src/public/bank/                bank resource and sync endpoint

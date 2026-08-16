@@ -25,5 +25,6 @@ void client.webhooks;
 void acquiringClient.invoices;
 void acquiringClient.merchant;
 void acquiringClient.statements;
+void acquiringClient.submerchants;
 void acquiringClient.webhooks;
 void verifyAcquiringWebhookSignature;
