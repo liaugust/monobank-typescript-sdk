@@ -42,6 +42,9 @@ describe("get statements input validation", () => {
     expect(() => createStatementsEndpoint({ account: "0", from: -1 })).toThrow(
       MonobankValidationError,
     );
+    expect(() =>
+      createStatementsEndpoint({ account: "0", from: new Date(-1) }),
+    ).toThrow(MonobankValidationError);
     expect(() => createStatementsEndpoint({ account: "0", from: 1.5 })).toThrow(
       MonobankValidationError,
     );

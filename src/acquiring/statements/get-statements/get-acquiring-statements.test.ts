@@ -14,6 +14,7 @@ describe("Acquiring statement request", () => {
 
   it.each([
     { from: -1, name: "negative Unix time" },
+    { from: new Date(-1), name: "pre-epoch Date" },
     { from: 1.5, name: "fractional Unix time" },
     { from: Number.POSITIVE_INFINITY, name: "infinite Unix time" },
     { from: new Date("invalid"), name: "invalid Date" },

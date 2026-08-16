@@ -916,6 +916,34 @@ integer `amount`, and numeric ISO 4217 `ccy`. Optional fields include merchant
 profit, reference, destination, authorization data, QR identifier, and nested
 cancellations. Loose schemas preserve additive upstream fields.
 
+| Item field      | Type                               | Required | Notes                                       |
+| --------------- | ---------------------------------- | -------- | ------------------------------------------- |
+| `invoiceId`     | `string`                           | Yes      | Acquiring invoice identifier                |
+| `status`        | `AcquiringStatementStatus`         | Yes      | Transaction processing status               |
+| `maskedPan`     | `string`                           | Yes      | Masked payment-card number                  |
+| `date`          | `string`                           | Yes      | RFC-3339 transaction timestamp              |
+| `amount`        | `number`                           | Yes      | Integer amount in minor currency units      |
+| `ccy`           | `number`                           | Yes      | Numeric ISO 4217 currency code              |
+| `paymentScheme` | `AcquiringPaymentScheme`           | Yes      | Full payment or documented installment plan |
+| `profitAmount`  | `number`                           | No       | Integer merchant proceeds in minor units    |
+| `reference`     | `string`                           | No       | Merchant payment reference                  |
+| `destination`   | `string`                           | No       | Payment destination                         |
+| `approvalCode`  | `string`                           | No       | Authorization approval code                 |
+| `rrn`           | `string`                           | No       | Retrieval reference number                  |
+| `shortQrId`     | `string \| null`                   | No       | Short QR identifier when supplied           |
+| `cancelList`    | `AcquiringStatementCancellation[]` | No       | Cancellation records for the transaction    |
+
+Each `cancelList` entry has the following documented fields:
+
+| Cancellation field | Type     | Required | Notes                                    |
+| ------------------ | -------- | -------- | ---------------------------------------- |
+| `amount`           | `number` | Yes      | Integer amount in minor currency units   |
+| `ccy`              | `number` | Yes      | Numeric ISO 4217 currency code           |
+| `date`             | `string` | Yes      | RFC-3339 cancellation timestamp          |
+| `maskedPan`        | `string` | Yes      | Masked payment-card number               |
+| `approvalCode`     | `string` | No       | Cancellation authorization approval code |
+| `rrn`              | `string` | No       | Retrieval reference number               |
+
 ### Jar
 
 | Field          | Type     | Notes                  |

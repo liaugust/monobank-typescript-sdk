@@ -9,10 +9,9 @@ export type UnixTimeInput = Date | number;
 export function normalizeUnixTime(value: UnixTimeInput): number | undefined {
   if (value instanceof Date) {
     const milliseconds = value.getTime();
+    const seconds = Math.floor(milliseconds / 1_000);
 
-    return Number.isFinite(milliseconds)
-      ? Math.floor(milliseconds / 1_000)
-      : undefined;
+    return Number.isFinite(milliseconds) && seconds >= 0 ? seconds : undefined;
   }
 
   return Number.isFinite(value) && Number.isInteger(value) && value >= 0
