@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseRetryAfter } from "../parse-retry-after.js";
+import { parseRetryAfter } from "./parse-retry-after.js";
 
 describe("parseRetryAfter", () => {
   it.each([
