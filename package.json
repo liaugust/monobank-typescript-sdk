@@ -34,8 +34,10 @@
   "types": "./dist/index.d.ts",
   "files": [
     "dist",
+    "AGENTS.md",
     "README.md",
-    "SECURITY.md"
+    "SECURITY.md",
+    "llms.txt"
   ],
   "scripts": {
     "prepare": "husky",
