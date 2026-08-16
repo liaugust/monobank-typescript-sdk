@@ -97,6 +97,8 @@ export {
   statementItemSchema,
   statementItemsSchema,
 } from "./personal/statement-item.js";
+export { MonobankPublicClient } from "./public/monobank-public-client.js";
+export type { MonobankPublicClientOptions } from "./public/monobank-public-client-options.js";
 export type { FetchLike } from "./transport/fetch-like.js";
 export type { ResponseValidationIssue } from "./transport/response-schema.js";
 export type { RetryOptions } from "./transport/retry-options.js";

@@ -15,7 +15,7 @@ interface TransportOptions {
   readonly fetch?: FetchLike;
   readonly retry?: RetryOptions;
   readonly timeoutMs?: number;
-  readonly token: string;
+  readonly token?: string;
 }
 
 interface JsonRequest<T> {
@@ -43,7 +43,7 @@ interface StoredTransportOptions {
   readonly fetch: FetchLike;
   readonly retry?: RetryOptions;
   readonly timeoutMs: number;
-  readonly token: string;
+  readonly token?: string;
 }
 
 const defaultBaseUrl = "https://api.monobank.ua";
@@ -62,7 +62,9 @@ export class MonobankTransport {
       baseUrl: validateBaseUrl(options.baseUrl ?? defaultBaseUrl),
       fetch: options.fetch ?? validateGlobalFetch(),
       timeoutMs: validateTimeout(options.timeoutMs ?? defaultTimeoutMs),
-      token: validateToken(options.token),
+      ...(options.token === undefined
+        ? {}
+        : { token: validateToken(options.token) }),
       ...(retry === undefined ? {} : { retry: validateRetry(retry) }),
     };
   }
@@ -116,7 +118,10 @@ export class MonobankTransport {
     headers.set("Accept", "application/json");
 
     if (request.auth) {
-      headers.set("X-Token", this.options.token);
+      headers.set(
+        "X-Token",
+        requireAuthenticatedToken(this.options.token, request.endpoint),
+      );
     }
 
     const init: RequestInit = {
@@ -373,6 +378,21 @@ function validateToken(token: string): string {
   return token;
 }
 
+function requireAuthenticatedToken(
+  token: string | undefined,
+  endpoint: string,
+): string {
+  if (token === undefined) {
+    throw new MonobankValidationError({
+      endpoint,
+      issues: ["token is required for authenticated requests"],
+      message: "Invalid Monobank transport request.",
+    });
+  }
+
+  return token;
+}
+
 function validateBaseUrl(value: string): URL {
   let url: URL;
   try {
@@ -508,7 +528,7 @@ async function parseSuccessJson(
 async function createApiError(
   response: Response,
   endpoint: string,
-  token: string,
+  token: string | undefined,
   reason: () => "aborted" | "network" | "timeout",
 ): Promise<MonobankApiError> {
   const upstreamMessage = sanitizeUpstreamMessage(
@@ -552,7 +572,7 @@ function isAbortError(error: unknown): boolean {
 
 function sanitizeUpstreamMessage(
   responseText: string,
-  token: string,
+  token: string | undefined,
 ): string | undefined {
   if (responseText.length === 0) {
     return undefined;
@@ -560,7 +580,8 @@ function sanitizeUpstreamMessage(
 
   const jsonMessage = parseErrorDescription(responseText);
   const message = jsonMessage ?? responseText;
-  const redacted = message.split(token).join("[redacted]");
+  const redacted =
+    token === undefined ? message : message.split(token).join("[redacted]");
 
   return redacted.slice(0, 1_024);
 }

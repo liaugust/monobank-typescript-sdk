@@ -22,6 +22,7 @@ describe("public package surface", () => {
       "MonobankApiError",
       "MonobankNetworkError",
       "MonobankPersonalClient",
+      "MonobankPublicClient",
       "MonobankResponseValidationError",
       "MonobankValidationError",
       "accountSchema",

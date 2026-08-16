@@ -253,6 +253,16 @@ describe("MonobankTransport", () => {
     expect(new Headers(init?.headers).get("X-Token")).toBe("secret-token");
   });
 
+  it("rejects authenticated requests when no token was configured", async () => {
+    const fetch = createFetchSequence([jsonResponse({ ok: true })]);
+    const transport = new MonobankTransport({ fetch });
+
+    await expect(getPersonalClientInfo(transport)).rejects.toBeInstanceOf(
+      MonobankValidationError,
+    );
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("normalizes the base URL and endpoint into one absolute request URL", async () => {
     const fetch = createFetchSequence([jsonResponse({ ok: true })]);
     const transport = new MonobankTransport({

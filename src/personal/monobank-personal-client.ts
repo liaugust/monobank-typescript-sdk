@@ -1,10 +1,6 @@
 import { MonobankTransport } from "../transport/transport.js";
-import type { BankSync } from "./bank-sync.js";
-import { bankSyncSchema } from "./bank-sync.js";
 import type { ClientInfo } from "./client-info.js";
 import { clientInfoSchema } from "./client-info.js";
-import type { CurrencyRate } from "./currency-rate.js";
-import { currencyRatesSchema } from "./currency-rate.js";
 import type {
   GetStatementsInput,
   UnixTimeInput,
@@ -25,7 +21,7 @@ import { statementItemsSchema } from "./statement-item.js";
  *   fetch: globalThis.fetch,
  *   token: "personal-token",
  * });
- * const rates = await client.getCurrencyRates();
+ * const profile = await client.getClientInfo();
  * ```
  */
 export class MonobankPersonalClient {
@@ -38,54 +34,6 @@ export class MonobankPersonalClient {
    */
   public constructor(options: MonobankPersonalClientOptions) {
     this.transport = new MonobankTransport(options);
-  }
-
-  /**
-   * Loads public Monobank synchronization metadata without sending `X-Token`.
-   *
-   * This public GET is eligible for the configured safe retry policy only when
-   * `retry` is supplied to the constructor. A provided `RequestOptions.signal`
-   * cancels the active Fetch attempt and any retry delay.
-   * @param options Optional cancellation controls for this request.
-   * @returns Public bank synchronization metadata including server time in Unix milliseconds.
-   * @throws {MonobankApiError} When Monobank returns a non-success HTTP status.
-   * @throws {MonobankNetworkError} When Fetch fails, times out, or the caller aborts.
-   * @throws {MonobankResponseValidationError} When the successful payload does not match the public schema.
-   * @throws {MonobankValidationError} When request configuration is invalid before Fetch runs.
-   */
-  public getBankSync(options?: RequestOptions): Promise<BankSync> {
-    return this.transport.getJson({
-      auth: false,
-      endpoint: "/bank/sync",
-      retryable: true,
-      schema: bankSyncSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
-    });
-  }
-
-  /**
-   * Loads public currency rates without sending `X-Token`.
-   *
-   * This public GET is eligible for the configured safe retry policy only when
-   * `retry` is supplied to the constructor. A provided `RequestOptions.signal`
-   * cancels the active Fetch attempt and any retry delay.
-   * @param options Optional cancellation controls for this request.
-   * @returns Public currency quotes with ISO 4217 numeric codes and Unix-second quote timestamps.
-   * @throws {MonobankApiError} When Monobank returns a non-success HTTP status.
-   * @throws {MonobankNetworkError} When Fetch fails, times out, or the caller aborts.
-   * @throws {MonobankResponseValidationError} When the successful payload does not match the public schema.
-   * @throws {MonobankValidationError} When request configuration is invalid before Fetch runs.
-   */
-  public getCurrencyRates(
-    options?: RequestOptions,
-  ): Promise<readonly CurrencyRate[]> {
-    return this.transport.getJson({
-      auth: false,
-      endpoint: "/bank/currency",
-      retryable: true,
-      schema: currencyRatesSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
-    });
   }
 
   /**

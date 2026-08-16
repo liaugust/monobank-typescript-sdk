@@ -23,16 +23,18 @@ import {
   InvoiceStatus,
   MonobankAcquiringClient,
   MonobankPersonalClient,
+  MonobankPublicClient,
   parsePersonalWebhookEvent,
 } from "@liaugust/monobank-sdk";
 
 const client = new MonobankPersonalClient({ token: "token" });
+const publicClient = new MonobankPublicClient();
 const acquiringClient = new MonobankAcquiringClient({ token: "token" });
 const input: GetStatementsInput = { from: new Date(0) };
-const bankSync: Promise<BankSync> = client.getBankSync();
+const bankSync: Promise<BankSync> = publicClient.getBankSync();
 const statements = client.getStatements(input);
 const clientInfo: Promise<ClientInfo> = client.getClientInfo();
-const rates: Promise<readonly CurrencyRate[]> = client.getCurrencyRates();
+const rates: Promise<readonly CurrencyRate[]> = publicClient.getCurrencyRates();
 const merchantDetails: Promise<MerchantDetails> =
   acquiringClient.getMerchantDetails();
 const createInvoiceInput: CreateInvoiceInput = {
@@ -107,6 +109,12 @@ void cashbackType;
 void cashbackTypesAreExact;
 void account;
 void webhookEvent;
+
+const removedPersonalPublicMethod: Exclude<
+  "getBankSync" | "getCurrencyRates",
+  keyof MonobankPersonalClient
+> = "getCurrencyRates";
+void removedPersonalPublicMethod;
 
 // @ts-expect-error -- Personal token is required by the public constructor.
 new MonobankPersonalClient({});
