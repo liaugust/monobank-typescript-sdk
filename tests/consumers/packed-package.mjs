@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import {
+  existsSync,
   mkdirSync,
   readFileSync,
   realpathSync,
@@ -49,6 +50,14 @@ const extractedPackage = join(extractedDirectory, "package");
 const extractedManifest = JSON.parse(
   readFileSync(join(extractedPackage, "package.json"), "utf8"),
 );
+
+for (const agentGuide of ["AGENTS.md", "llms.txt"]) {
+  assert.equal(
+    existsSync(join(extractedPackage, agentGuide)),
+    true,
+    `${agentGuide} must be available to agents using the packed SDK`,
+  );
+}
 
 for (const dependency of Object.keys(extractedManifest.dependencies ?? {})) {
   const dependencyTarget = realpathSync(

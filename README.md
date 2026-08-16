@@ -1,10 +1,33 @@
 # @liaugust/monobank-sdk
 
-Unofficial TypeScript SDK for the Monobank APIs. This package is not endorsed
-by Monobank.
+[![npm version](https://img.shields.io/npm/v/%40liaugust%2Fmonobank-sdk?logo=npm)](https://www.npmjs.com/package/@liaugust/monobank-sdk)
+[![CI](https://github.com/liaugust/monobank-typescript-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/liaugust/monobank-typescript-sdk/actions/workflows/ci.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-The SDK supports Node.js 20.19.5+ and modern browsers that provide the standard
-Fetch API.
+A strict, runtime-validated TypeScript SDK for the Monobank API.
+
+It gives applications typed Personal API responses without trusting the wire:
+every successful JSON payload crosses a Zod validation boundary before it
+reaches your code.
+
+> [!IMPORTANT]
+> This is an unofficial community package. It is not developed, sponsored, or
+> endorsed by Monobank.
+
+## Why this SDK?
+
+- Runtime validation for successful API responses and webhook payloads
+- Strict TypeScript types with preserved JSDoc in published declarations
+- ESM, CommonJS, and modern browser-bundler support
+- Fetch injection for tests, proxies, observability, and alternative runtimes
+- Explicit cancellation, timeouts, and bounded retries for safe GET requests
+- Credential-safe errors that do not retain tokens or raw Personal payloads
+- Forward-compatible response objects that preserve additive upstream fields
+
+## Requirements
+
+- Node.js 20.19.5 or newer, or a modern browser with the standard Fetch API
+- A Monobank Personal API token for `MonobankPersonalClient`
 
 ## Installation
 
@@ -12,75 +35,103 @@ Fetch API.
 pnpm add @liaugust/monobank-sdk
 ```
 
-## Personal Client
+```sh
+npm install @liaugust/monobank-sdk
+```
 
-Create a Personal client with a token. The token is sent only to
-`/personal/*` endpoints; public `/bank/*` requests do not receive `X-Token`.
+## Quick start
 
 ```ts
-import { MonobankPersonalClient } from "@liaugust/monobank-sdk";
+import { AccountType, MonobankPersonalClient } from "@liaugust/monobank-sdk";
 
-const client = new MonobankPersonalClient({
-  token: "personal-token",
+const monobank = new MonobankPersonalClient({
+  token: process.env.MONOBANK_TOKEN!,
 });
-```
 
-Inject Fetch for tests, proxies, instrumentation, or runtimes that do not use
-`globalThis.fetch` directly.
+const client = await monobank.getClientInfo();
+const blackAccounts = client.accounts.filter(
+  (account) => account.type === AccountType.Black,
+);
 
-```ts
-const client = new MonobankPersonalClient({
-  fetch: async (input, init) => await fetch(input, init),
-  token: "personal-token",
-});
-```
+const account = blackAccounts[0];
+if (account === undefined) {
+  throw new Error("No black account is available");
+}
 
-## Personal API Examples
-
-Currency rates are public and Monobank may cache them for 5 minutes.
-
-```ts
-const rates = await client.getCurrencyRates();
-```
-
-Bank synchronization metadata is public and includes server time plus the
-public verification key.
-
-```ts
-const sync = await client.getBankSync();
-```
-
-Client information is authenticated and limited by Monobank to one request per
-60 seconds.
-
-```ts
-const info = await client.getClientInfo();
-```
-
-Statements are authenticated, limited to one request per 60 seconds, and the
-requested window must not exceed 2,682,000 seconds. Dates are normalized to Unix
-seconds at the request boundary.
-
-```ts
-const statements = await client.getStatements({
-  account: info.accounts[0].id,
+const statements = await monobank.getStatements({
+  account: account.id,
   from: new Date("2026-08-01T00:00:00.000Z"),
   to: new Date("2026-08-16T00:00:00.000Z"),
 });
 ```
 
-Set a webhook with an absolute HTTP(S) URL, or pass an empty string to remove
-the configured webhook. Webhook configuration is a mutating request and is
-never retried automatically by the SDK.
+Do not hardcode a real token in source code. Load it from validated application
+configuration or a secret manager. The non-null assertion above keeps the
+example focused; production code should validate the environment value first.
+
+## API at a glance
+
+| Method                 | Authentication | Result                     | Notes                                          |
+| ---------------------- | -------------- | -------------------------- | ---------------------------------------------- |
+| `getBankSync()`        | Public         | `BankSync`                 | Server time and public verification key        |
+| `getCurrencyRates()`   | Public         | `readonly CurrencyRate[]`  | Monobank may cache rates for five minutes      |
+| `getClientInfo()`      | Personal token | `ClientInfo`               | Limited upstream to one request per 60 seconds |
+| `getStatements(input)` | Personal token | `readonly StatementItem[]` | Maximum window: 2,682,000 seconds              |
+| `setWebhook(input)`    | Personal token | `void`                     | Mutating request; never retried automatically  |
+
+The client requires a token at construction because it owns both public and
+authenticated Personal methods. The SDK never sends that token to `/bank/*`
+endpoints.
+
+### Public data
 
 ```ts
-await client.setWebhook({
-  webHookUrl: "https://example.test/monobank/webhook",
+const rates = await monobank.getCurrencyRates();
+const synchronization = await monobank.getBankSync();
+```
+
+### Client information
+
+```ts
+import { CashbackType } from "@liaugust/monobank-sdk";
+
+const info = await monobank.getClientInfo();
+const cashbackAccounts = info.accounts.filter(
+  (account) => account.cashbackType === CashbackType.UAH,
+);
+```
+
+`AccountType` and `CashbackType` are importable const objects with corresponding
+union types. They provide enum-like values without emitting TypeScript enum
+runtime code.
+
+### Statements
+
+```ts
+const statements = await monobank.getStatements({
+  account: info.accounts[0]?.id,
+  from: 1_786_060_800,
+  to: 1_787_356_800,
 });
 ```
 
-Parse incoming Personal webhook payloads after your application has read JSON.
-Parsing validates the payload shape only; it does not authenticate the sender.
+`Date` values are converted to integer Unix seconds. Numeric values must
+already be finite, nonnegative Unix-second integers. Omitting `account`
+requests Monobank's default account identifier, `0`.
+
+### Webhooks
+
+Set or remove the Personal webhook URL:
+
+```ts
+await monobank.setWebhook({
+  webHookUrl: "https://example.com/webhooks/monobank",
+});
+
+await monobank.setWebhook({ webHookUrl: "" });
+```
+
+Validate an incoming JSON body:
 
 ```ts
 import { parsePersonalWebhookEvent } from "@liaugust/monobank-sdk";
@@ -88,30 +139,39 @@ import { parsePersonalWebhookEvent } from "@liaugust/monobank-sdk";
 const event = parsePersonalWebhookEvent(await request.json());
 ```
 
-## Retries And Cancellation
+Parsing validates the documented payload shape. It does **not** authenticate
+the sender; verify the delivery channel and any signature material before
+acting on a webhook.
 
-Automatic retries are disabled by default. When configured, retries apply only
-to safe GET requests, honor `Retry-After`, and can be cancelled with
-`RequestOptions.signal`. `POST /personal/webhook` is never retried.
+## Retries, timeouts, and cancellation
+
+Retries are disabled unless configured. A retry policy applies only to safe
+GET requests, respects `Retry-After`, and never retries `setWebhook()`.
 
 ```ts
-const client = new MonobankPersonalClient({
+const monobank = new MonobankPersonalClient({
   retry: {
-    initialDelayMs: 250,
+    baseDelayMs: 250,
     maxAttempts: 3,
     maxDelayMs: 2_000,
   },
-  token: "personal-token",
+  timeoutMs: 10_000,
+  token: process.env.MONOBANK_TOKEN!,
 });
 
 const controller = new AbortController();
-const info = await client.getClientInfo({ signal: controller.signal });
+
+const info = await monobank.getClientInfo({
+  signal: controller.signal,
+});
+
+// Call controller.abort() when the surrounding operation is cancelled.
 ```
 
-## Errors
+An abort, timeout, or Fetch failure becomes a `MonobankNetworkError` with a
+stable `reason` of `"aborted"`, `"timeout"`, or `"network"`.
 
-All public SDK errors are safe for application diagnostics and avoid retaining
-tokens or raw Personal payloads.
+## Errors
 
 ```ts
 import {
@@ -122,7 +182,7 @@ import {
 } from "@liaugust/monobank-sdk";
 
 try {
-  await client.getClientInfo();
+  await monobank.getClientInfo();
 } catch (error) {
   if (error instanceof MonobankApiError) {
     console.error(error.status, error.retryAfterMs, error.upstreamMessage);
@@ -138,12 +198,66 @@ try {
 }
 ```
 
-## Credentials And CI
+- `MonobankValidationError` — invalid SDK configuration or method input
+- `MonobankNetworkError` — abort, timeout, or network failure before a response
+- `MonobankApiError` — non-success HTTP response from Monobank
+- `MonobankResponseValidationError` — successful JSON did not match its schema
 
-Pass tokens through application configuration or secret storage; do not hardcode
-them in source, tests, issues, logs, or examples. The repository verification
-suite uses injected Fetch implementations and must never make live Monobank
-calls or require live Personal tokens.
+Public errors retain only bounded diagnostic data. They intentionally exclude
+tokens, authorization headers, request objects, and raw Personal payloads.
 
-Every exported client, schema, parser, error, options type, and public method
-has JSDoc that is preserved in generated declarations for editor IntelliSense.
+## Runtime schemas
+
+The package exports its Zod Mini schemas for applications that need the exact
+same validation boundary:
+
+```ts
+import {
+  clientInfoSchema,
+  currencyRatesSchema,
+  personalWebhookEventSchema,
+  statementItemsSchema,
+} from "@liaugust/monobank-sdk";
+```
+
+Monobank response objects use `looseObject`, so documented fields are validated
+while unknown additive fields are preserved for forward compatibility.
+
+## Data conventions
+
+- Monetary integers are expressed in the currency's minor units.
+- Currency codes are numeric ISO 4217 codes.
+- Statement and rate timestamps are Unix seconds.
+- `BankSync.serverTimeMsec` is Unix milliseconds.
+- Upstream field names, including `webHookUrl`, are preserved.
+
+## Testing applications
+
+Inject a Fetch-compatible function instead of making live banking requests:
+
+```ts
+const monobank = new MonobankPersonalClient({
+  fetch: async () =>
+    new Response(JSON.stringify([]), {
+      headers: { "content-type": "application/json" },
+      status: 200,
+    }),
+  token: "synthetic-test-token",
+});
+```
+
+The SDK repository itself never requires live Personal credentials. Its test
+suite uses synthetic fixtures and injected Fetch implementations.
+
+## Project guides
+
+- [llms.txt](llms.txt) gives language models a compact package and API map.
+- [AGENTS.md](AGENTS.md) defines safe usage and contribution rules for coding
+  agents.
+- [CONTRIBUTING.md](CONTRIBUTING.md) explains the contributor workflow.
+- [SECURITY.md](SECURITY.md) explains private vulnerability reporting.
+- [RELEASING.md](RELEASING.md) documents trusted npm publishing.
+
+## License
+
+[MIT](LICENSE)

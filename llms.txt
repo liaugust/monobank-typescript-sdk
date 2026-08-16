@@ -1,0 +1,108 @@
+# @liaugust/monobank-sdk
+
+> Unofficial, strict, runtime-validated TypeScript SDK for Monobank Public and
+> Personal API endpoints. Supports Node.js 20.19.5+, ESM, CommonJS, and modern
+> browser bundlers. Zod Mini validates every successful JSON response.
+
+Package: https://www.npmjs.com/package/@liaugust/monobank-sdk
+Repository: https://github.com/liaugust/monobank-typescript-sdk
+License: MIT
+
+## Use the package
+
+Install with `pnpm add @liaugust/monobank-sdk` or
+`npm install @liaugust/monobank-sdk`.
+
+Import only from `@liaugust/monobank-sdk`.
+
+```ts
+import { MonobankPersonalClient } from "@liaugust/monobank-sdk";
+
+const client = new MonobankPersonalClient({
+  token: validatedConfig.monobankToken,
+});
+```
+
+## Client methods
+
+- `getBankSync(options?)`: public `/bank/sync`; no `X-Token`; returns
+  `Promise<BankSync>`.
+- `getCurrencyRates(options?)`: public `/bank/currency`; no `X-Token`; returns
+  `Promise<readonly CurrencyRate[]>`.
+- `getClientInfo(options?)`: authenticated `/personal/client-info`; returns
+  `Promise<ClientInfo>`; upstream limit is one call per 60 seconds.
+- `getStatements(input, options?)`: authenticated statements; returns
+  `Promise<readonly StatementItem[]>`; maximum inclusive window is 2,682,000
+  seconds; `Date` inputs become Unix seconds.
+- `setWebhook(input, options?)`: authenticated webhook mutation; accepts an
+  absolute HTTP(S) URL or `""` to remove it; never retried automatically.
+- `parsePersonalWebhookEvent(input)`: validates webhook JSON shape; does not
+  authenticate the sender.
+
+Each optional request `options` object accepts `signal?: AbortSignal`.
+
+## Constructor options
+
+- `token: string`: required Personal API token; sent only to authenticated
+  `/personal/*` methods.
+- `fetch?: FetchLike`: injected Fetch-compatible implementation.
+- `baseUrl?: string`: absolute HTTP(S) origin for controlled proxies or tests.
+- `timeoutMs?: number`: per-attempt timeout in milliseconds.
+- `retry?: { baseDelayMs; maxAttempts; maxDelayMs }`: bounded retry policy for
+  safe GET requests. Retries are disabled when omitted.
+
+## Errors
+
+- `MonobankValidationError`: invalid configuration or method input before
+  Fetch.
+- `MonobankNetworkError`: Fetch failure with reason `network`, `timeout`, or
+  `aborted`.
+- `MonobankApiError`: non-2xx response; includes status and optional
+  `retryAfterMs` and safe upstream message.
+- `MonobankResponseValidationError`: successful payload failed runtime schema
+  validation.
+
+Errors intentionally do not retain tokens, authorization headers, Request
+objects, or raw Personal payloads.
+
+## Exported runtime values
+
+- Enum-like const objects: `AccountType`, `CashbackType`.
+- Schemas: `accountSchema`, `bankSyncSchema`, `clientInfoSchema`,
+  `currencyRateSchema`, `currencyRatesSchema`, `jarSchema`,
+  `managedAccountSchema`, `managedClientSchema`, `statementItemSchema`,
+  `statementItemsSchema`, `personalWebhookEventSchema`.
+- Errors: `MonobankApiError`, `MonobankNetworkError`,
+  `MonobankResponseValidationError`, `MonobankValidationError`.
+- Client/parser: `MonobankPersonalClient`, `parsePersonalWebhookEvent`.
+
+See `src/index.ts` for the complete authoritative export list, including types.
+
+## Data rules
+
+- Monetary integers use the currency's minor units.
+- Currency codes are numeric ISO 4217 codes.
+- Rate and statement timestamps are Unix seconds.
+- `BankSync.serverTimeMsec` is Unix milliseconds.
+- Response schemas preserve unknown additive fields.
+- Upstream field spelling is preserved, including `webHookUrl`.
+
+## Safety rules for generated code
+
+- Never expose, log, or commit a real Personal token or banking payload.
+- Never send `X-Token` to public `/bank/*` endpoints.
+- Never treat webhook parsing as sender authentication.
+- Never retry `setWebhook()` automatically.
+- Do not invent Acquiring APIs; they are not in the current public surface.
+- Prefer exported SDK types, schemas, value objects, and error classes over
+  duplicate local definitions.
+- Validate environment configuration before constructing the client.
+
+## Authoritative project documents
+
+- `README.md`: human-facing guide and examples.
+- `AGENTS.md`: operational rules for agents using or modifying the SDK.
+- `src/index.ts`: public export boundary.
+- `CONTRIBUTING.md`: contributor workflow.
+- `SECURITY.md`: vulnerability reporting and sensitive-data rules.
+- `RELEASING.md`: release procedure.
