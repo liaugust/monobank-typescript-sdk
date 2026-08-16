@@ -1,6 +1,7 @@
 import { MonobankTransport } from "../../transport/transport.js";
 import { MonobankAcquiringInvoices } from "../invoices/monobank-acquiring-invoices.js";
 import { MonobankAcquiringMerchant } from "../merchant/monobank-acquiring-merchant.js";
+import { MonobankAcquiringQr } from "../qr/monobank-acquiring-qr.js";
 import { MonobankAcquiringStatements } from "../statements/monobank-acquiring-statements.js";
 import { MonobankAcquiringSubmerchants } from "../submerchants/monobank-acquiring-submerchants.js";
 import { MonobankAcquiringWebhooks } from "../webhooks/monobank-acquiring-webhooks.js";
@@ -22,6 +23,9 @@ export class MonobankAcquiringClient {
 
   /** Merchant operations sharing this client's credentials and transport settings. */
   public readonly merchant: MonobankAcquiringMerchant;
+
+  /** Read-only QR cashier operations sharing this client's credentials and transport settings. */
+  public readonly qr: MonobankAcquiringQr;
 
   /** Transaction statement operations sharing this client's credentials and transport settings. */
   public readonly statements: MonobankAcquiringStatements;
@@ -45,6 +49,7 @@ export class MonobankAcquiringClient {
 
     this.invoices = new MonobankAcquiringInvoices(transport);
     this.merchant = new MonobankAcquiringMerchant(transport);
+    this.qr = new MonobankAcquiringQr(transport);
     this.statements = new MonobankAcquiringStatements(transport);
     this.submerchants = new MonobankAcquiringSubmerchants(transport);
     this.webhooks = new MonobankAcquiringWebhooks(transport);

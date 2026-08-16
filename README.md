@@ -84,6 +84,8 @@ example focused; production code should validate the environment value first.
 | `acquiring.merchant.getDetails()`           | Acquiring token | `MerchantDetails`           | Merchant identity for the supplied token       |
 | `acquiring.statements.get(input)`           | Acquiring token | `AcquiringStatement`        | Transaction statement ordered newest first     |
 | `acquiring.submerchants.list()`             | Acquiring token | `AcquiringSubmerchantList`  | Terminals available to supported merchants     |
+| `acquiring.qr.list()`                       | Acquiring token | `AcquiringQrCashierList`    | QR cashiers registered for the merchant        |
+| `acquiring.qr.getDetails(input)`            | Acquiring token | `AcquiringQrDetails`        | State of one activated QR cashier              |
 | `acquiring.webhooks.getPublicKey()`         | Acquiring token | `AcquiringWebhookPublicKey` | Key used to authenticate webhook signatures    |
 | `acquiring.invoices.create(input)`          | Acquiring token | `NewInvoice`                | Creates a hosted payment page                  |
 | `acquiring.invoices.getStatus(input)`       | Acquiring token | `Invoice`                   | Safe GET; eligible for configured retries      |
@@ -131,6 +133,44 @@ for (const submerchant of submerchants.list) {
 
 The response list is readonly. Every item has a terminal `code` and owner
 `iban`; `edrpou` and `owner` are optional because Monobank may omit them.
+
+### Acquiring QR cashiers
+
+List the QR cashiers registered for the merchant, then read the current state of
+one of them:
+
+```ts
+import { AcquiringQrAmountType } from "@liaugust/monobank-sdk";
+
+const cashiers = await acquiring.qr.list();
+
+for (const cashier of cashiers.list) {
+  console.log(cashier.shortQrId, cashier.pageUrl);
+
+  if (cashier.amountType === AcquiringQrAmountType.Merchant) {
+    console.log("This cashier expects the merchant to set the amount");
+  }
+}
+
+const [first] = cashiers.list;
+
+if (first !== undefined) {
+  const details = await acquiring.qr.getDetails({ qrId: first.qrId });
+
+  if (details.invoiceId !== undefined) {
+    console.log(details.invoiceId, details.amount, details.ccy);
+  }
+}
+```
+
+`cashiers.list` is readonly. `amountType` reports who sets the payment amount:
+`merchant`, `client`, or `fix`. `getDetails()` answers only for activated
+cashiers; Monobank documents `invoiceId` as present only while an amount is set
+on the cashier, and `amount` and `ccy` may be omitted for the same reason, so
+treat all three as absent unless present. Amounts are integer minor units. Both
+calls are safe GETs eligible for configured retries. `getDetails()` rejects a
+`qrId` that is not a nonempty string without surrounding whitespace with
+`MonobankValidationError`, before any request is sent.
 
 ### Acquiring statements
 
@@ -378,6 +418,8 @@ same validation boundary:
 
 ```ts
 import {
+  acquiringQrCashierListSchema,
+  acquiringQrDetailsSchema,
   acquiringStatementItemSchema,
   acquiringStatementSchema,
   acquiringSubmerchantListSchema,
