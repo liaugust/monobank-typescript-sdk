@@ -45,24 +45,24 @@ const createInvoiceOptions: CreateInvoiceOptions = {
   cms: "Synthetic Shop",
   cmsVersion: "1.2.3",
 };
-const newInvoice: Promise<NewInvoice> = acquiringClient.createInvoice(
+const newInvoice: Promise<NewInvoice> = acquiringClient.invoices.create(
   createInvoiceInput,
   createInvoiceOptions,
 );
-const invoice: Promise<Invoice> = acquiringClient.getInvoiceStatus({
+const invoice: Promise<Invoice> = acquiringClient.invoices.getStatus({
   invoiceId: "invoice-42",
 });
 const cancelInput: CancelInvoiceInput = { invoiceId: "invoice-42" };
 const cancellation: Promise<InvoiceCancellation> =
-  acquiringClient.cancelInvoice(cancelInput);
+  acquiringClient.invoices.cancel(cancelInput);
 const finalization: Promise<InvoiceFinalization> =
-  acquiringClient.finalizeInvoice({ invoiceId: "invoice-42" });
-const receipt: Promise<InvoiceReceipt> = acquiringClient.getInvoiceReceipt({
+  acquiringClient.invoices.finalize({ invoiceId: "invoice-42" });
+const receipt: Promise<InvoiceReceipt> = acquiringClient.invoices.getReceipt({
   invoiceId: "invoice-42",
 });
 const fiscalChecks: Promise<InvoiceFiscalChecks> =
-  acquiringClient.getInvoiceFiscalChecks({ invoiceId: "invoice-42" });
-const removal: Promise<void> = acquiringClient.removeInvoice({
+  acquiringClient.invoices.getFiscalChecks({ invoiceId: "invoice-42" });
+const removal: Promise<void> = acquiringClient.invoices.remove({
   invoiceId: "invoice-42",
 });
 const invoiceStatus: InvoiceStatus = InvoiceStatus.Success;
@@ -120,6 +120,17 @@ const removedFlatMerchantMethod: Exclude<
   keyof MonobankAcquiringClient
 > = "getMerchantDetails";
 void removedFlatMerchantMethod;
+const removedFlatInvoiceMethod: Exclude<
+  | "cancelInvoice"
+  | "createInvoice"
+  | "finalizeInvoice"
+  | "getInvoiceFiscalChecks"
+  | "getInvoiceReceipt"
+  | "getInvoiceStatus"
+  | "removeInvoice",
+  keyof MonobankAcquiringClient
+> = "createInvoice";
+void removedFlatInvoiceMethod;
 
 // @ts-expect-error -- Personal token is required by the public constructor.
 new MonobankPersonalClient({});

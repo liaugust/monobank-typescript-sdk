@@ -81,6 +81,16 @@ describe("MonobankPublicClient", () => {
     expect(fetch.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
   });
 
+  it("passes caller signals to currency requests", async () => {
+    const fetch = createFetchSequence([jsonResponse([currencyRateFixture])]);
+    const client = new MonobankPublicClient({ fetch });
+    const controller = new AbortController();
+
+    await client.getCurrencyRates({ signal: controller.signal });
+
+    expect(fetch.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
+  });
+
   it("uses configured safe retries for public GET requests", async () => {
     vi.useFakeTimers();
     const fetch = createFetchSequence([
@@ -122,5 +132,16 @@ describe("MonobankPublicClient", () => {
     await expect(client.getCurrencyRates()).rejects.toBeInstanceOf(
       MonobankResponseValidationError,
     );
+  });
+
+  it("keeps public API error diagnostics without requiring a token", async () => {
+    const fetch = createFetchSequence([
+      new Response("public endpoint denied", { status: 403 }),
+    ]);
+    const client = new MonobankPublicClient({ fetch });
+
+    await expect(client.getBankSync()).rejects.toMatchObject({
+      upstreamMessage: "public endpoint denied",
+    });
   });
 });

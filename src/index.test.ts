@@ -19,6 +19,7 @@ describe("public package surface", () => {
       "InvoiceStatus",
       "InvoiceWalletStatus",
       "MonobankAcquiringClient",
+      "MonobankAcquiringInvoices",
       "MonobankAcquiringMerchant",
       "MonobankApiError",
       "MonobankNetworkError",

@@ -7,19 +7,19 @@ import {
   invoiceStatusFixture,
   newInvoiceFixture,
   receiptFixture,
-} from "../../tests/fixtures/acquiring-api.js";
+} from "../../../tests/fixtures/acquiring-api.js";
 import {
   createFetchSequence,
   jsonResponse,
-} from "../../tests/support/create-fetch-sequence.js";
+} from "../../../tests/support/create-fetch-sequence.js";
 import {
   firstRequestHeaders,
   firstRequestUrl,
-} from "../../tests/support/fetch-request-inspection.js";
-import { MonobankResponseValidationError } from "../errors/monobank-response-validation-error.js";
-import { MonobankValidationError } from "../errors/monobank-validation-error.js";
-import { MonobankAcquiringClient } from "./client/monobank-acquiring-client.js";
-import { InvoicePaymentType } from "./invoice.js";
+} from "../../../tests/support/fetch-request-inspection.js";
+import { MonobankResponseValidationError } from "../../errors/monobank-response-validation-error.js";
+import { MonobankValidationError } from "../../errors/monobank-validation-error.js";
+import { MonobankAcquiringClient } from "../client/monobank-acquiring-client.js";
+import { InvoicePaymentType } from "./invoice-payment-info.js";
 
 function firstRequestBody(fetch: ReturnType<typeof createFetchSequence>) {
   const body = fetch.mock.calls[0]?.[1]?.body;
@@ -31,7 +31,7 @@ function firstRequestBody(fetch: ReturnType<typeof createFetchSequence>) {
   return JSON.parse(body) as unknown;
 }
 
-describe("MonobankAcquiringClient invoice lifecycle", () => {
+describe("MonobankAcquiringInvoices", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
@@ -41,7 +41,7 @@ describe("MonobankAcquiringClient invoice lifecycle", () => {
     const client = new MonobankAcquiringClient({ fetch, token: "token" });
 
     await expect(
-      client.createInvoice(
+      client.invoices.create(
         {
           amount: 4_200,
           merchantPaymInfo: { reference: "order-42" },
@@ -72,7 +72,7 @@ describe("MonobankAcquiringClient invoice lifecycle", () => {
     const client = new MonobankAcquiringClient({ fetch, token: "token" });
 
     await expect(
-      client.getInvoiceStatus({ invoiceId: "invoice/42" }),
+      client.invoices.getStatus({ invoiceId: "invoice/42" }),
     ).resolves.toEqual(invoiceStatusFixture);
     expect(firstRequestUrl(fetch).href).toBe(
       "https://api.monobank.ua/api/merchant/invoice/status?invoiceId=invoice%2F42",
@@ -92,7 +92,7 @@ describe("MonobankAcquiringClient invoice lifecycle", () => {
     });
 
     await expect(
-      client.cancelInvoice({
+      client.invoices.cancel({
         amount: 2_100,
         extRef: "refund-42",
         invoiceId: "invoice-42",
@@ -111,7 +111,7 @@ describe("MonobankAcquiringClient invoice lifecycle", () => {
     const client = new MonobankAcquiringClient({ fetch, token: "token" });
 
     await expect(
-      client.removeInvoice({ invoiceId: "invoice-42" }),
+      client.invoices.remove({ invoiceId: "invoice-42" }),
     ).resolves.toBeUndefined();
     expect(firstRequestUrl(fetch).pathname).toBe(
       "/api/merchant/invoice/remove",
@@ -124,7 +124,10 @@ describe("MonobankAcquiringClient invoice lifecycle", () => {
     const client = new MonobankAcquiringClient({ fetch, token: "token" });
 
     await expect(
-      client.finalizeInvoice({ amount: 4_200, invoiceId: "invoice-42" }),
+      client.invoices.finalize({
+        amount: 4_200,
+        invoiceId: "invoice-42",
+      }),
     ).resolves.toEqual(finalizationFixture);
     expect(firstRequestUrl(fetch).pathname).toBe(
       "/api/merchant/invoice/finalize",
@@ -140,7 +143,7 @@ describe("MonobankAcquiringClient invoice lifecycle", () => {
     const client = new MonobankAcquiringClient({ fetch, token: "token" });
 
     await expect(
-      client.getInvoiceReceipt({
+      client.invoices.getReceipt({
         email: "buyer+mono@example.test",
         invoiceId: "invoice-42",
       }),
@@ -155,11 +158,24 @@ describe("MonobankAcquiringClient invoice lifecycle", () => {
     const client = new MonobankAcquiringClient({ fetch, token: "token" });
 
     await expect(
-      client.getInvoiceFiscalChecks({ invoiceId: "invoice-42" }),
+      client.invoices.getFiscalChecks({ invoiceId: "invoice-42" }),
     ).resolves.toEqual(fiscalChecksFixture);
     expect(firstRequestUrl(fetch).href).toBe(
       "https://api.monobank.ua/api/merchant/invoice/fiscal-checks?invoiceId=invoice-42",
     );
+  });
+
+  it("passes caller cancellation through the shared invoice resource", async () => {
+    const fetch = createFetchSequence([jsonResponse(invoiceStatusFixture)]);
+    const client = new MonobankAcquiringClient({ fetch, token: "token" });
+    const controller = new AbortController();
+
+    await client.invoices.getStatus(
+      { invoiceId: "invoice-42" },
+      { signal: controller.signal },
+    );
+
+    expect(fetch.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
   });
 
   it("retries safe invoice GET requests", async () => {
@@ -174,7 +190,7 @@ describe("MonobankAcquiringClient invoice lifecycle", () => {
       token: "token",
     });
 
-    const result = client.getInvoiceStatus({ invoiceId: "invoice-42" });
+    const result = client.invoices.getStatus({ invoiceId: "invoice-42" });
     result.catch(() => undefined);
     await vi.advanceTimersByTimeAsync(100);
 
@@ -186,9 +202,9 @@ describe("MonobankAcquiringClient invoice lifecycle", () => {
     const fetch = createFetchSequence([jsonResponse(newInvoiceFixture)]);
     const client = new MonobankAcquiringClient({ fetch, token: "token" });
 
-    await expect(client.createInvoice({ amount: 4.2 })).rejects.toBeInstanceOf(
-      MonobankValidationError,
-    );
+    await expect(
+      client.invoices.create({ amount: 4.2 }),
+    ).rejects.toBeInstanceOf(MonobankValidationError);
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -197,7 +213,7 @@ describe("MonobankAcquiringClient invoice lifecycle", () => {
     const client = new MonobankAcquiringClient({ fetch, token: "token" });
 
     await expect(
-      client.createInvoice({ amount: 4_200 }),
+      client.invoices.create({ amount: 4_200 }),
     ).rejects.toBeInstanceOf(MonobankResponseValidationError);
   });
 });
