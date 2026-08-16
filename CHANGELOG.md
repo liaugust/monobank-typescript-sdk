@@ -4,8 +4,15 @@ All notable changes to this package are documented here.
 
 ## 0.1.0 - 2026-08-16
 
-- Prepare the first release published through npm trusted publishing.
-- Preserve the SDK API and package formats verified in the bootstrap release.
+- Organize Public, Personal, and Acquiring APIs into focused resource clients.
+- Add the Acquiring merchant and complete invoice-lifecycle API surface.
+- Authenticate Acquiring webhooks with a fetched public key and built-in Web
+  Crypto signature verification for Node.js and browser consumers.
+- Preserve strict runtime validation, credential-safe errors, bounded retries,
+  cancellation, and complete ESM, CommonJS, declaration, browser, and packed
+  package verification.
+- Publish the first GitHub-driven release through npm trusted publishing with
+  provenance.
 
 ## 0.0.1 - 2026-08-16
 
