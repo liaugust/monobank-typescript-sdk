@@ -23,18 +23,21 @@ import {
   InvoiceStatus,
   MonobankAcquiringClient,
   MonobankPersonalClient,
+  MonobankPublicClient,
   parsePersonalWebhookEvent,
 } from "@liaugust/monobank-sdk";
 
 const client = new MonobankPersonalClient({ token: "token" });
+const publicClient = new MonobankPublicClient();
 const acquiringClient = new MonobankAcquiringClient({ token: "token" });
 const input: GetStatementsInput = { from: new Date(0) };
-const bankSync: Promise<BankSync> = client.getBankSync();
-const statements = client.getStatements(input);
-const clientInfo: Promise<ClientInfo> = client.getClientInfo();
-const rates: Promise<readonly CurrencyRate[]> = client.getCurrencyRates();
+const bankSync: Promise<BankSync> = publicClient.bank.getSync();
+const statements = client.statements.get(input);
+const clientInfo: Promise<ClientInfo> = client.client.getInfo();
+const rates: Promise<readonly CurrencyRate[]> =
+  publicClient.currency.getRates();
 const merchantDetails: Promise<MerchantDetails> =
-  acquiringClient.getMerchantDetails();
+  acquiringClient.merchant.getDetails();
 const createInvoiceInput: CreateInvoiceInput = {
   amount: 4_200,
   paymentType: InvoicePaymentType.Hold,
@@ -43,28 +46,28 @@ const createInvoiceOptions: CreateInvoiceOptions = {
   cms: "Synthetic Shop",
   cmsVersion: "1.2.3",
 };
-const newInvoice: Promise<NewInvoice> = acquiringClient.createInvoice(
+const newInvoice: Promise<NewInvoice> = acquiringClient.invoices.create(
   createInvoiceInput,
   createInvoiceOptions,
 );
-const invoice: Promise<Invoice> = acquiringClient.getInvoiceStatus({
+const invoice: Promise<Invoice> = acquiringClient.invoices.getStatus({
   invoiceId: "invoice-42",
 });
 const cancelInput: CancelInvoiceInput = { invoiceId: "invoice-42" };
 const cancellation: Promise<InvoiceCancellation> =
-  acquiringClient.cancelInvoice(cancelInput);
+  acquiringClient.invoices.cancel(cancelInput);
 const finalization: Promise<InvoiceFinalization> =
-  acquiringClient.finalizeInvoice({ invoiceId: "invoice-42" });
-const receipt: Promise<InvoiceReceipt> = acquiringClient.getInvoiceReceipt({
+  acquiringClient.invoices.finalize({ invoiceId: "invoice-42" });
+const receipt: Promise<InvoiceReceipt> = acquiringClient.invoices.getReceipt({
   invoiceId: "invoice-42",
 });
 const fiscalChecks: Promise<InvoiceFiscalChecks> =
-  acquiringClient.getInvoiceFiscalChecks({ invoiceId: "invoice-42" });
-const removal: Promise<void> = acquiringClient.removeInvoice({
+  acquiringClient.invoices.getFiscalChecks({ invoiceId: "invoice-42" });
+const removal: Promise<void> = acquiringClient.invoices.remove({
   invoiceId: "invoice-42",
 });
 const invoiceStatus: InvoiceStatus = InvoiceStatus.Success;
-const webhookUpdate: Promise<void> = client.setWebhook({ webHookUrl: "" });
+const webhookUpdate: Promise<void> = client.webhooks.set({ webHookUrl: "" });
 const accountType: AccountType = AccountType.Black;
 const cashbackType: CashbackType = CashbackType.UAH;
 const accountTypesAreExact = {
@@ -108,6 +111,28 @@ void cashbackTypesAreExact;
 void account;
 void webhookEvent;
 
+const removedPersonalPublicMethod: Exclude<
+  "getBankSync" | "getCurrencyRates",
+  keyof MonobankPersonalClient
+> = "getCurrencyRates";
+void removedPersonalPublicMethod;
+const removedFlatMerchantMethod: Exclude<
+  "getMerchantDetails",
+  keyof MonobankAcquiringClient
+> = "getMerchantDetails";
+void removedFlatMerchantMethod;
+const removedFlatInvoiceMethod: Exclude<
+  | "cancelInvoice"
+  | "createInvoice"
+  | "finalizeInvoice"
+  | "getInvoiceFiscalChecks"
+  | "getInvoiceReceipt"
+  | "getInvoiceStatus"
+  | "removeInvoice",
+  keyof MonobankAcquiringClient
+> = "createInvoice";
+void removedFlatInvoiceMethod;
+
 // @ts-expect-error -- Personal token is required by the public constructor.
 new MonobankPersonalClient({});
 
@@ -115,7 +140,7 @@ new MonobankPersonalClient({});
 new MonobankAcquiringClient({});
 
 // @ts-expect-error -- Statement start time must be a Date or Unix number.
-void client.getStatements({ account: "0", from: "2026-08-01" });
+void client.statements.get({ account: "0", from: "2026-08-01" });
 
 // @ts-expect-error -- Account types are limited to documented wire values.
 const invalidAccountType: AccountType = "gold";

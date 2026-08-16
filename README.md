@@ -6,9 +6,9 @@
 
 A strict, runtime-validated TypeScript SDK for the Monobank API.
 
-It gives applications typed Personal and Acquiring API responses without
-trusting the wire: every successful JSON payload crosses a Zod validation
-boundary before it reaches your code.
+It gives applications typed Public, Personal, and Acquiring API responses
+without trusting the wire: every successful JSON payload crosses a Zod
+validation boundary before it reaches your code.
 
 > [!IMPORTANT]
 > This is an unofficial community package. It is not developed, sponsored, or
@@ -27,6 +27,7 @@ boundary before it reaches your code.
 ## Requirements
 
 - Node.js 20.19.5 or newer, or a modern browser with the standard Fetch API
+- No token for `MonobankPublicClient`
 - A Monobank Personal API token for `MonobankPersonalClient`
 - A Monobank Acquiring token for `MonobankAcquiringClient`
 
@@ -49,8 +50,8 @@ const monobank = new MonobankPersonalClient({
   token: process.env.MONOBANK_TOKEN!,
 });
 
-const client = await monobank.getClientInfo();
-const blackAccounts = client.accounts.filter(
+const info = await monobank.client.getInfo();
+const blackAccounts = info.accounts.filter(
   (account) => account.type === AccountType.Black,
 );
 
@@ -59,7 +60,7 @@ if (account === undefined) {
   throw new Error("No black account is available");
 }
 
-const statements = await monobank.getStatements({
+const statements = await monobank.statements.get({
   account: account.id,
   from: new Date("2026-08-01T00:00:00.000Z"),
   to: new Date("2026-08-16T00:00:00.000Z"),
@@ -72,28 +73,27 @@ example focused; production code should validate the environment value first.
 
 ## API at a glance
 
-| Method                          | Authentication  | Result                     | Notes                                          |
-| ------------------------------- | --------------- | -------------------------- | ---------------------------------------------- |
-| `getBankSync()`                 | Public          | `BankSync`                 | Server time and public verification key        |
-| `getCurrencyRates()`            | Public          | `readonly CurrencyRate[]`  | Monobank may cache rates for five minutes      |
-| `getClientInfo()`               | Personal token  | `ClientInfo`               | Limited upstream to one request per 60 seconds |
-| `getStatements(input)`          | Personal token  | `readonly StatementItem[]` | Maximum window: 2,682,000 seconds              |
-| `setWebhook(input)`             | Personal token  | `void`                     | Mutating request; never retried automatically  |
-| `getMerchantDetails()`          | Acquiring token | `MerchantDetails`          | Merchant identity for the supplied token       |
-| `createInvoice(input)`          | Acquiring token | `NewInvoice`               | Creates a hosted payment page                  |
-| `getInvoiceStatus(input)`       | Acquiring token | `Invoice`                  | Safe GET; eligible for configured retries      |
-| `cancelInvoice(input)`          | Acquiring token | `InvoiceCancellation`      | Full or partial cancellation                   |
-| `removeInvoice(input)`          | Acquiring token | `void`                     | Invalidates an unpaid invoice                  |
-| `finalizeInvoice(input)`        | Acquiring token | `InvoiceFinalization`      | Captures a held payment                        |
-| `getInvoiceReceipt(input)`      | Acquiring token | `InvoiceReceipt`           | Gets and optionally emails a receipt           |
-| `getInvoiceFiscalChecks(input)` | Acquiring token | `InvoiceFiscalChecks`      | Loads fiscalization results                    |
+| Call                                        | Authentication  | Result                     | Notes                                          |
+| ------------------------------------------- | --------------- | -------------------------- | ---------------------------------------------- |
+| `publicApi.bank.getSync()`                  | None            | `BankSync`                 | Server time and public verification key        |
+| `publicApi.currency.getRates()`             | None            | `readonly CurrencyRate[]`  | Monobank may cache rates for five minutes      |
+| `personal.client.getInfo()`                 | Personal token  | `ClientInfo`               | Limited upstream to one request per 60 seconds |
+| `personal.statements.get(input)`            | Personal token  | `readonly StatementItem[]` | Maximum window: 2,682,000 seconds              |
+| `personal.webhooks.set(input)`              | Personal token  | `void`                     | Mutating request; never retried automatically  |
+| `acquiring.merchant.getDetails()`           | Acquiring token | `MerchantDetails`          | Merchant identity for the supplied token       |
+| `acquiring.invoices.create(input)`          | Acquiring token | `NewInvoice`               | Creates a hosted payment page                  |
+| `acquiring.invoices.getStatus(input)`       | Acquiring token | `Invoice`                  | Safe GET; eligible for configured retries      |
+| `acquiring.invoices.cancel(input)`          | Acquiring token | `InvoiceCancellation`      | Full or partial cancellation                   |
+| `acquiring.invoices.remove(input)`          | Acquiring token | `void`                     | Invalidates an unpaid invoice                  |
+| `acquiring.invoices.finalize(input)`        | Acquiring token | `InvoiceFinalization`      | Captures a held payment                        |
+| `acquiring.invoices.getReceipt(input)`      | Acquiring token | `InvoiceReceipt`           | Gets and optionally emails a receipt           |
+| `acquiring.invoices.getFiscalChecks(input)` | Acquiring token | `InvoiceFiscalChecks`      | Loads fiscalization results                    |
 
 See the [complete API reference](docs/API.md) for signatures, parameters,
 returns, errors, retry behavior, data models, and focused examples.
 
-The client requires a token at construction because it owns both public and
-authenticated Personal methods. The SDK never sends that token to `/bank/*`
-endpoints.
+Each client represents one credential boundary. Public calls use a token-free
+client; Personal and Acquiring tokens cannot accidentally cross API families.
 
 ### Acquiring merchant details
 
@@ -106,7 +106,7 @@ const acquiring = new MonobankAcquiringClient({
   token: process.env.MONOBANK_ACQUIRING_TOKEN!,
 });
 
-const merchant = await acquiring.getMerchantDetails();
+const merchant = await acquiring.merchant.getDetails();
 console.log(merchant.merchantId, merchant.merchantName, merchant.edrpou);
 ```
 
@@ -121,7 +121,7 @@ const acquiring = new MonobankAcquiringClient({
   token: process.env.MONOBANK_ACQUIRING_TOKEN!,
 });
 
-const created = await acquiring.createInvoice(
+const created = await acquiring.invoices.create(
   {
     amount: 4_200,
     merchantPaymInfo: {
@@ -137,7 +137,7 @@ const created = await acquiring.createInvoice(
   },
 );
 
-const invoice = await acquiring.getInvoiceStatus({
+const invoice = await acquiring.invoices.getStatus({
   invoiceId: created.invoiceId,
 });
 
@@ -148,14 +148,17 @@ if (invoice.status === InvoiceStatus.Success) {
 
 Monetary amounts are integer minor units. Use `paymentType: "hold"` (or
 `InvoicePaymentType.Hold`) only when your application will later call
-`finalizeInvoice()` or `cancelInvoice()`. Invoice mutations are never retried
-automatically.
+`acquiring.invoices.finalize()` or `acquiring.invoices.cancel()`. Invoice
+mutations are never retried automatically.
 
 ### Public data
 
 ```ts
-const rates = await monobank.getCurrencyRates();
-const synchronization = await monobank.getBankSync();
+import { MonobankPublicClient } from "@liaugust/monobank-sdk";
+
+const publicApi = new MonobankPublicClient();
+const rates = await publicApi.currency.getRates();
+const synchronization = await publicApi.bank.getSync();
 ```
 
 ### Client information
@@ -163,7 +166,7 @@ const synchronization = await monobank.getBankSync();
 ```ts
 import { CashbackType } from "@liaugust/monobank-sdk";
 
-const info = await monobank.getClientInfo();
+const info = await monobank.client.getInfo();
 const cashbackAccounts = info.accounts.filter(
   (account) => account.cashbackType === CashbackType.UAH,
 );
@@ -182,7 +185,7 @@ if (account === undefined) {
   throw new Error("No account is available");
 }
 
-const statements = await monobank.getStatements({
+const statements = await monobank.statements.get({
   account: account.id,
   from: 1_786_060_800,
   to: 1_787_356_800,
@@ -198,11 +201,11 @@ requests Monobank's default account identifier, `0`.
 Set or remove the Personal webhook URL:
 
 ```ts
-await monobank.setWebhook({
+await monobank.webhooks.set({
   webHookUrl: "https://example.com/webhooks/monobank",
 });
 
-await monobank.setWebhook({ webHookUrl: "" });
+await monobank.webhooks.set({ webHookUrl: "" });
 ```
 
 Validate an incoming JSON body:
@@ -220,7 +223,7 @@ acting on a webhook.
 ## Retries, timeouts, and cancellation
 
 Retries are disabled unless configured. A retry policy applies only to safe
-GET requests, respects `Retry-After`, and never retries `setWebhook()`.
+GET requests, respects `Retry-After`, and never retries `webhooks.set()`.
 
 ```ts
 const monobank = new MonobankPersonalClient({
@@ -235,7 +238,7 @@ const monobank = new MonobankPersonalClient({
 
 const controller = new AbortController();
 
-const info = await monobank.getClientInfo({
+const info = await monobank.client.getInfo({
   signal: controller.signal,
 });
 
@@ -256,7 +259,7 @@ import {
 } from "@liaugust/monobank-sdk";
 
 try {
-  await monobank.getClientInfo();
+  await monobank.client.getInfo();
 } catch (error) {
   if (error instanceof MonobankApiError) {
     console.error(error.status, error.retryAfterMs, error.upstreamMessage);

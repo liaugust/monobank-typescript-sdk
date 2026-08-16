@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import * as sdk from "../../dist/index.js";
 
 const fetchStub = async () => new Response("{}", { status: 200 });
+const publicApi = new sdk.MonobankPublicClient({ fetch: fetchStub });
 const client = new sdk.MonobankPersonalClient({
   fetch: fetchStub,
   token: "test-token",
@@ -17,6 +18,7 @@ for (const exportName of [
   "MonobankApiError",
   "MonobankNetworkError",
   "MonobankPersonalClient",
+  "MonobankPublicClient",
   "MonobankResponseValidationError",
   "MonobankValidationError",
 ]) {
@@ -24,4 +26,14 @@ for (const exportName of [
 }
 
 assert.ok(client instanceof sdk.MonobankPersonalClient);
+assert.ok(publicApi instanceof sdk.MonobankPublicClient);
 assert.ok(acquiringClient instanceof sdk.MonobankAcquiringClient);
+assert.equal(sdk.MonobankAcquiringInvoices, undefined);
+assert.equal(sdk.MonobankAcquiringMerchant, undefined);
+assert.equal(typeof publicApi.bank.getSync, "function");
+assert.equal(typeof publicApi.currency.getRates, "function");
+assert.equal(typeof client.client.getInfo, "function");
+assert.equal(typeof client.statements.get, "function");
+assert.equal(typeof client.webhooks.set, "function");
+assert.equal(typeof acquiringClient.merchant.getDetails, "function");
+assert.equal(typeof acquiringClient.invoices.create, "function");

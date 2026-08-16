@@ -5,11 +5,13 @@ const {
   MonobankApiError,
   MonobankNetworkError,
   MonobankPersonalClient,
+  MonobankPublicClient,
   MonobankResponseValidationError,
   MonobankValidationError,
 } = require("../../dist/index.cjs");
 
 const fetchStub = async () => new Response("{}", { status: 200 });
+const publicApi = new MonobankPublicClient({ fetch: fetchStub });
 const client = new MonobankPersonalClient({
   fetch: fetchStub,
   token: "test-token",
@@ -23,7 +25,23 @@ assert.equal(typeof MonobankAcquiringClient, "function");
 assert.equal(typeof MonobankApiError, "function");
 assert.equal(typeof MonobankNetworkError, "function");
 assert.equal(typeof MonobankPersonalClient, "function");
+assert.equal(typeof MonobankPublicClient, "function");
 assert.equal(typeof MonobankResponseValidationError, "function");
 assert.equal(typeof MonobankValidationError, "function");
 assert.ok(client instanceof MonobankPersonalClient);
+assert.ok(publicApi instanceof MonobankPublicClient);
 assert.ok(acquiringClient instanceof MonobankAcquiringClient);
+
+const resourceMethods = [
+  publicApi.bank.getSync,
+  publicApi.currency.getRates,
+  client.client.getInfo,
+  client.statements.get,
+  client.webhooks.set,
+  acquiringClient.merchant.getDetails,
+  acquiringClient.invoices.create,
+];
+
+for (const method of resourceMethods) {
+  assert.equal(typeof method, "function");
+}

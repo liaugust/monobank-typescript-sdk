@@ -15,12 +15,17 @@ License: MIT
 Install with `pnpm add @liaugust/monobank-sdk` or
 `npm install @liaugust/monobank-sdk`.
 
-Import only from `@liaugust/monobank-sdk`.
+Import only from `@liaugust/monobank-sdk`. Choose the client by credential
+family; do not use the authenticated clients for public calls.
 
 ```ts
-import { MonobankPersonalClient } from "@liaugust/monobank-sdk";
+import {
+  MonobankPersonalClient,
+  MonobankPublicClient,
+} from "@liaugust/monobank-sdk";
 
-const client = new MonobankPersonalClient({
+const publicApi = new MonobankPublicClient();
+const personal = new MonobankPersonalClient({
   token: validatedConfig.monobankToken,
 });
 ```
@@ -29,43 +34,45 @@ Use `MonobankAcquiringClient` with a separate Acquiring token.
 
 ## Client methods
 
-- `getBankSync(options?)`: public `/bank/sync`; no `X-Token`; returns
+- `publicApi.bank.getSync(options?)`: public `/bank/sync`; no `X-Token`; returns
   `Promise<BankSync>`.
-- `getCurrencyRates(options?)`: public `/bank/currency`; no `X-Token`; returns
-  `Promise<readonly CurrencyRate[]>`.
-- `getClientInfo(options?)`: authenticated `/personal/client-info`; returns
-  `Promise<ClientInfo>`; upstream limit is one call per 60 seconds.
-- `getStatements(input, options?)`: authenticated statements; returns
+- `publicApi.currency.getRates(options?)`: public `/bank/currency`; no `X-Token`;
+  returns `Promise<readonly CurrencyRate[]>`.
+- `personal.client.getInfo(options?)`: authenticated `/personal/client-info`;
+  returns `Promise<ClientInfo>`; upstream limit is one call per 60 seconds.
+- `personal.statements.get(input, options?)`: authenticated statements; returns
   `Promise<readonly StatementItem[]>`; maximum inclusive window is 2,682,000
   seconds; `Date` inputs become Unix seconds.
-- `setWebhook(input, options?)`: authenticated webhook mutation; accepts an
-  absolute HTTP(S) URL or `""` to remove it; never retried automatically.
+- `personal.webhooks.set(input, options?)`: authenticated webhook mutation;
+  accepts an absolute HTTP(S) URL or `""` to remove it; never retried
+  automatically.
 - `parsePersonalWebhookEvent(input)`: validates webhook JSON shape; does not
   authenticate the sender.
-- `getMerchantDetails(options?)`: authenticated `/api/merchant/details`;
-  returns `Promise<MerchantDetails>`.
-- `createInvoice(input, options?)`: creates a hosted Acquiring invoice; returns
-  `Promise<NewInvoice>`; never retried automatically.
-- `getInvoiceStatus(input, options?)`: returns `Promise<Invoice>` for an
-  `invoiceId`; safe GET eligible for configured retries.
-- `cancelInvoice(input, options?)`: full or partial payment cancellation;
-  returns `Promise<InvoiceCancellation>`; never retried automatically.
-- `removeInvoice(input, options?)`: invalidates an unpaid invoice; returns
-  `Promise<void>`; never retried automatically.
-- `finalizeInvoice(input, options?)`: captures a held amount; returns
-  `Promise<InvoiceFinalization>`; never retried automatically.
-- `getInvoiceReceipt(input, options?)`: gets a base64 receipt and can request
-  email delivery; returns `Promise<InvoiceReceipt>`.
-- `getInvoiceFiscalChecks(input, options?)`: returns
+- `acquiring.merchant.getDetails(options?)`: authenticated
+  `/api/merchant/details`; returns `Promise<MerchantDetails>`.
+- `acquiring.invoices.create(input, options?)`: creates a hosted Acquiring
+  invoice; returns `Promise<NewInvoice>`; never retried automatically.
+- `acquiring.invoices.getStatus(input, options?)`: returns `Promise<Invoice>`
+  for an `invoiceId`; safe GET eligible for configured retries.
+- `acquiring.invoices.cancel(input, options?)`: full or partial payment
+  cancellation; returns `Promise<InvoiceCancellation>`; never retried
+  automatically.
+- `acquiring.invoices.remove(input, options?)`: invalidates an unpaid invoice;
+  returns `Promise<void>`; never retried automatically.
+- `acquiring.invoices.finalize(input, options?)`: captures a held amount;
+  returns `Promise<InvoiceFinalization>`; never retried automatically.
+- `acquiring.invoices.getReceipt(input, options?)`: gets a base64 receipt and
+  can request email delivery; returns `Promise<InvoiceReceipt>`.
+- `acquiring.invoices.getFiscalChecks(input, options?)`: returns
   `Promise<InvoiceFiscalChecks>`.
 
 Each optional request `options` object accepts `signal?: AbortSignal`.
 
 ## Constructor options
 
-- `token: string`: required token for the selected client; Personal credentials
-  are sent only to `/personal/*`, and Acquiring credentials only to
-  `/api/merchant/*`.
+- `token: string`: required only for Personal and Acquiring clients; Personal
+  credentials are sent only to `/personal/*`, and Acquiring credentials only
+  to `/api/merchant/*`.
 - `fetch?: FetchLike`: injected Fetch-compatible implementation.
 - `baseUrl?: string`: absolute HTTP(S) origin for controlled proxies or tests.
 - `timeoutMs?: number`: per-attempt timeout in milliseconds.
@@ -101,8 +108,9 @@ objects, or raw API payloads.
   `receiptSchema`, `invoiceFiscalChecksSchema`.
 - Errors: `MonobankApiError`, `MonobankNetworkError`,
   `MonobankResponseValidationError`, `MonobankValidationError`.
-- Client/parser: `MonobankPersonalClient`, `MonobankAcquiringClient`,
-  `parsePersonalWebhookEvent`.
+- Clients/parser: `MonobankPublicClient`, `MonobankPersonalClient`,
+  `MonobankAcquiringClient`, `parsePersonalWebhookEvent`. Resource classes are
+  available through parent properties and are not root runtime exports.
 
 See `src/index.ts` for the complete authoritative export list, including types.
 
@@ -121,8 +129,9 @@ See `src/index.ts` for the complete authoritative export list, including types.
 - Never mix Personal and Acquiring tokens or send `X-Token` to public
   `/bank/*` endpoints.
 - Never treat webhook parsing as sender authentication.
-- Never retry `setWebhook()`, `createInvoice()`, `cancelInvoice()`,
-  `removeInvoice()`, or `finalizeInvoice()` automatically.
+- Never retry `personal.webhooks.set()`, `acquiring.invoices.create()`,
+  `acquiring.invoices.cancel()`, `acquiring.invoices.remove()`, or
+  `acquiring.invoices.finalize()` automatically.
 - Do not invent Acquiring APIs beyond the implemented merchant-details and
   invoice-lifecycle methods.
 - Prefer exported SDK types, schemas, value objects, and error classes over

@@ -1,48 +1,64 @@
+export { MonobankAcquiringClient } from "./acquiring/client/monobank-acquiring-client.js";
+export type { MonobankAcquiringClientOptions } from "./acquiring/client/monobank-acquiring-client-options.js";
+export type { CancelInvoiceInput } from "./acquiring/invoices/cancel-invoice/cancel-invoice.js";
 export type {
-  Invoice,
-  InvoiceCancellation,
-  InvoiceFinalization,
-  InvoiceFiscalChecks,
-  InvoiceReceipt,
+  CreateInvoiceInput,
+  CreateInvoiceOptions,
   NewInvoice,
-} from "./acquiring/invoice.js";
+} from "./acquiring/invoices/create-invoice/create-invoice.js";
+export { newInvoiceSchema } from "./acquiring/invoices/create-invoice/create-invoice.js";
+export type {
+  FinalizeInvoiceInput,
+  InvoiceFinalization,
+} from "./acquiring/invoices/finalize-invoice/finalize-invoice.js";
+export { finalizeInvoiceResponseSchema } from "./acquiring/invoices/finalize-invoice/finalize-invoice.js";
+export type {
+  GetInvoiceFiscalChecksInput,
+  InvoiceFiscalChecks,
+} from "./acquiring/invoices/get-invoice-fiscal-checks/get-invoice-fiscal-checks.js";
 export {
-  cancelInvoiceResponseSchema,
-  DiscountMode,
-  DiscountType,
-  finalizeInvoiceResponseSchema,
   FiscalCheckStatus,
   FiscalCheckType,
   FiscalizationSource,
-  InvoiceCancellationStatus,
   invoiceFiscalChecksSchema,
+} from "./acquiring/invoices/get-invoice-fiscal-checks/get-invoice-fiscal-checks.js";
+export type {
+  GetInvoiceReceiptInput,
+  InvoiceReceipt,
+} from "./acquiring/invoices/get-invoice-receipt/get-invoice-receipt.js";
+export { receiptSchema } from "./acquiring/invoices/get-invoice-receipt/get-invoice-receipt.js";
+export type {
+  GetInvoiceStatusInput,
+  Invoice,
+} from "./acquiring/invoices/get-invoice-status/get-invoice-status.js";
+export {
+  InvoiceStatus,
+  invoiceStatusSchema,
+} from "./acquiring/invoices/get-invoice-status/get-invoice-status.js";
+export type { FiscalizationItem } from "./acquiring/invoices/models/fiscalization-item.js";
+export type { InvoiceCancellation } from "./acquiring/invoices/models/invoice-cancellation.js";
+export {
+  cancelInvoiceResponseSchema,
+  InvoiceCancellationStatus,
+} from "./acquiring/invoices/models/invoice-cancellation.js";
+export type { InvoiceDiscount } from "./acquiring/invoices/models/invoice-discount.js";
+export {
+  DiscountMode,
+  DiscountType,
+} from "./acquiring/invoices/models/invoice-discount.js";
+export {
   InvoicePaymentMethod,
   InvoicePaymentSystem,
   InvoicePaymentType,
-  InvoiceStatus,
-  invoiceStatusSchema,
-  InvoiceWalletStatus,
-  newInvoiceSchema,
-  receiptSchema,
-} from "./acquiring/invoice.js";
+} from "./acquiring/invoices/models/invoice-payment-info.js";
+export { InvoiceWalletStatus } from "./acquiring/invoices/models/invoice-wallet.js";
 export type {
-  CancelInvoiceInput,
-  CreateInvoiceInput,
-  CreateInvoiceOptions,
-  FinalizeInvoiceInput,
-  FiscalizationItem,
-  GetInvoiceFiscalChecksInput,
-  GetInvoiceReceiptInput,
-  GetInvoiceStatusInput,
   InvoiceBasketItem,
-  InvoiceDiscount,
   MerchantPaymentInfo,
-  RemoveInvoiceInput,
-} from "./acquiring/invoice-input.js";
-export type { MerchantDetails } from "./acquiring/merchant-details.js";
-export { merchantDetailsSchema } from "./acquiring/merchant-details.js";
-export { MonobankAcquiringClient } from "./acquiring/monobank-acquiring-client.js";
-export type { MonobankAcquiringClientOptions } from "./acquiring/monobank-acquiring-client-options.js";
+} from "./acquiring/invoices/models/merchant-payment-info.js";
+export type { RemoveInvoiceInput } from "./acquiring/invoices/remove-invoice/remove-invoice.js";
+export type { MerchantDetails } from "./acquiring/merchant/get-merchant-details/get-merchant-details.js";
+export { merchantDetailsSchema } from "./acquiring/merchant/get-merchant-details/get-merchant-details.js";
 export type { MonobankApiErrorOptions } from "./errors/monobank-api-error.js";
 export { MonobankApiError } from "./errors/monobank-api-error.js";
 export type {
@@ -54,49 +70,51 @@ export type { MonobankResponseValidationErrorOptions } from "./errors/monobank-r
 export { MonobankResponseValidationError } from "./errors/monobank-response-validation-error.js";
 export type { MonobankValidationErrorOptions } from "./errors/monobank-validation-error.js";
 export { MonobankValidationError } from "./errors/monobank-validation-error.js";
-export type { Account } from "./personal/account.js";
+export { MonobankPersonalClient } from "./personal/client/monobank-personal-client.js";
+export type { MonobankPersonalClientOptions } from "./personal/client/monobank-personal-client-options.js";
+export type { ClientInfo } from "./personal/client-info/get-info/get-info.js";
+export { clientInfoSchema } from "./personal/client-info/get-info/get-info.js";
+export type { Account } from "./personal/client-info/models/account.js";
 export {
   accountSchema,
   AccountType,
   CashbackType,
-} from "./personal/account.js";
-export type { BankSync } from "./personal/bank-sync.js";
-export { bankSyncSchema } from "./personal/bank-sync.js";
-export type { ClientInfo } from "./personal/client-info.js";
-export { clientInfoSchema } from "./personal/client-info.js";
-export type { CurrencyRate } from "./personal/currency-rate.js";
-export {
-  currencyRateSchema,
-  currencyRatesSchema,
-} from "./personal/currency-rate.js";
-export type {
-  GetStatementsInput,
-  UnixTimeInput,
-} from "./personal/get-statements-input.js";
-export type { Jar } from "./personal/jar.js";
-export { jarSchema } from "./personal/jar.js";
+} from "./personal/client-info/models/account.js";
+export type { Jar } from "./personal/client-info/models/jar.js";
+export { jarSchema } from "./personal/client-info/models/jar.js";
 export type {
   ManagedAccount,
   ManagedClient,
-} from "./personal/managed-client.js";
+} from "./personal/client-info/models/managed-client.js";
 export {
   managedAccountSchema,
   managedClientSchema,
-} from "./personal/managed-client.js";
-export { MonobankPersonalClient } from "./personal/monobank-personal-client.js";
-export type { MonobankPersonalClientOptions } from "./personal/monobank-personal-client-options.js";
-export type { PersonalWebhookEvent } from "./personal/personal-webhook-event.js";
-export {
-  parsePersonalWebhookEvent,
-  personalWebhookEventSchema,
-} from "./personal/personal-webhook-event.js";
-export type { RequestOptions } from "./personal/request-options.js";
-export type { SetWebhookInput } from "./personal/set-webhook-input.js";
-export type { StatementItem } from "./personal/statement-item.js";
+} from "./personal/client-info/models/managed-client.js";
+export type {
+  GetStatementsInput,
+  UnixTimeInput,
+} from "./personal/statements/get-statements/get-statements.js";
+export type { StatementItem } from "./personal/statements/models/statement-item.js";
 export {
   statementItemSchema,
   statementItemsSchema,
-} from "./personal/statement-item.js";
+} from "./personal/statements/models/statement-item.js";
+export type { PersonalWebhookEvent } from "./personal/webhooks/models/personal-webhook-event.js";
+export {
+  parsePersonalWebhookEvent,
+  personalWebhookEventSchema,
+} from "./personal/webhooks/models/personal-webhook-event.js";
+export type { SetWebhookInput } from "./personal/webhooks/set-webhook/set-webhook.js";
+export type { BankSync } from "./public/bank/get-sync/get-sync.js";
+export { bankSyncSchema } from "./public/bank/get-sync/get-sync.js";
+export { MonobankPublicClient } from "./public/client/monobank-public-client.js";
+export type { MonobankPublicClientOptions } from "./public/client/monobank-public-client-options.js";
+export type { CurrencyRate } from "./public/currency/get-rates/get-rates.js";
+export {
+  currencyRateSchema,
+  currencyRatesSchema,
+} from "./public/currency/get-rates/get-rates.js";
+export type { RequestOptions } from "./shared/request-options.js";
 export type { FetchLike } from "./transport/fetch-like.js";
 export type { ResponseValidationIssue } from "./transport/response-schema.js";
 export type { RetryOptions } from "./transport/retry-options.js";
