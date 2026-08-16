@@ -16,7 +16,7 @@
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
-  "packageManager": "pnpm@11.22.0",
+  "packageManager": "pnpm@10.34.5",
   "exports": {
     ".": {
       "import": {
@@ -53,7 +53,7 @@
     "check:dead-code": "knip --treat-config-hints-as-errors",
     "check:duplication": "jscpd",
     "build": "tsup",
-    "check:package": "publint && attw --pack . && node tests/consumers/esm.mjs && node tests/consumers/commonjs.cjs && node tests/consumers/declarations.mjs && tsup tests/consumers/browser.ts --format esm --platform browser --out-dir .tmp/browser-smoke --clean && pnpm test:packed-package",
+    "check:package": "publint && attw --pack . && node tests/consumers/esm.mjs && node tests/consumers/commonjs.cjs && node tests/consumers/declarations.mjs && tsup tests/consumers/browser.mjs --format esm --platform browser --out-dir .tmp/browser-smoke --clean && pnpm test:packed-package",
     "test:packed-package": "node tests/consumers/packed-package.mjs",
     "check:release-tag": "node scripts/check-release-tag.mjs",
     "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm test:types && pnpm check:dead-code && pnpm check:duplication && pnpm build && pnpm check:package"

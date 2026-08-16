@@ -12,6 +12,13 @@ supported contract.
 - [MonobankPersonalClient](#monobankpersonalclient)
 - [MonobankAcquiringClient](#monobankacquiringclient)
 - [getMerchantDetails](#getmerchantdetails)
+- [createInvoice](#createinvoice)
+- [getInvoiceStatus](#getinvoicestatus)
+- [cancelInvoice](#cancelinvoice)
+- [removeInvoice](#removeinvoice)
+- [finalizeInvoice](#finalizeinvoice)
+- [getInvoiceReceipt](#getinvoicereceipt)
+- [getInvoiceFiscalChecks](#getinvoicefiscalchecks)
 - [getBankSync](#getbanksync)
 - [getCurrencyRates](#getcurrencyrates)
 - [getClientInfo](#getclientinfo)
@@ -156,6 +163,154 @@ Throws `MonobankApiError`, `MonobankNetworkError`,
 const merchant = await acquiring.getMerchantDetails();
 console.log(merchant.merchantId, merchant.merchantName, merchant.edrpou);
 ```
+
+## createInvoice
+
+```ts
+acquiring.createInvoice(
+  input: CreateInvoiceInput,
+  options?: CreateInvoiceOptions,
+): Promise<NewInvoice>
+```
+
+Creates a hosted payment page through `POST /api/merchant/invoice/create`.
+`amount` and all item sums are integer minor units. `ccy` is an optional numeric
+ISO 4217 code; Monobank defaults it to 980.
+
+Important input fields:
+
+| Field              | Type                  | Required | Meaning                                      |
+| ------------------ | --------------------- | -------- | -------------------------------------------- |
+| `amount`           | `number`              | Yes      | Integer payment amount in minor units        |
+| `ccy`              | `number`              | No       | Integer numeric ISO 4217 code                |
+| `merchantPaymInfo` | `MerchantPaymentInfo` | No       | Order reference, description, basket, emails |
+| `redirectUrl`      | `string`              | No       | Payer redirect target                        |
+| `webHookUrl`       | `string`              | No       | Invoice-status callback target               |
+| `validity`         | `number`              | No       | Integer lifetime in seconds                  |
+| `paymentType`      | `InvoicePaymentType`  | No       | `"debit"` or `"hold"`; defaults upstream     |
+| `saveCardData`     | object                | No       | Optional card-tokenization request           |
+
+Returns `{ invoiceId, pageUrl }`. This mutating request is never retried.
+Throws the four standard SDK error classes; input validation happens before
+Fetch.
+
+`CreateInvoiceOptions` extends `RequestOptions` with optional `cms` and
+`cmsVersion` strings. They are sent as the official `X-Cms` and
+`X-Cms-Version` integration-attribution headers.
+
+```ts
+const created = await acquiring.createInvoice({
+  amount: 4_200,
+  merchantPaymInfo: {
+    destination: "Order 42",
+    reference: "order-42",
+  },
+  webHookUrl: "https://example.com/webhooks/monobank",
+});
+```
+
+## getInvoiceStatus
+
+```ts
+acquiring.getInvoiceStatus(
+  input: GetInvoiceStatusInput,
+  options?: RequestOptions,
+): Promise<Invoice>
+```
+
+Loads `GET /api/merchant/invoice/status?invoiceId=...`. The invoice identifier
+is required and URL-encoded. The response includes the documented status,
+amount and currency plus optional timestamps, final amount, failure data,
+payment details, cancellations, wallet data, and tips data.
+
+This safe GET is eligible for configured retries. Throws the four standard SDK
+error classes.
+
+```ts
+const invoice = await acquiring.getInvoiceStatus({
+  invoiceId: created.invoiceId,
+});
+```
+
+## cancelInvoice
+
+```ts
+acquiring.cancelInvoice(
+  input: CancelInvoiceInput,
+  options?: RequestOptions,
+): Promise<InvoiceCancellation>
+```
+
+Requests a full or partial cancellation through
+`POST /api/merchant/invoice/cancel`. `invoiceId` is required; `amount`,
+`extRef`, and fiscalization `items` are optional. The result contains a
+documented cancellation status plus creation and modification timestamps.
+
+This mutating request is never retried. Throws the four standard SDK error
+classes.
+
+## removeInvoice
+
+```ts
+acquiring.removeInvoice(
+  input: RemoveInvoiceInput,
+  options?: RequestOptions,
+): Promise<void>
+```
+
+Invalidates an unpaid invoice through `POST /api/merchant/invoice/remove`.
+Monobank rejects removal after payment. This mutating request is never retried.
+Throws `MonobankApiError`, `MonobankNetworkError`, or
+`MonobankValidationError`.
+
+## finalizeInvoice
+
+```ts
+acquiring.finalizeInvoice(
+  input: FinalizeInvoiceInput,
+  options?: RequestOptions,
+): Promise<InvoiceFinalization>
+```
+
+Captures all or part of an invoice created with `paymentType: "hold"` through
+`POST /api/merchant/invoice/finalize`. `invoiceId` is required; a minor-unit
+`amount` and fiscalization `items` are optional. Returns `{ status: "success" }`
+when Monobank accepts the request.
+
+This mutating request is never retried. Throws the four standard SDK error
+classes.
+
+## getInvoiceReceipt
+
+```ts
+acquiring.getInvoiceReceipt(
+  input: GetInvoiceReceiptInput,
+  options?: RequestOptions,
+): Promise<InvoiceReceipt>
+```
+
+Loads `GET /api/merchant/invoice/receipt?invoiceId=...`. Supplying `email` also
+asks Monobank to send the receipt there. The optional `file` response field is
+a base64-encoded PDF.
+
+This safe GET is eligible for configured retries. Throws the four standard SDK
+error classes.
+
+## getInvoiceFiscalChecks
+
+```ts
+acquiring.getInvoiceFiscalChecks(
+  input: GetInvoiceFiscalChecksInput,
+  options?: RequestOptions,
+): Promise<InvoiceFiscalChecks>
+```
+
+Loads `GET /api/merchant/invoice/fiscal-checks?invoiceId=...`. Each check has a
+required identifier, type, processing status, and fiscalization source plus
+optional status text, tax URL, and base64 PDF.
+
+This safe GET is eligible for configured retries. Throws the four standard SDK
+error classes.
 
 ## getBankSync
 
@@ -440,20 +595,26 @@ All schemas expose Zod Mini's standard parsing interface. Object schemas are
 loose: documented fields are validated and unknown additive fields are
 preserved.
 
-| Export                       | Validates                         |
-| ---------------------------- | --------------------------------- |
-| `accountSchema`              | One Personal account              |
-| `bankSyncSchema`             | `/bank/sync` response             |
-| `clientInfoSchema`           | `/personal/client-info` response  |
-| `currencyRateSchema`         | One exchange-rate item            |
-| `currencyRatesSchema`        | `/bank/currency` response array   |
-| `jarSchema`                  | One Personal jar                  |
-| `managedAccountSchema`       | One delegated FOP account         |
-| `managedClientSchema`        | One delegated FOP client          |
-| `merchantDetailsSchema`      | `/api/merchant/details` response  |
-| `statementItemSchema`        | One statement item                |
-| `statementItemsSchema`       | Statement response array          |
-| `personalWebhookEventSchema` | Incoming Personal statement event |
+| Export                          | Validates                         |
+| ------------------------------- | --------------------------------- |
+| `accountSchema`                 | One Personal account              |
+| `bankSyncSchema`                | `/bank/sync` response             |
+| `clientInfoSchema`              | `/personal/client-info` response  |
+| `currencyRateSchema`            | One exchange-rate item            |
+| `currencyRatesSchema`           | `/bank/currency` response array   |
+| `jarSchema`                     | One Personal jar                  |
+| `managedAccountSchema`          | One delegated FOP account         |
+| `managedClientSchema`           | One delegated FOP client          |
+| `merchantDetailsSchema`         | `/api/merchant/details` response  |
+| `newInvoiceSchema`              | Create-invoice response           |
+| `invoiceStatusSchema`           | Invoice status or webhook payload |
+| `cancelInvoiceResponseSchema`   | Invoice cancellation response     |
+| `finalizeInvoiceResponseSchema` | Hold finalization response        |
+| `receiptSchema`                 | Invoice receipt response          |
+| `invoiceFiscalChecksSchema`     | Invoice fiscal checks response    |
+| `statementItemSchema`           | One statement item                |
+| `statementItemsSchema`          | Statement response array          |
+| `personalWebhookEventSchema`    | Incoming Personal statement event |
 
 ```ts
 import { currencyRatesSchema } from "@liaugust/monobank-sdk";
@@ -467,9 +628,8 @@ if (parsed.success) {
 
 ## Enum-like values
 
-`AccountType` and `CashbackType` are importable const objects with matching
-union types. They provide enum-like values without emitted TypeScript enum
-code.
+The SDK exports importable const objects with matching union types. They
+provide enum-like values without emitted TypeScript enum code.
 
 ```ts
 import {
@@ -502,6 +662,22 @@ const cashbackType: CashbackTypeValue = CashbackType.UAH;
 | `Miles`  | `"Miles"`  |
 | `None`   | `"None"`   |
 | `UAH`    | `"UAH"`    |
+
+### Acquiring values
+
+| Export                      | Wire values                                                                  |
+| --------------------------- | ---------------------------------------------------------------------------- |
+| `InvoicePaymentType`        | `debit`, `hold`                                                              |
+| `InvoiceStatus`             | `created`, `processing`, `hold`, `success`, `failure`, `reversed`, `expired` |
+| `InvoiceCancellationStatus` | `processing`, `success`, `failure`                                           |
+| `InvoicePaymentSystem`      | `visa`, `mastercard`                                                         |
+| `InvoicePaymentMethod`      | `pan`, `apple`, `google`, `monobank`, `wallet`, `direct`                     |
+| `InvoiceWalletStatus`       | `new`, `created`, `failed`                                                   |
+| `DiscountType`              | `DISCOUNT`, `EXTRA_CHARGE`                                                   |
+| `DiscountMode`              | `PERCENT`, `VALUE`                                                           |
+| `FiscalCheckType`           | `sale`, `return`                                                             |
+| `FiscalCheckStatus`         | `new`, `process`, `done`, `failed`                                           |
+| `FiscalizationSource`       | `checkbox`, `monopay`                                                        |
 
 ## Response models
 
@@ -561,6 +737,19 @@ validation.
 | `merchantName` | `string` | Merchant display name             |
 | `edrpou`       | `string` | Ukrainian registration identifier |
 
+### Acquiring invoice models
+
+- `NewInvoice` contains the Monobank `invoiceId` and hosted `pageUrl`.
+- `Invoice` contains required `invoiceId`, `status`, `amount`, and `ccy`, plus
+  optional lifecycle timestamps, payment/cancellation details, wallet data,
+  tips data, failure information, reference, destination, and final amount.
+- `InvoiceCancellation` contains `status`, `createdDate`, and `modifiedDate`
+  plus optional cancellation transaction data when returned in invoice status.
+- `InvoiceFinalization` contains the literal status `"success"`.
+- `InvoiceReceipt` optionally contains a base64-encoded PDF in `file`.
+- `InvoiceFiscalChecks` optionally contains `checks`; check records use the
+  exported fiscal enum-like values and may include a tax URL or base64 PDF.
+
 ### Jar
 
 | Field          | Type     | Notes                  |
@@ -613,24 +802,36 @@ object containing the target `account` identifier and validated
 
 ## Supporting types
 
-| Export                                   | Purpose                                         |
-| ---------------------------------------- | ----------------------------------------------- |
-| `MonobankPersonalClientOptions`          | Constructor configuration                       |
-| `MonobankAcquiringClientOptions`         | Acquiring constructor configuration             |
-| `RequestOptions`                         | Optional per-request `AbortSignal`              |
-| `RetryOptions`                           | Safe GET retry policy                           |
-| `GetStatementsInput`                     | Statement account and time window               |
-| `UnixTimeInput`                          | `Date \| number` statement timestamp input      |
-| `SetWebhookInput`                        | Webhook URL request body                        |
-| `FetchLike`                              | Injectable Fetch-compatible function            |
-| `ResponseValidationIssue`                | Safe schema issue retained by validation errors |
-| `MonobankApiErrorOptions`                | Public API-error constructor data               |
-| `MonobankNetworkErrorOptions`            | Public network-error constructor data           |
-| `MonobankNetworkErrorReason`             | `"aborted" \| "network" \| "timeout"`           |
-| `MonobankResponseValidationErrorOptions` | Public response-validation constructor data     |
-| `MonobankValidationErrorOptions`         | Public input-validation constructor data        |
+| Export                                   | Purpose                                                        |
+| ---------------------------------------- | -------------------------------------------------------------- |
+| `MonobankPersonalClientOptions`          | Constructor configuration                                      |
+| `MonobankAcquiringClientOptions`         | Acquiring constructor configuration                            |
+| `RequestOptions`                         | Optional per-request `AbortSignal`                             |
+| `RetryOptions`                           | Safe GET retry policy                                          |
+| `GetStatementsInput`                     | Statement account and time window                              |
+| `UnixTimeInput`                          | `Date \| number` statement timestamp input                     |
+| `SetWebhookInput`                        | Webhook URL request body                                       |
+| `CreateInvoiceInput`                     | Invoice amount, order, redirect, webhook, and payment controls |
+| `CreateInvoiceOptions`                   | Cancellation and optional CMS attribution headers              |
+| `GetInvoiceStatusInput`                  | Invoice identifier for status lookup                           |
+| `CancelInvoiceInput`                     | Full or partial cancellation request                           |
+| `RemoveInvoiceInput`                     | Unpaid invoice identifier                                      |
+| `FinalizeInvoiceInput`                   | Hold capture request                                           |
+| `GetInvoiceReceiptInput`                 | Receipt lookup and optional delivery email                     |
+| `GetInvoiceFiscalChecksInput`            | Fiscal-check lookup                                            |
+| `MerchantPaymentInfo`                    | Merchant order metadata and basket                             |
+| `InvoiceBasketItem`                      | Itemized invoice product or service                            |
+| `InvoiceDiscount`                        | Basket or order adjustment                                     |
+| `FiscalizationItem`                      | Item sent for cancellation/finalization fiscalization          |
+| `FetchLike`                              | Injectable Fetch-compatible function                           |
+| `ResponseValidationIssue`                | Safe schema issue retained by validation errors                |
+| `MonobankApiErrorOptions`                | Public API-error constructor data                              |
+| `MonobankNetworkErrorOptions`            | Public network-error constructor data                          |
+| `MonobankNetworkErrorReason`             | `"aborted" \| "network" \| "timeout"`                          |
+| `MonobankResponseValidationErrorOptions` | Public response-validation constructor data                    |
+| `MonobankValidationErrorOptions`         | Public input-validation constructor data                       |
 
-The response types `Account`, `BankSync`, `ClientInfo`, `CurrencyRate`, `Jar`,
-`ManagedAccount`, `ManagedClient`, `MerchantDetails`, `PersonalWebhookEvent`,
-and `StatementItem` are inferred from their runtime schemas and exported from
-the package root.
+Response types are inferred from their runtime schemas and exported from the
+package root, including the Personal models plus `MerchantDetails`,
+`NewInvoice`, `Invoice`, `InvoiceCancellation`, `InvoiceFinalization`,
+`InvoiceReceipt`, and `InvoiceFiscalChecks`.

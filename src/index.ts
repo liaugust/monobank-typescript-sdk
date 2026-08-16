@@ -1,3 +1,44 @@
+export type {
+  Invoice,
+  InvoiceCancellation,
+  InvoiceFinalization,
+  InvoiceFiscalChecks,
+  InvoiceReceipt,
+  NewInvoice,
+} from "./acquiring/invoice.js";
+export {
+  cancelInvoiceResponseSchema,
+  DiscountMode,
+  DiscountType,
+  finalizeInvoiceResponseSchema,
+  FiscalCheckStatus,
+  FiscalCheckType,
+  FiscalizationSource,
+  InvoiceCancellationStatus,
+  invoiceFiscalChecksSchema,
+  InvoicePaymentMethod,
+  InvoicePaymentSystem,
+  InvoicePaymentType,
+  InvoiceStatus,
+  invoiceStatusSchema,
+  InvoiceWalletStatus,
+  newInvoiceSchema,
+  receiptSchema,
+} from "./acquiring/invoice.js";
+export type {
+  CancelInvoiceInput,
+  CreateInvoiceInput,
+  CreateInvoiceOptions,
+  FinalizeInvoiceInput,
+  FiscalizationItem,
+  GetInvoiceFiscalChecksInput,
+  GetInvoiceReceiptInput,
+  GetInvoiceStatusInput,
+  InvoiceBasketItem,
+  InvoiceDiscount,
+  MerchantPaymentInfo,
+  RemoveInvoiceInput,
+} from "./acquiring/invoice-input.js";
 export type { MerchantDetails } from "./acquiring/merchant-details.js";
 export { merchantDetailsSchema } from "./acquiring/merchant-details.js";
 export { MonobankAcquiringClient } from "./acquiring/monobank-acquiring-client.js";

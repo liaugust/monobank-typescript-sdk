@@ -20,15 +20,19 @@ claim endorsement by Monobank.
 - Treat statement and rate timestamps as Unix seconds; `serverTimeMsec` is Unix
   milliseconds.
 - Use `AccountType` and `CashbackType` instead of repeating their wire strings.
+- Use the exported invoice, payment, cancellation, discount, wallet, and fiscal
+  enum-like values instead of repeating their wire strings.
 - Pass an `AbortSignal` when a caller needs cancellation.
 - Configure retries only when the application accepts repeated safe GET calls.
-  `setWebhook()` is never retried by the SDK.
+  mutating Personal and Acquiring methods are never retried by the SDK.
 - Narrow caught errors with the exported SDK error classes. Do not assume every
   failure is an HTTP error.
 - Treat `parsePersonalWebhookEvent()` as shape validation only. Authenticate
   webhook delivery separately before acting on it.
-- Use only documented Acquiring methods. The current Acquiring surface contains
-  `getMerchantDetails()`; do not invent unimplemented invoice or payment calls.
+- Use only documented Acquiring methods. The current surface contains merchant
+  details plus invoice creation, status, cancellation, removal, finalization,
+  receipt, and fiscal-check operations. Do not invent unimplemented payment
+  calls.
 
 ## Minimal Correct Usage
 
@@ -68,9 +72,11 @@ The root entry point exports:
 
 - `MonobankPersonalClient`
 - `MonobankAcquiringClient`
-- `AccountType` and `CashbackType`
+- Personal and Acquiring enum-like const values, including `AccountType`,
+  `CashbackType`, `InvoicePaymentType`, and `InvoiceStatus`
 - response schemas for accounts, bank sync, client info, currency rates, jars,
-  managed clients, merchant details, statements, and Personal webhook events
+  managed clients, merchant details, invoices, receipts, fiscal checks,
+  statements, and Personal webhook events
 - `parsePersonalWebhookEvent`
 - Personal and Acquiring request, response, transport, retry, and error types
 - `MonobankApiError`, `MonobankNetworkError`,

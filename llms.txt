@@ -44,6 +44,20 @@ Use `MonobankAcquiringClient` with a separate Acquiring token.
   authenticate the sender.
 - `getMerchantDetails(options?)`: authenticated `/api/merchant/details`;
   returns `Promise<MerchantDetails>`.
+- `createInvoice(input, options?)`: creates a hosted Acquiring invoice; returns
+  `Promise<NewInvoice>`; never retried automatically.
+- `getInvoiceStatus(input, options?)`: returns `Promise<Invoice>` for an
+  `invoiceId`; safe GET eligible for configured retries.
+- `cancelInvoice(input, options?)`: full or partial payment cancellation;
+  returns `Promise<InvoiceCancellation>`; never retried automatically.
+- `removeInvoice(input, options?)`: invalidates an unpaid invoice; returns
+  `Promise<void>`; never retried automatically.
+- `finalizeInvoice(input, options?)`: captures a held amount; returns
+  `Promise<InvoiceFinalization>`; never retried automatically.
+- `getInvoiceReceipt(input, options?)`: gets a base64 receipt and can request
+  email delivery; returns `Promise<InvoiceReceipt>`.
+- `getInvoiceFiscalChecks(input, options?)`: returns
+  `Promise<InvoiceFiscalChecks>`.
 
 Each optional request `options` object accepts `signal?: AbortSignal`.
 
@@ -74,12 +88,17 @@ objects, or raw API payloads.
 
 ## Exported runtime values
 
-- Enum-like const objects: `AccountType`, `CashbackType`.
+- Enum-like const objects: `AccountType`, `CashbackType`, `InvoicePaymentType`,
+  `InvoiceStatus`, `InvoiceCancellationStatus`, `InvoicePaymentSystem`,
+  `InvoicePaymentMethod`, `InvoiceWalletStatus`, `DiscountType`, `DiscountMode`,
+  `FiscalCheckType`, `FiscalCheckStatus`, `FiscalizationSource`.
 - Schemas: `accountSchema`, `bankSyncSchema`, `clientInfoSchema`,
   `currencyRateSchema`, `currencyRatesSchema`, `jarSchema`,
   `managedAccountSchema`, `managedClientSchema`, `statementItemSchema`,
   `statementItemsSchema`, `personalWebhookEventSchema`,
-  `merchantDetailsSchema`.
+  `merchantDetailsSchema`, `newInvoiceSchema`, `invoiceStatusSchema`,
+  `cancelInvoiceResponseSchema`, `finalizeInvoiceResponseSchema`,
+  `receiptSchema`, `invoiceFiscalChecksSchema`.
 - Errors: `MonobankApiError`, `MonobankNetworkError`,
   `MonobankResponseValidationError`, `MonobankValidationError`.
 - Client/parser: `MonobankPersonalClient`, `MonobankAcquiringClient`,
@@ -102,8 +121,10 @@ See `src/index.ts` for the complete authoritative export list, including types.
 - Never mix Personal and Acquiring tokens or send `X-Token` to public
   `/bank/*` endpoints.
 - Never treat webhook parsing as sender authentication.
-- Never retry `setWebhook()` automatically.
-- Do not invent Acquiring APIs beyond the implemented `getMerchantDetails()`.
+- Never retry `setWebhook()`, `createInvoice()`, `cancelInvoice()`,
+  `removeInvoice()`, or `finalizeInvoice()` automatically.
+- Do not invent Acquiring APIs beyond the implemented merchant-details and
+  invoice-lifecycle methods.
 - Prefer exported SDK types, schemas, value objects, and error classes over
   duplicate local definitions.
 - Validate environment configuration before constructing the client.
