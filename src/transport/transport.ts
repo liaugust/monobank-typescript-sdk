@@ -96,7 +96,11 @@ export class MonobankTransport {
     method: "GET" | "POST",
     request: EmptyRequest,
   ): Promise<Response> {
-    const endpointUrl = new URL(request.endpoint, this.options.baseUrl);
+    const endpointUrl = validateEndpointUrl(
+      request.endpoint,
+      this.options.baseUrl,
+      request.auth,
+    );
     const headers = new Headers({ Accept: "application/json" });
 
     if (request.auth) {
@@ -120,12 +124,11 @@ export class MonobankTransport {
     let response: Response;
     try {
       response = await this.options.fetch(endpointUrl, init);
-    } catch (cause) {
+    } catch {
       throw new MonobankNetworkError({
         endpoint: request.endpoint,
         message: "Monobank request failed before receiving a response.",
         reason: "network",
-        ...(cause instanceof Error ? { cause } : {}),
       });
     }
 
@@ -173,6 +176,38 @@ function validateBaseUrl(value: string): URL {
   }
 
   return url;
+}
+
+function validateEndpointUrl(
+  endpoint: string,
+  baseUrl: URL,
+  auth: boolean,
+): URL {
+  const issues: string[] = [];
+
+  if (!endpoint.startsWith("/") || endpoint.startsWith("//")) {
+    issues.push("endpoint must be a root-relative path");
+  }
+
+  const endpointUrl = new URL(endpoint, baseUrl);
+
+  if (endpointUrl.origin !== baseUrl.origin) {
+    issues.push("endpoint must resolve within the configured base URL origin");
+  }
+
+  if (auth && !endpointUrl.pathname.startsWith("/personal/")) {
+    issues.push("authenticated endpoints must use a /personal/ path");
+  }
+
+  if (issues.length > 0) {
+    throw new MonobankValidationError({
+      endpoint,
+      issues,
+      message: "Invalid Monobank transport request.",
+    });
+  }
+
+  return endpointUrl;
 }
 
 function validateGlobalFetch(): FetchLike {
