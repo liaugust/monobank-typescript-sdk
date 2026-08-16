@@ -44,6 +44,7 @@ describe("public package surface", () => {
       "receiptSchema",
       "statementItemSchema",
       "statementItemsSchema",
+      "verifyAcquiringWebhookSignature",
     ]);
   });
 });
