@@ -1,7 +1,7 @@
 # Monobank TypeScript SDK Design
 
 **Date:** 2026-08-16  
-**Status:** Approved in conversation; awaiting written-spec review  
+**Status:** Approved
 **Repository:** `monobank-typescript-sdk` (private GitHub repository)  
 **Package:** `@liaugust/monobank-sdk` (private until publication is explicitly approved)
 
@@ -112,6 +112,7 @@ integration, shared transport, shared errors, and complete support for the
 documented Personal API surface:
 
 - Currency rates.
+- Bank synchronization metadata and public verification key.
 - Client information, accounts, and jars.
 - Account statements.
 - Personal webhook configuration.
