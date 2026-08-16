@@ -1,3 +1,4 @@
+import type { RequestOptions } from "../shared/request-options.js";
 import { MonobankTransport } from "../transport/transport.js";
 import type { ClientInfo } from "./client-info.js";
 import { clientInfoSchema } from "./client-info.js";
@@ -7,7 +8,6 @@ import type {
 } from "./get-statements-input.js";
 import { createStatementsEndpoint } from "./get-statements-input.js";
 import type { MonobankPersonalClientOptions } from "./monobank-personal-client-options.js";
-import type { RequestOptions } from "./request-options.js";
 import type { SetWebhookInput } from "./set-webhook-input.js";
 import { createSetWebhookBody } from "./set-webhook-input.js";
 import type { StatementItem } from "./statement-item.js";

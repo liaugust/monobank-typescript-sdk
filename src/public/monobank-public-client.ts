@@ -2,7 +2,7 @@ import type { BankSync } from "../personal/bank-sync.js";
 import { bankSyncSchema } from "../personal/bank-sync.js";
 import type { CurrencyRate } from "../personal/currency-rate.js";
 import { currencyRatesSchema } from "../personal/currency-rate.js";
-import type { RequestOptions } from "../personal/request-options.js";
+import type { RequestOptions } from "../shared/request-options.js";
 import { MonobankTransport } from "../transport/transport.js";
 import type { MonobankPublicClientOptions } from "./monobank-public-client-options.js";
 

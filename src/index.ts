@@ -90,7 +90,6 @@ export {
   parsePersonalWebhookEvent,
   personalWebhookEventSchema,
 } from "./personal/personal-webhook-event.js";
-export type { RequestOptions } from "./personal/request-options.js";
 export type { SetWebhookInput } from "./personal/set-webhook-input.js";
 export type { StatementItem } from "./personal/statement-item.js";
 export {
@@ -99,6 +98,7 @@ export {
 } from "./personal/statement-item.js";
 export { MonobankPublicClient } from "./public/monobank-public-client.js";
 export type { MonobankPublicClientOptions } from "./public/monobank-public-client-options.js";
+export type { RequestOptions } from "./shared/request-options.js";
 export type { FetchLike } from "./transport/fetch-like.js";
 export type { ResponseValidationIssue } from "./transport/response-schema.js";
 export type { RetryOptions } from "./transport/retry-options.js";

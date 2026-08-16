@@ -1,4 +1,4 @@
-import type { RequestOptions } from "../personal/request-options.js";
+import type { RequestOptions } from "../shared/request-options.js";
 import { MonobankTransport } from "../transport/transport.js";
 import type {
   Invoice,

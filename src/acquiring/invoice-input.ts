@@ -1,7 +1,7 @@
 import * as z from "zod/mini";
 
 import { MonobankValidationError } from "../errors/monobank-validation-error.js";
-import type { RequestOptions } from "../personal/request-options.js";
+import type { RequestOptions } from "../shared/request-options.js";
 import type { ResponseSchema } from "../transport/response-schema.js";
 import { DiscountMode, DiscountType, InvoicePaymentType } from "./invoice.js";
 
