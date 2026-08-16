@@ -10,7 +10,11 @@ export { MonobankResponseValidationError } from "./errors/monobank-response-vali
 export type { MonobankValidationErrorOptions } from "./errors/monobank-validation-error.js";
 export { MonobankValidationError } from "./errors/monobank-validation-error.js";
 export type { Account } from "./personal/account.js";
-export { accountSchema } from "./personal/account.js";
+export {
+  accountSchema,
+  AccountType,
+  CashbackType,
+} from "./personal/account.js";
 export type { BankSync } from "./personal/bank-sync.js";
 export { bankSyncSchema } from "./personal/bank-sync.js";
 export type { ClientInfo } from "./personal/client-info.js";

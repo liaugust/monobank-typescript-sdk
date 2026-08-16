@@ -1,7 +1,7 @@
 # Contributing
 
-Use Node.js 20+ and pnpm 11.22.0. Corepack should select the package-manager
-version declared in `package.json`.
+Use Node.js 20.19.5+ and pnpm 11.22.0. Corepack should select the
+package-manager version declared in `package.json`.
 
 All behavior changes are test-first: write the failing test, confirm the RED
 failure, then make the smallest implementation that turns it GREEN. Public API

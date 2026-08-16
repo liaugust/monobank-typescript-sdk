@@ -3,7 +3,7 @@
 Private, unofficial TypeScript SDK for the Monobank APIs. This package is not
 published to npm yet and is not endorsed by Monobank.
 
-The SDK supports Node.js 20+ and modern browsers that provide the standard
+The SDK supports Node.js 20.19.5+ and modern browsers that provide the standard
 Fetch API. Until publication is approved, install it only from the private
 repository or workspace where it is developed.
 

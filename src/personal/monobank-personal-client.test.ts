@@ -12,6 +12,7 @@ import {
 } from "../../tests/support/create-fetch-sequence.js";
 import { MonobankResponseValidationError } from "../errors/monobank-response-validation-error.js";
 import { MonobankValidationError } from "../errors/monobank-validation-error.js";
+import type { GetStatementsInput } from "./get-statements-input.js";
 import { MonobankPersonalClient } from "./monobank-personal-client.js";
 
 function textResponse(body: string, init: ResponseInit = {}): Response {
@@ -328,10 +329,27 @@ describe("MonobankPersonalClient statements", () => {
 
     await client.getStatements({
       from: 1_785_542_400,
-    } as Parameters<MonobankPersonalClient["getStatements"]>[0]);
+    });
 
     expect(firstRequestUrl(fetch).href).toBe(
       "https://api.monobank.ua/personal/statement/0/1785542400",
+    );
+  });
+
+  it("defaults statement account to 0 for a complete time window", async () => {
+    const fetch = createFetchSequence([jsonResponse([statementItemFixture])]);
+    const client = new MonobankPersonalClient({
+      fetch,
+      token: "personal-token",
+    });
+
+    await client.getStatements({
+      from: 1_785_542_400,
+      to: 1_785_628_800,
+    });
+
+    expect(firstRequestUrl(fetch).href).toBe(
+      "https://api.monobank.ua/personal/statement/0/1785542400/1785628800",
     );
   });
 
@@ -377,6 +395,22 @@ describe("MonobankPersonalClient statements", () => {
     ).rejects.toBeInstanceOf(MonobankValidationError);
     await expect(
       client.getStatements({ account: "..", from: 1_000 }),
+    ).rejects.toBeInstanceOf(MonobankValidationError);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects a null statement account before Fetch", async () => {
+    const fetch = createFetchSequence([jsonResponse([statementItemFixture])]);
+    const client = new MonobankPersonalClient({
+      fetch,
+      token: "personal-token",
+    });
+
+    await expect(
+      client.getStatements({
+        account: null,
+        from: 1_785_542_400,
+      } as unknown as GetStatementsInput),
     ).rejects.toBeInstanceOf(MonobankValidationError);
     expect(fetch).not.toHaveBeenCalled();
   });

@@ -192,7 +192,7 @@ function createStatementRequestInput(
 
   if (input.to === undefined) {
     return {
-      account: input.account,
+      ...(input.account === undefined ? {} : { account: input.account }),
       from,
     };
   }
@@ -200,7 +200,7 @@ function createStatementRequestInput(
   const to: UnixTimeInput = input.to;
 
   return {
-    account: input.account,
+    ...(input.account === undefined ? {} : { account: input.account }),
     from,
     to,
   };

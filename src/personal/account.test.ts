@@ -1,25 +1,34 @@
 import { describe, expect, it } from "vitest";
 
 import { clientInfoFixture } from "../../tests/fixtures/personal-api.js";
-import { accountSchema } from "./account.js";
+import { accountSchema, AccountType, CashbackType } from "./account.js";
 
 const accountFixture = clientInfoFixture.accounts[0];
 
 describe("account schema", () => {
+  it("exports the exact documented account and cashback values", () => {
+    expect(AccountType).toStrictEqual({
+      Black: "black",
+      EAid: "eAid",
+      Fop: "fop",
+      Iron: "iron",
+      Platinum: "platinum",
+      White: "white",
+      Yellow: "yellow",
+    });
+    expect(CashbackType).toStrictEqual({
+      Miles: "Miles",
+      None: "None",
+      UAH: "UAH",
+    });
+  });
+
   it("accepts a Personal account with monetary values in minor units", () => {
     expect(accountSchema.parse(accountFixture)).toEqual(accountFixture);
   });
 
   it("accepts every documented account type", () => {
-    const accountTypes = [
-      "black",
-      "white",
-      "platinum",
-      "iron",
-      "fop",
-      "yellow",
-      "eAid",
-    ] as const;
+    const accountTypes = Object.values(AccountType);
 
     expect(
       accountTypes.map((type) =>
@@ -29,7 +38,7 @@ describe("account schema", () => {
   });
 
   it("accepts every documented cashback type", () => {
-    const cashbackTypes = ["None", "UAH", "Miles"] as const;
+    const cashbackTypes = Object.values(CashbackType);
 
     expect(
       cashbackTypes.map((cashbackType) =>

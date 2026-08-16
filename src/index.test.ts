@@ -5,6 +5,8 @@ import * as sdk from "./index.js";
 describe("public package surface", () => {
   it("exports only the deliberate runtime API", () => {
     expect(Object.keys(sdk).sort()).toStrictEqual([
+      "AccountType",
+      "CashbackType",
       "MonobankApiError",
       "MonobankNetworkError",
       "MonobankPersonalClient",
