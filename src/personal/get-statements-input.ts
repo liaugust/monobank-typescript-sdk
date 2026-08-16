@@ -15,8 +15,8 @@ export type UnixTimeInput = Date | number;
  * Input for fetching Personal account or jar statements.
  */
 export interface GetStatementsInput {
-  /** Account or jar identifier from `/personal/client-info`; runtime omission defaults to `0`. */
-  readonly account: string;
+  /** Account or jar identifier from `/personal/client-info`; omission defaults to `0`. */
+  readonly account?: string;
   /** Inclusive statement window start as Unix seconds or a `Date`. */
   readonly from: UnixTimeInput;
   /** Optional inclusive statement window end as Unix seconds or a `Date`. */
@@ -34,16 +34,18 @@ export interface GetStatementsInput {
  * @throws {MonobankValidationError} When account or Unix-second values are invalid.
  */
 export function createStatementsEndpoint(input: GetStatementsInput): string {
-  const account =
-    (input as { readonly account?: string }).account === undefined
-      ? "0"
-      : input.account;
+  const account = resolveStatementAccount(input.account);
   const from = normalizeUnixTime(input.from, "from");
   const to =
     input.to === undefined ? undefined : normalizeUnixTime(input.to, "to");
   const issues: string[] = [];
 
-  if (account.length === 0 || account === "." || account === "..") {
+  if (
+    typeof account !== "string" ||
+    account.length === 0 ||
+    account === "." ||
+    account === ".."
+  ) {
     issues.push("account must be a non-empty path segment");
   }
 
@@ -67,6 +69,14 @@ export function createStatementsEndpoint(input: GetStatementsInput): string {
   const prefix = `${statementsEndpoint}/${encodedAccount}/${String(from)}`;
 
   return to === undefined ? prefix : `${prefix}/${String(to)}`;
+}
+
+function resolveStatementAccount(account: string | undefined): string {
+  if (account === undefined) {
+    return "0";
+  }
+
+  return account;
 }
 
 function normalizeUnixTime(value: UnixTimeInput, name: "from" | "to"): number {

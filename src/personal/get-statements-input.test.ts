@@ -14,11 +14,11 @@ describe("get statements input validation", () => {
     ).toBe("/personal/statement/jar%2Fid/1785542400/1785628800");
   });
 
-  it("uses account 0 and omits the trailing to segment when both are omitted at runtime", () => {
+  it("uses account 0 and omits the trailing to segment when both are omitted", () => {
     expect(
       createStatementsEndpoint({
         from: 1_785_542_400,
-      } as Parameters<typeof createStatementsEndpoint>[0]),
+      }),
     ).toBe("/personal/statement/0/1785542400");
   });
 

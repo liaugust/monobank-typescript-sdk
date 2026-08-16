@@ -9,5 +9,6 @@
     },
     "types": ["node"]
   },
+  "exclude": [],
   "include": ["./public-api.test-d.ts"]
 }
