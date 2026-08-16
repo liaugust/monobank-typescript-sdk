@@ -5,6 +5,7 @@ import simpleImportSort from "eslint-plugin-simple-import-sort";
 import tseslint from "typescript-eslint";
 
 const publicApiFiles = [
+  "src/acquiring/*.ts",
   "src/errors/*.ts",
   "src/personal/*.ts",
   "src/transport/fetch-like.ts",

@@ -22,6 +22,7 @@ interface JsonRequest<T> {
   readonly auth: boolean;
   readonly body?: unknown;
   readonly endpoint: string;
+  readonly headers?: HeadersInit;
   readonly retryable?: boolean;
   readonly schema: ResponseSchema<T>;
   readonly signal?: AbortSignal;
@@ -31,6 +32,7 @@ interface EmptyRequest {
   readonly auth: boolean;
   readonly body?: unknown;
   readonly endpoint: string;
+  readonly headers?: HeadersInit;
   readonly retryable?: boolean;
   readonly signal?: AbortSignal;
 }
@@ -110,7 +112,8 @@ export class MonobankTransport {
       request.auth,
       this.options.authenticatedPathPrefix,
     );
-    const headers = new Headers({ Accept: "application/json" });
+    const headers = new Headers(request.headers);
+    headers.set("Accept", "application/json");
 
     if (request.auth) {
       headers.set("X-Token", this.options.token);

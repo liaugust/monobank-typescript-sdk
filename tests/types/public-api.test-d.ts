@@ -1,15 +1,26 @@
 import type {
   Account,
   BankSync,
+  CancelInvoiceInput,
   ClientInfo,
+  CreateInvoiceInput,
+  CreateInvoiceOptions,
   CurrencyRate,
   GetStatementsInput,
+  Invoice,
+  InvoiceCancellation,
+  InvoiceFinalization,
+  InvoiceFiscalChecks,
+  InvoiceReceipt,
   MerchantDetails,
+  NewInvoice,
   PersonalWebhookEvent,
 } from "@liaugust/monobank-sdk";
 import {
   AccountType,
   CashbackType,
+  InvoicePaymentType,
+  InvoiceStatus,
   MonobankAcquiringClient,
   MonobankPersonalClient,
   parsePersonalWebhookEvent,
@@ -24,6 +35,35 @@ const clientInfo: Promise<ClientInfo> = client.getClientInfo();
 const rates: Promise<readonly CurrencyRate[]> = client.getCurrencyRates();
 const merchantDetails: Promise<MerchantDetails> =
   acquiringClient.getMerchantDetails();
+const createInvoiceInput: CreateInvoiceInput = {
+  amount: 4_200,
+  paymentType: InvoicePaymentType.Hold,
+};
+const createInvoiceOptions: CreateInvoiceOptions = {
+  cms: "Synthetic Shop",
+  cmsVersion: "1.2.3",
+};
+const newInvoice: Promise<NewInvoice> = acquiringClient.createInvoice(
+  createInvoiceInput,
+  createInvoiceOptions,
+);
+const invoice: Promise<Invoice> = acquiringClient.getInvoiceStatus({
+  invoiceId: "invoice-42",
+});
+const cancelInput: CancelInvoiceInput = { invoiceId: "invoice-42" };
+const cancellation: Promise<InvoiceCancellation> =
+  acquiringClient.cancelInvoice(cancelInput);
+const finalization: Promise<InvoiceFinalization> =
+  acquiringClient.finalizeInvoice({ invoiceId: "invoice-42" });
+const receipt: Promise<InvoiceReceipt> = acquiringClient.getInvoiceReceipt({
+  invoiceId: "invoice-42",
+});
+const fiscalChecks: Promise<InvoiceFiscalChecks> =
+  acquiringClient.getInvoiceFiscalChecks({ invoiceId: "invoice-42" });
+const removal: Promise<void> = acquiringClient.removeInvoice({
+  invoiceId: "invoice-42",
+});
+const invoiceStatus: InvoiceStatus = InvoiceStatus.Success;
 const webhookUpdate: Promise<void> = client.setWebhook({ webHookUrl: "" });
 const accountType: AccountType = AccountType.Black;
 const cashbackType: CashbackType = CashbackType.UAH;
@@ -52,6 +92,14 @@ void statements;
 void clientInfo;
 void rates;
 void merchantDetails;
+void newInvoice;
+void invoice;
+void cancellation;
+void finalization;
+void receipt;
+void fiscalChecks;
+void removal;
+void invoiceStatus;
 void webhookUpdate;
 void accountType;
 void accountTypesAreExact;

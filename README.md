@@ -72,14 +72,21 @@ example focused; production code should validate the environment value first.
 
 ## API at a glance
 
-| Method                 | Authentication  | Result                     | Notes                                          |
-| ---------------------- | --------------- | -------------------------- | ---------------------------------------------- |
-| `getBankSync()`        | Public          | `BankSync`                 | Server time and public verification key        |
-| `getCurrencyRates()`   | Public          | `readonly CurrencyRate[]`  | Monobank may cache rates for five minutes      |
-| `getClientInfo()`      | Personal token  | `ClientInfo`               | Limited upstream to one request per 60 seconds |
-| `getStatements(input)` | Personal token  | `readonly StatementItem[]` | Maximum window: 2,682,000 seconds              |
-| `setWebhook(input)`    | Personal token  | `void`                     | Mutating request; never retried automatically  |
-| `getMerchantDetails()` | Acquiring token | `MerchantDetails`          | Merchant identity for the supplied token       |
+| Method                          | Authentication  | Result                     | Notes                                          |
+| ------------------------------- | --------------- | -------------------------- | ---------------------------------------------- |
+| `getBankSync()`                 | Public          | `BankSync`                 | Server time and public verification key        |
+| `getCurrencyRates()`            | Public          | `readonly CurrencyRate[]`  | Monobank may cache rates for five minutes      |
+| `getClientInfo()`               | Personal token  | `ClientInfo`               | Limited upstream to one request per 60 seconds |
+| `getStatements(input)`          | Personal token  | `readonly StatementItem[]` | Maximum window: 2,682,000 seconds              |
+| `setWebhook(input)`             | Personal token  | `void`                     | Mutating request; never retried automatically  |
+| `getMerchantDetails()`          | Acquiring token | `MerchantDetails`          | Merchant identity for the supplied token       |
+| `createInvoice(input)`          | Acquiring token | `NewInvoice`               | Creates a hosted payment page                  |
+| `getInvoiceStatus(input)`       | Acquiring token | `Invoice`                  | Safe GET; eligible for configured retries      |
+| `cancelInvoice(input)`          | Acquiring token | `InvoiceCancellation`      | Full or partial cancellation                   |
+| `removeInvoice(input)`          | Acquiring token | `void`                     | Invalidates an unpaid invoice                  |
+| `finalizeInvoice(input)`        | Acquiring token | `InvoiceFinalization`      | Captures a held payment                        |
+| `getInvoiceReceipt(input)`      | Acquiring token | `InvoiceReceipt`           | Gets and optionally emails a receipt           |
+| `getInvoiceFiscalChecks(input)` | Acquiring token | `InvoiceFiscalChecks`      | Loads fiscalization results                    |
 
 See the [complete API reference](docs/API.md) for signatures, parameters,
 returns, errors, retry behavior, data models, and focused examples.
@@ -104,6 +111,45 @@ console.log(merchant.merchantId, merchant.merchantName, merchant.edrpou);
 ```
 
 The Acquiring token is sent only to authenticated `/api/merchant/*` methods.
+
+Create a debit invoice and inspect its status:
+
+```ts
+import { InvoiceStatus, MonobankAcquiringClient } from "@liaugust/monobank-sdk";
+
+const acquiring = new MonobankAcquiringClient({
+  token: process.env.MONOBANK_ACQUIRING_TOKEN!,
+});
+
+const created = await acquiring.createInvoice(
+  {
+    amount: 4_200,
+    merchantPaymInfo: {
+      destination: "Order 42",
+      reference: "order-42",
+    },
+    redirectUrl: "https://example.com/orders/42",
+    webHookUrl: "https://example.com/webhooks/monobank",
+  },
+  {
+    cms: "Synthetic Shop",
+    cmsVersion: "1.2.3",
+  },
+);
+
+const invoice = await acquiring.getInvoiceStatus({
+  invoiceId: created.invoiceId,
+});
+
+if (invoice.status === InvoiceStatus.Success) {
+  console.log("Paid", invoice.finalAmount);
+}
+```
+
+Monetary amounts are integer minor units. Use `paymentType: "hold"` (or
+`InvoicePaymentType.Hold`) only when your application will later call
+`finalizeInvoice()` or `cancelInvoice()`. Invoice mutations are never retried
+automatically.
 
 ### Public data
 
@@ -243,7 +289,9 @@ same validation boundary:
 import {
   clientInfoSchema,
   currencyRatesSchema,
+  invoiceStatusSchema,
   merchantDetailsSchema,
+  newInvoiceSchema,
   personalWebhookEventSchema,
   statementItemsSchema,
 } from "@liaugust/monobank-sdk";
