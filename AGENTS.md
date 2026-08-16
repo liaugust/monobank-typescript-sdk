@@ -14,7 +14,8 @@ claim endorsement by Monobank.
 
 - Import public values and types only from `@liaugust/monobank-sdk`.
 - Construct `MonobankPersonalClient` with a validated Personal token.
-- Never hardcode, log, serialize, or commit real tokens or Personal payloads.
+- Construct `MonobankAcquiringClient` with a separate validated Acquiring token.
+- Never hardcode, log, serialize, or commit real tokens or API payloads.
 - Treat all monetary integers as minor currency units.
 - Treat statement and rate timestamps as Unix seconds; `serverTimeMsec` is Unix
   milliseconds.
@@ -26,8 +27,8 @@ claim endorsement by Monobank.
   failure is an HTTP error.
 - Treat `parsePersonalWebhookEvent()` as shape validation only. Authenticate
   webhook delivery separately before acting on it.
-- Do not invent Acquiring methods or imports. The current public client covers
-  the implemented Public and Personal endpoints only.
+- Use only documented Acquiring methods. The current Acquiring surface contains
+  `getMerchantDetails()`; do not invent unimplemented invoice or payment calls.
 
 ## Minimal Correct Usage
 
@@ -66,11 +67,12 @@ async function loadStatements(token: string, signal: AbortSignal) {
 The root entry point exports:
 
 - `MonobankPersonalClient`
+- `MonobankAcquiringClient`
 - `AccountType` and `CashbackType`
 - response schemas for accounts, bank sync, client info, currency rates, jars,
-  managed clients, statements, and Personal webhook events
+  managed clients, merchant details, statements, and Personal webhook events
 - `parsePersonalWebhookEvent`
-- Personal request, response, transport, retry, and error types
+- Personal and Acquiring request, response, transport, retry, and error types
 - `MonobankApiError`, `MonobankNetworkError`,
   `MonobankResponseValidationError`, and `MonobankValidationError`
 
@@ -82,6 +84,7 @@ before generating calls; do not guess arguments.
 
 ```text
 src/index.ts                    public package boundary
+src/acquiring/                 Acquiring client, schemas, and types
 src/personal/                   Personal client, inputs, schemas, and types
 src/transport/                  Fetch transport, retry, timeout, and parsing
 src/errors/                     public credential-safe error classes
@@ -94,16 +97,15 @@ tests/consumers/                ESM, CJS, browser, declaration, and tarball smok
 
 ## Architectural Invariants
 
-- Preserve the separation between Personal and future Acquiring credentials
-  and clients.
-- Send `X-Token` only to authenticated `/personal/*` endpoints. Public
-  `/bank/*` requests must never receive it.
+- Preserve the separation between Personal and Acquiring credentials and clients.
+- Send Personal `X-Token` only to `/personal/*` and Acquiring `X-Token` only to
+  `/api/merchant/*`. Public `/bank/*` requests must never receive either token.
 - Parse every successful JSON response through its matching Zod Mini schema.
 - Use loose response objects so validated additive upstream fields survive.
 - Keep Zod as the only runtime dependency unless a design change is explicitly
   approved.
 - Keep transport failures credential-safe: never retain tokens, authorization
-  headers, Request objects, or raw Personal response bodies.
+  headers, Request objects, or raw API response bodies.
 - Retry only safe GET requests. Never retry mutating requests automatically.
 - Keep endpoint input validation ahead of Fetch.
 - Keep one primary reusable runtime abstraction per source file.

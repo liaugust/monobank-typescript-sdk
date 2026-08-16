@@ -77,3 +77,16 @@ for (const memberName of [
     `MonobankPersonalClient.${memberName} JSDoc is missing`,
   );
 }
+
+const acquiringClientClass = findClass("MonobankAcquiringClient");
+assert.ok(
+  hasJSDoc(acquiringClientClass),
+  "MonobankAcquiringClient JSDoc is missing",
+);
+
+for (const memberName of ["constructor", "getMerchantDetails"]) {
+  assert.ok(
+    hasJSDoc(findClassMember(acquiringClientClass, memberName)),
+    `MonobankAcquiringClient.${memberName} JSDoc is missing`,
+  );
+}

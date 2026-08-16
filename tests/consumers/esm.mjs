@@ -7,8 +7,13 @@ const client = new sdk.MonobankPersonalClient({
   fetch: fetchStub,
   token: "test-token",
 });
+const acquiringClient = new sdk.MonobankAcquiringClient({
+  fetch: fetchStub,
+  token: "test-acquiring-token",
+});
 
 for (const exportName of [
+  "MonobankAcquiringClient",
   "MonobankApiError",
   "MonobankNetworkError",
   "MonobankPersonalClient",
@@ -19,3 +24,4 @@ for (const exportName of [
 }
 
 assert.ok(client instanceof sdk.MonobankPersonalClient);
+assert.ok(acquiringClient instanceof sdk.MonobankAcquiringClient);

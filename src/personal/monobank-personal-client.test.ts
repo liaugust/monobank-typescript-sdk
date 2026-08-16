@@ -10,6 +10,10 @@ import {
   createFetchSequence,
   jsonResponse,
 } from "../../tests/support/create-fetch-sequence.js";
+import {
+  firstRequestHeaders,
+  firstRequestUrl,
+} from "../../tests/support/fetch-request-inspection.js";
 import { MonobankResponseValidationError } from "../errors/monobank-response-validation-error.js";
 import { MonobankValidationError } from "../errors/monobank-validation-error.js";
 import type { GetStatementsInput } from "./get-statements-input.js";
@@ -17,22 +21,6 @@ import { MonobankPersonalClient } from "./monobank-personal-client.js";
 
 function textResponse(body: string, init: ResponseInit = {}): Response {
   return new Response(body, init);
-}
-
-function firstRequestHeaders(
-  fetch: ReturnType<typeof createFetchSequence>,
-): Headers {
-  return new Headers(fetch.mock.calls[0]?.[1]?.headers);
-}
-
-function firstRequestUrl(fetch: ReturnType<typeof createFetchSequence>): URL {
-  const [input] = fetch.mock.calls[0] ?? [];
-  expect(input).toBeInstanceOf(URL);
-  if (!(input instanceof URL)) {
-    throw new Error("Client should call Fetch with a URL instance");
-  }
-
-  return input;
 }
 
 describe("MonobankPersonalClient public endpoints", () => {

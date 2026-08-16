@@ -10,6 +10,8 @@ supported contract.
 
 - [Shared conventions](#shared-conventions)
 - [MonobankPersonalClient](#monobankpersonalclient)
+- [MonobankAcquiringClient](#monobankacquiringclient)
+- [getMerchantDetails](#getmerchantdetails)
 - [getBankSync](#getbanksync)
 - [getCurrencyRates](#getcurrencyrates)
 - [getClientInfo](#getclientinfo)
@@ -30,7 +32,8 @@ supported contract.
 - `BankSync.serverTimeMsec` is Unix milliseconds.
 - Successful JSON responses are parsed through Zod Mini schemas.
 - Response objects preserve unknown additive fields from Monobank.
-- A Personal token is sent only to authenticated `/personal/*` endpoints.
+- A Personal token is sent only to authenticated `/personal/*` endpoints, and
+  an Acquiring token is sent only to authenticated `/api/merchant/*` endpoints.
 - Optional request controls use `RequestOptions`, whose only field is
   `signal?: AbortSignal`.
 
@@ -90,6 +93,69 @@ only methods marked as safe GET requests and only for:
 Caller aborts and per-attempt timeouts are not retried. A valid `Retry-After`
 value takes precedence over exponential backoff; if it exceeds `maxDelayMs`,
 the request fails without another attempt. `setWebhook()` is never retried.
+
+## MonobankAcquiringClient
+
+```ts
+new MonobankAcquiringClient(options: MonobankAcquiringClientOptions)
+```
+
+The Acquiring client is separate from `MonobankPersonalClient` so credentials
+cannot cross API families. Its token is attached only to authenticated
+`/api/merchant/*` requests.
+
+### Constructor options
+
+| Option      | Type           | Default                   | Contract                                                            |
+| ----------- | -------------- | ------------------------- | ------------------------------------------------------------------- |
+| `token`     | `string`       | Required                  | Nonempty Acquiring token without surrounding whitespace             |
+| `baseUrl`   | `string`       | `https://api.monobank.ua` | Absolute HTTP(S) origin, primarily for controlled proxies and tests |
+| `fetch`     | `FetchLike`    | `globalThis.fetch`        | Required when the runtime does not provide global Fetch             |
+| `timeoutMs` | `number`       | `10_000`                  | Positive finite per-attempt timeout in milliseconds                 |
+| `retry`     | `RetryOptions` | Disabled                  | Bounded policy for retry-eligible safe GET requests                 |
+
+Invalid constructor configuration throws `MonobankValidationError` before a
+request is made.
+
+```ts
+import { MonobankAcquiringClient } from "@liaugust/monobank-sdk";
+
+const acquiring = new MonobankAcquiringClient({
+  retry: {
+    baseDelayMs: 250,
+    maxAttempts: 3,
+    maxDelayMs: 2_000,
+  },
+  token: "validated-acquiring-token",
+});
+```
+
+## getMerchantDetails
+
+```ts
+acquiring.getMerchantDetails(
+  options?: RequestOptions,
+): Promise<MerchantDetails>
+```
+
+Loads the merchant identity from `GET /api/merchant/details`.
+
+| Property       | Value                                                      |
+| -------------- | ---------------------------------------------------------- |
+| Authentication | Acquiring token in `X-Token`                               |
+| Rate limit     | No endpoint-specific limit is encoded or enforced          |
+| Retries        | Eligible when a retry policy is configured                 |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds   |
+| Cancellation   | `options.signal` cancels the active request or retry delay |
+| Returns        | `MerchantDetails`                                          |
+
+Throws `MonobankApiError`, `MonobankNetworkError`,
+`MonobankResponseValidationError`, or `MonobankValidationError`.
+
+```ts
+const merchant = await acquiring.getMerchantDetails();
+console.log(merchant.merchantId, merchant.merchantName, merchant.edrpou);
+```
 
 ## getBankSync
 
@@ -384,6 +450,7 @@ preserved.
 | `jarSchema`                  | One Personal jar                  |
 | `managedAccountSchema`       | One delegated FOP account         |
 | `managedClientSchema`        | One delegated FOP client          |
+| `merchantDetailsSchema`      | `/api/merchant/details` response  |
 | `statementItemSchema`        | One statement item                |
 | `statementItemsSchema`       | Statement response array          |
 | `personalWebhookEventSchema` | Incoming Personal statement event |
@@ -486,6 +553,14 @@ validation.
 | `jars`           | `readonly Jar[]`                        | Savings jars                   |
 | `managedClients` | `readonly ManagedClient[] \| undefined` | Optional delegated FOP clients |
 
+### MerchantDetails
+
+| Field          | Type     | Notes                             |
+| -------------- | -------- | --------------------------------- |
+| `merchantId`   | `string` | Acquiring merchant identifier     |
+| `merchantName` | `string` | Merchant display name             |
+| `edrpou`       | `string` | Ukrainian registration identifier |
+
 ### Jar
 
 | Field          | Type     | Notes                  |
@@ -541,6 +616,7 @@ object containing the target `account` identifier and validated
 | Export                                   | Purpose                                         |
 | ---------------------------------------- | ----------------------------------------------- |
 | `MonobankPersonalClientOptions`          | Constructor configuration                       |
+| `MonobankAcquiringClientOptions`         | Acquiring constructor configuration             |
 | `RequestOptions`                         | Optional per-request `AbortSignal`              |
 | `RetryOptions`                           | Safe GET retry policy                           |
 | `GetStatementsInput`                     | Statement account and time window               |
@@ -555,5 +631,6 @@ object containing the target `account` identifier and validated
 | `MonobankValidationErrorOptions`         | Public input-validation constructor data        |
 
 The response types `Account`, `BankSync`, `ClientInfo`, `CurrencyRate`, `Jar`,
-`ManagedAccount`, `ManagedClient`, `PersonalWebhookEvent`, and `StatementItem`
-are inferred from their runtime schemas and exported from the package root.
+`ManagedAccount`, `ManagedClient`, `MerchantDetails`, `PersonalWebhookEvent`,
+and `StatementItem` are inferred from their runtime schemas and exported from
+the package root.

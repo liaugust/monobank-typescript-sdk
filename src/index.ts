@@ -1,3 +1,7 @@
+export type { MerchantDetails } from "./acquiring/merchant-details.js";
+export { merchantDetailsSchema } from "./acquiring/merchant-details.js";
+export { MonobankAcquiringClient } from "./acquiring/monobank-acquiring-client.js";
+export type { MonobankAcquiringClientOptions } from "./acquiring/monobank-acquiring-client-options.js";
 export type { MonobankApiErrorOptions } from "./errors/monobank-api-error.js";
 export { MonobankApiError } from "./errors/monobank-api-error.js";
 export type {

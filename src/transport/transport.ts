@@ -10,6 +10,7 @@ import type { ResponseSchema } from "./response-schema.js";
 import type { RetryOptions } from "./retry-options.js";
 
 interface TransportOptions {
+  readonly authenticatedPathPrefix?: "/api/merchant/" | "/personal/";
   readonly baseUrl?: string;
   readonly fetch?: FetchLike;
   readonly retry?: RetryOptions;
@@ -35,6 +36,7 @@ interface EmptyRequest {
 }
 
 interface StoredTransportOptions {
+  readonly authenticatedPathPrefix: "/api/merchant/" | "/personal/";
   readonly baseUrl: URL;
   readonly fetch: FetchLike;
   readonly retry?: RetryOptions;
@@ -54,6 +56,7 @@ export class MonobankTransport {
     const retry = options.retry;
 
     this.options = {
+      authenticatedPathPrefix: options.authenticatedPathPrefix ?? "/personal/",
       baseUrl: validateBaseUrl(options.baseUrl ?? defaultBaseUrl),
       fetch: options.fetch ?? validateGlobalFetch(),
       timeoutMs: validateTimeout(options.timeoutMs ?? defaultTimeoutMs),
@@ -105,6 +108,7 @@ export class MonobankTransport {
       request.endpoint,
       this.options.baseUrl,
       request.auth,
+      this.options.authenticatedPathPrefix,
     );
     const headers = new Headers({ Accept: "application/json" });
 
@@ -391,6 +395,7 @@ function validateEndpointUrl(
   endpoint: string,
   baseUrl: URL,
   auth: boolean,
+  authenticatedPathPrefix: "/api/merchant/" | "/personal/",
 ): URL {
   const issues: string[] = [];
 
@@ -404,8 +409,10 @@ function validateEndpointUrl(
     issues.push("endpoint must resolve within the configured base URL origin");
   }
 
-  if (auth && !endpointUrl.pathname.startsWith("/personal/")) {
-    issues.push("authenticated endpoints must use a /personal/ path");
+  if (auth && !endpointUrl.pathname.startsWith(authenticatedPathPrefix)) {
+    issues.push(
+      `authenticated endpoints must use an ${authenticatedPathPrefix} path`,
+    );
   }
 
   if (issues.length > 0) {
