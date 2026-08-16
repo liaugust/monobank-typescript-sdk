@@ -43,7 +43,7 @@ export function createStatementsEndpoint(input: GetStatementsInput): string {
     input.to === undefined ? undefined : normalizeUnixTime(input.to, "to");
   const issues: string[] = [];
 
-  if (account.length === 0) {
+  if (account.length === 0 || account === "." || account === "..") {
     issues.push("account must be a non-empty path segment");
   }
 

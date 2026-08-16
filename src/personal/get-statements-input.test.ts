@@ -58,4 +58,13 @@ describe("get statements input validation", () => {
       createStatementsEndpoint({ account: "0", from: 1_000, to: 2_683_001 }),
     ).toThrow(MonobankValidationError);
   });
+
+  it("rejects dot-segment accounts before they can be normalized by URL resolution", () => {
+    expect(() =>
+      createStatementsEndpoint({ account: ".", from: 1_000 }),
+    ).toThrow(MonobankValidationError);
+    expect(() =>
+      createStatementsEndpoint({ account: "..", from: 1_000 }),
+    ).toThrow(MonobankValidationError);
+  });
 });
