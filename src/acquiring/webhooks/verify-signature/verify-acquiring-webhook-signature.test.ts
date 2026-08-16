@@ -106,17 +106,32 @@ describe("verifyAcquiringWebhookSignature", () => {
   });
 
   it("does not retain malformed signature input in validation errors", async () => {
+    const sensitiveBody = "do-not-retain-this-body";
     const sensitiveSignature = "do-not-retain-this-signature!";
     const error = await captureRejection(
       verifyAcquiringWebhookSignature({
-        body: new TextEncoder().encode(
-          validAcquiringWebhookSignatureFixture.body,
-        ),
+        body: new TextEncoder().encode(sensitiveBody),
         publicKey: validAcquiringWebhookSignatureFixture.publicKey,
         signature: sensitiveSignature,
       }),
     );
 
+    expect(containsStringRecursively(error, sensitiveBody)).toBe(false);
     expect(containsStringRecursively(error, sensitiveSignature)).toBe(false);
+  });
+
+  it("does not retain malformed public-key input in validation errors", async () => {
+    const sensitivePublicKey = "do-not-retain-this-public-key!";
+    const error = await captureRejection(
+      verifyAcquiringWebhookSignature({
+        body: new TextEncoder().encode(
+          validAcquiringWebhookSignatureFixture.body,
+        ),
+        publicKey: sensitivePublicKey,
+        signature: validAcquiringWebhookSignatureFixture.signature,
+      }),
+    );
+
+    expect(containsStringRecursively(error, sensitivePublicKey)).toBe(false);
   });
 });
