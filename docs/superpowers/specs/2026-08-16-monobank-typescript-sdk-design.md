@@ -250,7 +250,24 @@ intended files and entry points would be published.
 ## 12. Testing Strategy
 
 Tests will use an injected mock `fetch`; CI must never require a personal or
-merchant token. Coverage will include:
+merchant token. All maintained production source must be covered by tests. CI
+will enforce 100% thresholds for statements, branches, functions, and lines;
+falling below any threshold will fail the pull request.
+
+Coverage exclusions are limited to generated artifacts, declaration-only
+files, and tooling/configuration files that contain no production behavior.
+Blanket directory exclusions, coverage-threshold reductions, and ignore
+comments added only to make the metric pass are not acceptable. Any necessary
+coverage ignore must document why the code cannot be executed deterministically
+and must be approved during review.
+
+Coverage percentage is a floor, not a substitute for behavioral assertions.
+Every public endpoint and helper must have success, upstream-error,
+malformed-response, and relevant boundary tests. Every public schema must have
+representative valid and invalid payload tests. Compile-time tests must cover
+the supported public type surface and expected type failures.
+
+Behavioral coverage will include:
 
 - Correct URLs, HTTP methods, headers, query parameters, and request bodies.
 - Successful response validation for every endpoint schema.
@@ -277,11 +294,12 @@ Every pull request will run independent, deterministic checks for:
 2. Prettier formatting.
 3. ESLint.
 4. TypeScript type checking.
-5. Unit and type tests.
-6. Knip.
-7. JSCPD.
-8. Production build.
-9. Packed-package contents and consumer smoke tests.
+5. Unit, integration-style transport, and type tests.
+6. Coverage enforcement at 100% statements, branches, functions, and lines.
+7. Knip.
+8. JSCPD.
+9. Production build.
+10. Packed-package contents and consumer smoke tests.
 
 The branch must not be described as complete while a required check is failing.
 No workflow will publish packages or deploy external systems during the first
@@ -322,6 +340,8 @@ The overall two-PR project is complete when:
 - The private repository exists and both pull requests are merged sequentially.
 - The Personal API and scoped core Acquiring API are implemented and documented.
 - All documented successful responses in scope are runtime-validated.
+- Maintained production source has 100% statement, branch, function, and line
+  coverage with behavior-focused assertions.
 - The required format, lint, typecheck, test, Knip, JSCPD, build, and package
   checks pass from a clean checkout.
 - Node.js 20 ESM/CommonJS and a modern-browser bundle path are verified.
