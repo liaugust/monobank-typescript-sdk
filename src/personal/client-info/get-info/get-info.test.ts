@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { clientInfoFixture } from "../../tests/fixtures/personal-api.js";
-import { clientInfoSchema } from "./client-info.js";
+import { clientInfoFixture } from "../../../../tests/fixtures/personal-api.js";
+import { clientInfoSchema } from "./get-info.js";
 
 describe("client info schema", () => {
   it("accepts complete Personal client information with accounts, jars, and managed clients", () => {

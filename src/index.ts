@@ -72,30 +72,30 @@ export type { MonobankResponseValidationErrorOptions } from "./errors/monobank-r
 export { MonobankResponseValidationError } from "./errors/monobank-response-validation-error.js";
 export type { MonobankValidationErrorOptions } from "./errors/monobank-validation-error.js";
 export { MonobankValidationError } from "./errors/monobank-validation-error.js";
-export type { Account } from "./personal/account.js";
+export { MonobankPersonalClient } from "./personal/client/monobank-personal-client.js";
+export type { MonobankPersonalClientOptions } from "./personal/client/monobank-personal-client-options.js";
+export type { ClientInfo } from "./personal/client-info/get-info/get-info.js";
+export { clientInfoSchema } from "./personal/client-info/get-info/get-info.js";
+export type { Account } from "./personal/client-info/models/account.js";
 export {
   accountSchema,
   AccountType,
   CashbackType,
-} from "./personal/account.js";
-export type { ClientInfo } from "./personal/client-info.js";
-export { clientInfoSchema } from "./personal/client-info.js";
+} from "./personal/client-info/models/account.js";
+export type { Jar } from "./personal/client-info/models/jar.js";
+export { jarSchema } from "./personal/client-info/models/jar.js";
+export type {
+  ManagedAccount,
+  ManagedClient,
+} from "./personal/client-info/models/managed-client.js";
+export {
+  managedAccountSchema,
+  managedClientSchema,
+} from "./personal/client-info/models/managed-client.js";
 export type {
   GetStatementsInput,
   UnixTimeInput,
 } from "./personal/get-statements-input.js";
-export type { Jar } from "./personal/jar.js";
-export { jarSchema } from "./personal/jar.js";
-export type {
-  ManagedAccount,
-  ManagedClient,
-} from "./personal/managed-client.js";
-export {
-  managedAccountSchema,
-  managedClientSchema,
-} from "./personal/managed-client.js";
-export { MonobankPersonalClient } from "./personal/monobank-personal-client.js";
-export type { MonobankPersonalClientOptions } from "./personal/monobank-personal-client-options.js";
 export type { PersonalWebhookEvent } from "./personal/personal-webhook-event.js";
 export {
   parsePersonalWebhookEvent,

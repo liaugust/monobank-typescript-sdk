@@ -1,11 +1,17 @@
 import * as z from "zod/mini";
 
-import type { Account } from "./account.js";
-import { accountSchema } from "./account.js";
-import type { Jar } from "./jar.js";
-import { jarSchema } from "./jar.js";
-import type { ManagedAccount, ManagedClient } from "./managed-client.js";
-import { managedClientSchema } from "./managed-client.js";
+import type { Account } from "../models/account.js";
+import { accountSchema } from "../models/account.js";
+import type { Jar } from "../models/jar.js";
+import { jarSchema } from "../models/jar.js";
+import type {
+  ManagedAccount,
+  ManagedClient,
+} from "../models/managed-client.js";
+import { managedClientSchema } from "../models/managed-client.js";
+
+/** Authenticated endpoint for Personal client information. */
+export const getClientInfoEndpoint = "/personal/client-info";
 
 /**
  * Runtime validator for the authenticated `/personal/client-info` response.

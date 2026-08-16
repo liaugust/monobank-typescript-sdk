@@ -1,17 +1,16 @@
-import type { RequestOptions } from "../shared/request-options.js";
-import { MonobankTransport } from "../transport/transport.js";
-import type { ClientInfo } from "./client-info.js";
-import { clientInfoSchema } from "./client-info.js";
+import type { RequestOptions } from "../../shared/request-options.js";
+import { MonobankTransport } from "../../transport/transport.js";
+import { MonobankPersonalClientInfo } from "../client-info/monobank-personal-client-info.js";
 import type {
   GetStatementsInput,
   UnixTimeInput,
-} from "./get-statements-input.js";
-import { createStatementsEndpoint } from "./get-statements-input.js";
+} from "../get-statements-input.js";
+import { createStatementsEndpoint } from "../get-statements-input.js";
+import type { SetWebhookInput } from "../set-webhook-input.js";
+import { createSetWebhookBody } from "../set-webhook-input.js";
+import type { StatementItem } from "../statement-item.js";
+import { statementItemsSchema } from "../statement-item.js";
 import type { MonobankPersonalClientOptions } from "./monobank-personal-client-options.js";
-import type { SetWebhookInput } from "./set-webhook-input.js";
-import { createSetWebhookBody } from "./set-webhook-input.js";
-import type { StatementItem } from "./statement-item.js";
-import { statementItemsSchema } from "./statement-item.js";
 
 /**
  * Client for Monobank Personal API endpoints with injected Fetch support for tests, proxies, and nonstandard runtimes.
@@ -21,10 +20,13 @@ import { statementItemsSchema } from "./statement-item.js";
  *   fetch: globalThis.fetch,
  *   token: "personal-token",
  * });
- * const profile = await client.getClientInfo();
+ * const profile = await client.client.getInfo();
  * ```
  */
 export class MonobankPersonalClient {
+  /** Authenticated Personal client identity and account operations. */
+  public readonly client: MonobankPersonalClientInfo;
+
   private readonly transport: MonobankTransport;
 
   /**
@@ -34,30 +36,7 @@ export class MonobankPersonalClient {
    */
   public constructor(options: MonobankPersonalClientOptions) {
     this.transport = new MonobankTransport(options);
-  }
-
-  /**
-   * Loads authenticated Personal client profile, accounts, jars, and delegated FOP clients.
-   *
-   * Monobank limits this authenticated endpoint to one request per 60 seconds.
-   * This safe GET is retried only when a bounded retry policy is supplied to
-   * the constructor. A provided `RequestOptions.signal` cancels the active
-   * Fetch attempt and any retry delay.
-   * @param options Optional cancellation controls for this request.
-   * @returns Validated Personal client information with monetary values in minor currency units.
-   * @throws {MonobankApiError} When Monobank returns a non-success HTTP status.
-   * @throws {MonobankNetworkError} When Fetch fails, times out, or the caller aborts.
-   * @throws {MonobankResponseValidationError} When the successful payload does not match the client-info schema.
-   * @throws {MonobankValidationError} When request configuration is invalid before Fetch runs.
-   */
-  public getClientInfo(options?: RequestOptions): Promise<ClientInfo> {
-    return this.transport.getJson({
-      auth: true,
-      endpoint: "/personal/client-info",
-      retryable: true,
-      schema: clientInfoSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
-    });
+    this.client = new MonobankPersonalClientInfo(this.transport);
   }
 
   /**

@@ -33,7 +33,7 @@ const acquiringClient = new MonobankAcquiringClient({ token: "token" });
 const input: GetStatementsInput = { from: new Date(0) };
 const bankSync: Promise<BankSync> = publicClient.bank.getSync();
 const statements = client.getStatements(input);
-const clientInfo: Promise<ClientInfo> = client.getClientInfo();
+const clientInfo: Promise<ClientInfo> = client.client.getInfo();
 const rates: Promise<readonly CurrencyRate[]> =
   publicClient.currency.getRates();
 const merchantDetails: Promise<MerchantDetails> =

@@ -1,5 +1,5 @@
-import type { FetchLike } from "../transport/fetch-like.js";
-import type { RetryOptions } from "../transport/retry-options.js";
+import type { FetchLike } from "../../transport/fetch-like.js";
+import type { RetryOptions } from "../../transport/retry-options.js";
 
 /**
  * Configuration for the Personal client and its shared Fetch transport.
@@ -7,7 +7,7 @@ import type { RetryOptions } from "../transport/retry-options.js";
 export interface MonobankPersonalClientOptions {
   /** Absolute HTTP(S) Monobank API origin, primarily for tests and controlled proxies. */
   readonly baseUrl?: string;
-  /** Fetch-compatible implementation used for every Personal and public bank request. */
+  /** Fetch-compatible implementation used for every Personal request. */
   readonly fetch?: FetchLike;
   /** Optional bounded retry policy; when omitted, endpoint methods make one attempt. */
   readonly retry?: RetryOptions;
