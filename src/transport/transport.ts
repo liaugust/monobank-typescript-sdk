@@ -30,6 +30,7 @@ interface EmptyRequest {
   readonly auth: boolean;
   readonly body?: unknown;
   readonly endpoint: string;
+  readonly retryable?: boolean;
   readonly signal?: AbortSignal;
 }
 
@@ -44,6 +45,7 @@ interface StoredTransportOptions {
 const defaultBaseUrl = "https://api.monobank.ua";
 const defaultTimeoutMs = 10_000;
 const emptyResponseSchema = z.undefined();
+const retryableStatusCodes = new Set([429, 500, 502, 503, 504]);
 
 export class MonobankTransport {
   private readonly options: StoredTransportOptions;
@@ -121,27 +123,213 @@ export class MonobankTransport {
       init.body = JSON.stringify(request.body);
     }
 
-    let response: Response;
-    try {
-      response = await this.options.fetch(endpointUrl, init);
-    } catch {
-      throw new MonobankNetworkError({
-        endpoint: request.endpoint,
-        message: "Monobank request failed before receiving a response.",
-        reason: "network",
-      });
-    }
+    let attempt = 1;
+    for (;;) {
+      let response: Response;
+      try {
+        response = await this.fetchAttempt(endpointUrl, init, request);
+      } catch (error) {
+        const networkError = error as MonobankNetworkError;
+        const delayMs = retryDelayForNetworkError(
+          networkError,
+          method,
+          request,
+          this.options.retry,
+          attempt,
+        );
+        if (delayMs === undefined) {
+          throw networkError;
+        }
 
-    if (!response.ok) {
-      throw await createApiError(
+        await delayBeforeRetry(delayMs, request.endpoint, request.signal);
+        attempt += 1;
+        continue;
+      }
+
+      if (response.ok) {
+        return response;
+      }
+
+      const error = await createApiError(
         response,
         request.endpoint,
         this.options.token,
       );
+      const delayMs = retryDelayForApiError(
+        error,
+        method,
+        request,
+        this.options.retry,
+        attempt,
+      );
+      if (delayMs === undefined) {
+        throw error;
+      }
+
+      await delayBeforeRetry(delayMs, request.endpoint, request.signal);
+      attempt += 1;
+    }
+  }
+
+  private async fetchAttempt(
+    endpointUrl: URL,
+    init: RequestInit,
+    request: EmptyRequest,
+  ): Promise<Response> {
+    if (request.signal?.aborted) {
+      throw createAbortedError(request.endpoint);
     }
 
-    return response;
+    const attemptSignal = createAttemptSignal(
+      this.options.timeoutMs,
+      request.signal,
+    );
+
+    try {
+      return await this.options.fetch(endpointUrl, {
+        ...init,
+        signal: attemptSignal.signal,
+      });
+    } catch {
+      throw new MonobankNetworkError({
+        endpoint: request.endpoint,
+        message: "Monobank request failed before receiving a response.",
+        reason: attemptSignal.reason(),
+      });
+    } finally {
+      attemptSignal.cleanup();
+    }
   }
+}
+
+interface AttemptSignal {
+  readonly cleanup: () => void;
+  readonly reason: () => "aborted" | "network" | "timeout";
+  readonly signal: AbortSignal;
+}
+
+function createAttemptSignal(
+  timeoutMs: number,
+  callerSignal: AbortSignal | undefined,
+): AttemptSignal {
+  const controller = new AbortController();
+  let reason: "aborted" | "network" | "timeout" = "network";
+  const timeoutId = setTimeout(() => {
+    reason = "timeout";
+    controller.abort();
+  }, timeoutMs);
+  const abort = () => {
+    reason = "aborted";
+    controller.abort();
+  };
+
+  callerSignal?.addEventListener("abort", abort, { once: true });
+
+  return {
+    cleanup() {
+      clearTimeout(timeoutId);
+      callerSignal?.removeEventListener("abort", abort);
+    },
+    reason() {
+      return reason;
+    },
+    signal: controller.signal,
+  };
+}
+
+function retryDelayForApiError(
+  error: MonobankApiError,
+  method: "GET" | "POST",
+  request: EmptyRequest,
+  policy: RetryOptions | undefined,
+  attempt: number,
+): number | undefined {
+  if (
+    !canRetryRequest(method, request, policy, attempt) ||
+    !retryableStatusCodes.has(error.status)
+  ) {
+    return undefined;
+  }
+
+  return retryDelayMs(attempt, error.retryAfterMs, policy);
+}
+
+function retryDelayForNetworkError(
+  error: MonobankNetworkError,
+  method: "GET" | "POST",
+  request: EmptyRequest,
+  policy: RetryOptions | undefined,
+  attempt: number,
+): number | undefined {
+  if (
+    error.reason !== "network" ||
+    !canRetryRequest(method, request, policy, attempt)
+  ) {
+    return undefined;
+  }
+
+  return retryDelayMs(attempt, undefined, policy);
+}
+
+function canRetryRequest(
+  method: "GET" | "POST",
+  request: EmptyRequest,
+  policy: RetryOptions | undefined,
+  attempt: number,
+): policy is RetryOptions {
+  return (
+    request.retryable === true &&
+    policy !== undefined &&
+    method === "GET" &&
+    attempt < policy.maxAttempts
+  );
+}
+
+function retryDelayMs(
+  attempt: number,
+  retryAfterMs: number | undefined,
+  policy: RetryOptions,
+): number | undefined {
+  if (retryAfterMs !== undefined) {
+    return retryAfterMs <= policy.maxDelayMs ? retryAfterMs : undefined;
+  }
+
+  return Math.min(policy.baseDelayMs * 2 ** (attempt - 1), policy.maxDelayMs);
+}
+
+function delayBeforeRetry(
+  delayMs: number,
+  endpoint: string,
+  callerSignal: AbortSignal | undefined,
+): Promise<void> {
+  if (callerSignal?.aborted) {
+    return Promise.reject(createAbortedError(endpoint));
+  }
+
+  return new Promise((resolve, reject) => {
+    const cleanup = () => {
+      callerSignal?.removeEventListener("abort", abort);
+    };
+    const timeoutId = setTimeout(() => {
+      cleanup();
+      resolve();
+    }, delayMs);
+    const abort = () => {
+      clearTimeout(timeoutId);
+      cleanup();
+      reject(createAbortedError(endpoint));
+    };
+
+    callerSignal?.addEventListener("abort", abort, { once: true });
+  });
+}
+
+function createAbortedError(endpoint: string): MonobankNetworkError {
+  return new MonobankNetworkError({
+    endpoint,
+    message: "Monobank request was aborted before receiving a response.",
+    reason: "aborted",
+  });
 }
 
 function validateToken(token: string): string {
