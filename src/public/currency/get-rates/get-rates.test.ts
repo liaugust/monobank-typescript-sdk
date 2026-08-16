@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { currencyRateFixture } from "../../tests/fixtures/personal-api.js";
-import { currencyRateSchema, currencyRatesSchema } from "./currency-rate.js";
+import { currencyRateFixture } from "../../../../tests/fixtures/personal-api.js";
+import { currencyRateSchema, currencyRatesSchema } from "./get-rates.js";
 
 describe("currency rate schemas", () => {
   it("accepts buy and sell rates from the public currency endpoint", () => {

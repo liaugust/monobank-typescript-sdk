@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { bankSyncFixture } from "../../tests/fixtures/personal-api.js";
-import { bankSyncSchema } from "./bank-sync.js";
+import { bankSyncFixture } from "../../../../tests/fixtures/personal-api.js";
+import { bankSyncSchema } from "./get-sync.js";
 
 describe("bank sync schema", () => {
   it("accepts required public synchronization metadata", () => {

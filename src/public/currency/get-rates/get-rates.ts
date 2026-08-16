@@ -1,8 +1,9 @@
 import * as z from "zod/mini";
 
-/**
- * Runtime validator for one `/bank/currency` item with ISO 4217 numeric currency codes and a Unix-second quote timestamp.
- */
+/** Public endpoint for Monobank currency rates. */
+export const getCurrencyRatesEndpoint = "/bank/currency";
+
+/** Runtime validator for one public currency-rate item. */
 export const currencyRateSchema = z
   .looseObject({
     currencyCodeA: z.int(),
@@ -22,12 +23,8 @@ export const currencyRateSchema = z
     ),
   );
 
-/**
- * Runtime validator for the public `/bank/currency` response array returned without Personal authentication.
- */
+/** Runtime validator for the public currency-rate response array. */
 export const currencyRatesSchema = z.array(currencyRateSchema);
 
-/**
- * Public currency quote returned by Monobank with ISO 4217 numeric currency codes and Unix-second quote time.
- */
+/** Public currency quote with ISO 4217 numeric codes and Unix-second quote time. */
 export type CurrencyRate = z.infer<typeof currencyRateSchema>;

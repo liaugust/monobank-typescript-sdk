@@ -31,10 +31,11 @@ const client = new MonobankPersonalClient({ token: "token" });
 const publicClient = new MonobankPublicClient();
 const acquiringClient = new MonobankAcquiringClient({ token: "token" });
 const input: GetStatementsInput = { from: new Date(0) };
-const bankSync: Promise<BankSync> = publicClient.getBankSync();
+const bankSync: Promise<BankSync> = publicClient.bank.getSync();
 const statements = client.getStatements(input);
 const clientInfo: Promise<ClientInfo> = client.getClientInfo();
-const rates: Promise<readonly CurrencyRate[]> = publicClient.getCurrencyRates();
+const rates: Promise<readonly CurrencyRate[]> =
+  publicClient.currency.getRates();
 const merchantDetails: Promise<MerchantDetails> =
   acquiringClient.merchant.getDetails();
 const createInvoiceInput: CreateInvoiceInput = {

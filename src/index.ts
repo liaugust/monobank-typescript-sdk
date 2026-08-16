@@ -78,15 +78,8 @@ export {
   AccountType,
   CashbackType,
 } from "./personal/account.js";
-export type { BankSync } from "./personal/bank-sync.js";
-export { bankSyncSchema } from "./personal/bank-sync.js";
 export type { ClientInfo } from "./personal/client-info.js";
 export { clientInfoSchema } from "./personal/client-info.js";
-export type { CurrencyRate } from "./personal/currency-rate.js";
-export {
-  currencyRateSchema,
-  currencyRatesSchema,
-} from "./personal/currency-rate.js";
 export type {
   GetStatementsInput,
   UnixTimeInput,
@@ -114,8 +107,15 @@ export {
   statementItemSchema,
   statementItemsSchema,
 } from "./personal/statement-item.js";
-export { MonobankPublicClient } from "./public/monobank-public-client.js";
-export type { MonobankPublicClientOptions } from "./public/monobank-public-client-options.js";
+export type { BankSync } from "./public/bank/get-sync/get-sync.js";
+export { bankSyncSchema } from "./public/bank/get-sync/get-sync.js";
+export { MonobankPublicClient } from "./public/client/monobank-public-client.js";
+export type { MonobankPublicClientOptions } from "./public/client/monobank-public-client-options.js";
+export type { CurrencyRate } from "./public/currency/get-rates/get-rates.js";
+export {
+  currencyRateSchema,
+  currencyRatesSchema,
+} from "./public/currency/get-rates/get-rates.js";
 export type { RequestOptions } from "./shared/request-options.js";
 export type { FetchLike } from "./transport/fetch-like.js";
 export type { ResponseValidationIssue } from "./transport/response-schema.js";
