@@ -24,7 +24,7 @@ export class MonobankAcquiringClient {
   /** Merchant operations sharing this client's credentials and transport settings. */
   public readonly merchant: MonobankAcquiringMerchant;
 
-  /** Read-only QR cashier operations sharing this client's credentials and transport settings. */
+  /** QR cashier listing, details, and amount-reset operations sharing this client's credentials and transport settings. */
   public readonly qr: MonobankAcquiringQr;
 
   /** Transaction statement operations sharing this client's credentials and transport settings. */

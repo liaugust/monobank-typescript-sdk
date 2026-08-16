@@ -71,6 +71,7 @@ export {
 } from "./acquiring/qr/models/acquiring-qr-cashier.js";
 export type { AcquiringQrDetails } from "./acquiring/qr/models/acquiring-qr-details.js";
 export { acquiringQrDetailsSchema } from "./acquiring/qr/models/acquiring-qr-details.js";
+export type { ResetAcquiringQrAmountInput } from "./acquiring/qr/reset-qr-amount/reset-qr-amount.js";
 export type {
   AcquiringStatementUnixTimeInput,
   GetAcquiringStatementsInput,

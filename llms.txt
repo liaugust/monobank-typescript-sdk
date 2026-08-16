@@ -69,6 +69,10 @@ Use `MonobankAcquiringClient` with a separate Acquiring token.
   cashiers only, where `invoiceId` is documented as present only while an
   amount is set and `amount`/`ccy` may be omitted for the same reason; safe GET
   eligible for configured retries.
+- `acquiring.qr.resetAmount(input, options?)`: authenticated
+  `/api/merchant/qr/reset-amount`; POSTs `{ qrId }` to clear the amount set on
+  a QR cashier; returns `Promise<void>` because Monobank acknowledges with an
+  empty payload; mutating, so it is never retried automatically.
 - `acquiring.webhooks.getPublicKey(options?)`: authenticated
   `/api/merchant/pubkey`; returns `Promise<AcquiringWebhookPublicKey>`; caller
   owns caching and refresh after signature verification fails.
@@ -167,11 +171,12 @@ See `src/index.ts` for the complete authoritative export list, including types.
   transforming them. Read `X-Sign`, use the key from
   `acquiring.webhooks.getPublicKey()`, and reject a `false` result.
 - Never retry `personal.webhooks.set()`, `acquiring.invoices.create()`,
-  `acquiring.invoices.cancel()`, `acquiring.invoices.remove()`, or
-  `acquiring.invoices.finalize()` automatically.
+  `acquiring.invoices.cancel()`, `acquiring.invoices.remove()`,
+  `acquiring.invoices.finalize()`, or `acquiring.qr.resetAmount()`
+  automatically.
 - Do not invent Acquiring APIs beyond the implemented merchant-details,
-  submerchant-list, QR read-only, statement, webhook-trust, and
-  invoice-lifecycle methods. `acquiring.qr.resetAmount()` is not implemented.
+  submerchant-list, QR, statement, webhook-trust, and invoice-lifecycle
+  methods.
 - Prefer exported SDK types, schemas, value objects, and error classes over
   duplicate local definitions.
 - Validate environment configuration before constructing the client.

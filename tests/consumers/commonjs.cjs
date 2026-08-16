@@ -44,6 +44,7 @@ const resourceMethods = [
   acquiringClient.invoices.create,
   acquiringClient.qr.list,
   acquiringClient.qr.getDetails,
+  acquiringClient.qr.resetAmount,
   acquiringClient.statements.get,
   acquiringClient.submerchants.list,
   acquiringClient.webhooks.getPublicKey,

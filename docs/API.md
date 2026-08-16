@@ -18,6 +18,7 @@ supported contract.
 - [acquiring.submerchants.list](#acquiringsubmerchantslist)
 - [acquiring.qr.list](#acquiringqrlist)
 - [acquiring.qr.getDetails](#acquiringqrgetdetails)
+- [acquiring.qr.resetAmount](#acquiringqrresetamount)
 - [acquiring.statements.get](#acquiringstatementsget)
 - [invoices.create](#invoicescreate)
 - [invoices.getStatus](#invoicesgetstatus)
@@ -132,7 +133,9 @@ only methods marked as safe GET requests and only for:
 
 Caller aborts and per-attempt timeouts are not retried. A valid `Retry-After`
 value takes precedence over exponential backoff; if it exceeds `maxDelayMs`,
-the request fails without another attempt. `webhooks.set()` is never retried.
+the request fails without another attempt. Mutating methods are never retried,
+including `personal.webhooks.set()`, every `acquiring.invoices` mutation, and
+`acquiring.qr.resetAmount()`.
 
 ## MonobankAcquiringClient
 
@@ -174,7 +177,7 @@ The client groups operations into resource objects:
 
 - `acquiring.merchant`: merchant identity operations
 - `acquiring.invoices`: invoice lifecycle operations
-- `acquiring.qr`: read-only QR cashier operations
+- `acquiring.qr`: QR cashier listing, details, and amount reset
 - `acquiring.statements`: transaction statement operations
 - `acquiring.submerchants`: submerchant terminal operations
 - `acquiring.webhooks`: webhook trust-material operations
@@ -378,6 +381,39 @@ const details = await acquiring.qr.getDetails({ qrId: "XJ_DiM4rTd5V" });
 if (details.invoiceId !== undefined) {
   console.log(details.invoiceId, details.amount, details.ccy);
 }
+```
+
+## acquiring.qr.resetAmount
+
+```ts
+acquiring.qr.resetAmount(
+  input: ResetAcquiringQrAmountInput,
+  options?: RequestOptions,
+): Promise<void>
+```
+
+Posts `{ qrId }` to `POST /api/merchant/qr/reset-amount` to clear the payment
+amount a merchant previously set on a QR cashier. Monobank acknowledges the
+reset with an empty payload, so the method resolves to `undefined`. `qrId` is
+validated exactly as in `acquiring.qr.getDetails()`.
+
+| Property       | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Authentication | Acquiring token in `X-Token`                             |
+| Rate limit     | No endpoint-specific limit is encoded or enforced        |
+| Retries        | Never; the request mutates merchant state                |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds |
+| Cancellation   | `options.signal` cancels the active request              |
+| Returns        | `void`                                                   |
+
+Rejects with `MonobankApiError` (including `404` for an unknown QR cashier),
+`MonobankNetworkError`, or `MonobankValidationError`. Input validation runs
+before Fetch and rejects the returned promise rather than throwing
+synchronously. A failed reset is never retried by the SDK; deciding whether to
+repeat the mutation is the caller's responsibility.
+
+```ts
+await acquiring.qr.resetAmount({ qrId: "XJ_DiM4rTd5V" });
 ```
 
 ## acquiring.statements.get
@@ -1162,6 +1198,7 @@ object containing the target `account` identifier and validated
 | `GetAcquiringStatementsInput`            | Acquiring time window and optional submerchant terminal        |
 | `AcquiringStatementUnixTimeInput`        | `Date \| number` Acquiring statement timestamp input           |
 | `GetAcquiringQrDetailsInput`             | QR cashier identifier for details lookup                       |
+| `ResetAcquiringQrAmountInput`            | QR cashier identifier for clearing a set amount                |
 | `SetWebhookInput`                        | Webhook URL request body                                       |
 | `VerifyAcquiringWebhookSignatureInput`   | Raw body, public key, and signature verification inputs        |
 | `CreateInvoiceInput`                     | Invoice amount, order, redirect, webhook, and payment controls |

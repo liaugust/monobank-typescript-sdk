@@ -13,6 +13,7 @@ import {
   jsonResponse,
 } from "../../../tests/support/create-fetch-sequence.js";
 import {
+  firstRequestBody,
   firstRequestHeaders,
   firstRequestUrl,
 } from "../../../tests/support/fetch-request-inspection.js";
@@ -20,16 +21,6 @@ import { MonobankResponseValidationError } from "../../errors/monobank-response-
 import { MonobankValidationError } from "../../errors/monobank-validation-error.js";
 import { MonobankAcquiringClient } from "../client/monobank-acquiring-client.js";
 import { InvoicePaymentType } from "./models/invoice-payment-info.js";
-
-function firstRequestBody(fetch: ReturnType<typeof createFetchSequence>) {
-  const body = fetch.mock.calls[0]?.[1]?.body;
-
-  if (typeof body !== "string") {
-    throw new TypeError("Client should send a JSON string body");
-  }
-
-  return JSON.parse(body) as unknown;
-}
 
 describe("MonobankAcquiringInvoices", () => {
   afterEach(() => {

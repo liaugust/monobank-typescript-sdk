@@ -126,7 +126,7 @@ const resourceContracts = [
   ["MonobankPersonalClientInfo", ["constructor", "getInfo"]],
   ["MonobankPersonalStatements", ["constructor", "get"]],
   ["MonobankPersonalWebhooks", ["constructor", "set"]],
-  ["MonobankAcquiringQr", ["constructor", "getDetails", "list"]],
+  ["MonobankAcquiringQr", ["constructor", "getDetails", "list", "resetAmount"]],
   ["MonobankAcquiringStatements", ["constructor", "get"]],
   ["MonobankAcquiringSubmerchants", ["constructor", "list"]],
   ["MonobankAcquiringWebhooks", ["constructor", "getPublicKey"]],

@@ -10,6 +10,7 @@ import {
   jsonResponse,
 } from "../../../tests/support/create-fetch-sequence.js";
 import {
+  firstRequestBody,
   firstRequestHeaders,
   firstRequestUrl,
 } from "../../../tests/support/fetch-request-inspection.js";
@@ -117,42 +118,41 @@ describe("MonobankAcquiringQr", () => {
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
-  it("passes caller cancellation to the active list request", async () => {
-    const { fetch, requestSignal } = createAbortableFetch();
-    const client = new MonobankAcquiringClient({
-      fetch,
-      token: "acquiring-token",
-    });
-    const controller = new AbortController();
+  it.each([
+    {
+      name: "list",
+      start: (client: MonobankAcquiringClient, signal: AbortSignal) =>
+        client.qr.list({ signal }),
+    },
+    {
+      name: "details",
+      start: (client: MonobankAcquiringClient, signal: AbortSignal) =>
+        client.qr.getDetails({ qrId: "XJ_DiM4rTd5V" }, { signal }),
+    },
+    {
+      name: "amount reset",
+      start: (client: MonobankAcquiringClient, signal: AbortSignal) =>
+        client.qr.resetAmount({ qrId: "XJ_DiM4rTd5V" }, { signal }),
+    },
+  ])(
+    "passes caller cancellation to the active $name request",
+    async ({ start }) => {
+      const { fetch, requestSignal } = createAbortableFetch();
+      const client = new MonobankAcquiringClient({
+        fetch,
+        token: "acquiring-token",
+      });
+      const controller = new AbortController();
 
-    const request = client.qr.list({ signal: controller.signal });
-    request.catch(() => undefined);
-    await Promise.resolve();
-    controller.abort();
+      const request = start(client, controller.signal);
+      request.catch(() => undefined);
+      await Promise.resolve();
+      controller.abort();
 
-    expect(requestSignal()?.aborted).toBe(true);
-    await expect(request).rejects.toMatchObject({ reason: "aborted" });
-  });
-
-  it("passes caller cancellation to the active details request", async () => {
-    const { fetch, requestSignal } = createAbortableFetch();
-    const client = new MonobankAcquiringClient({
-      fetch,
-      token: "acquiring-token",
-    });
-    const controller = new AbortController();
-
-    const request = client.qr.getDetails(
-      { qrId: "XJ_DiM4rTd5V" },
-      { signal: controller.signal },
-    );
-    request.catch(() => undefined);
-    await Promise.resolve();
-    controller.abort();
-
-    expect(requestSignal()?.aborted).toBe(true);
-    await expect(request).rejects.toMatchObject({ reason: "aborted" });
-  });
+      expect(requestSignal()?.aborted).toBe(true);
+      await expect(request).rejects.toMatchObject({ reason: "aborted" });
+    },
+  );
 
   it("fails details requests that exceed the configured timeout", async () => {
     vi.useFakeTimers();
@@ -186,6 +186,65 @@ describe("MonobankAcquiringQr", () => {
     const client = createClient(fetch);
 
     await expect(client.qr.getDetails({ qrId: " " })).rejects.toBeInstanceOf(
+      MonobankValidationError,
+    );
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("clears the amount set on a QR cashier", async () => {
+    const fetch = createFetchSequence([jsonResponse({})]);
+    const client = createClient(fetch);
+
+    await expect(
+      client.qr.resetAmount({ qrId: "XJ_DiM4rTd5V" }),
+    ).resolves.toBeUndefined();
+    expect(firstRequestUrl(fetch).href).toBe(
+      "https://api.monobank.ua/api/merchant/qr/reset-amount",
+    );
+    expect(fetch.mock.calls[0]?.[1]?.method).toBe("POST");
+    expect(firstRequestHeaders(fetch).get("X-Token")).toBe("acquiring-token");
+    expect(firstRequestHeaders(fetch).get("Content-Type")).toBe(
+      "application/json",
+    );
+    expect(firstRequestBody(fetch)).toEqual({ qrId: "XJ_DiM4rTd5V" });
+  });
+
+  it("never retries the amount reset even with a retry policy", async () => {
+    const fetch = createFetchSequence([
+      new Response(null, { status: 503 }),
+      jsonResponse({}),
+    ]);
+    const client = new MonobankAcquiringClient({
+      fetch,
+      retry: { baseDelayMs: 1, maxAttempts: 3, maxDelayMs: 2 },
+      token: "acquiring-token",
+    });
+
+    await expect(
+      client.qr.resetAmount({ qrId: "XJ_DiM4rTd5V" }),
+    ).rejects.toMatchObject({ status: 503 });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects an unknown QR cashier when clearing the amount", async () => {
+    const fetch = createFetchSequence([new Response(null, { status: 404 })]);
+
+    const request = createClient(fetch).qr.resetAmount({
+      qrId: "XJ_DiM4rTd5V",
+    });
+
+    await expect(request).rejects.toBeInstanceOf(MonobankApiError);
+    await expect(request).rejects.toMatchObject({
+      endpoint: "/api/merchant/qr/reset-amount",
+      status: 404,
+    });
+  });
+
+  it("rejects an invalid amount-reset identifier before Fetch", async () => {
+    const fetch = createFetchSequence([]);
+    const client = createClient(fetch);
+
+    await expect(client.qr.resetAmount({ qrId: "" })).rejects.toBeInstanceOf(
       MonobankValidationError,
     );
     expect(fetch).not.toHaveBeenCalled();

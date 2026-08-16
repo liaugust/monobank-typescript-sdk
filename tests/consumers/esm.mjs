@@ -42,6 +42,7 @@ assert.equal(typeof acquiringClient.merchant.getDetails, "function");
 assert.equal(typeof acquiringClient.invoices.create, "function");
 assert.equal(typeof acquiringClient.qr.list, "function");
 assert.equal(typeof acquiringClient.qr.getDetails, "function");
+assert.equal(typeof acquiringClient.qr.resetAmount, "function");
 assert.equal(typeof acquiringClient.statements.get, "function");
 assert.equal(typeof acquiringClient.submerchants.list, "function");
 assert.equal(typeof acquiringClient.webhooks.getPublicKey, "function");
