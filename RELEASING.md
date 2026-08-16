@@ -8,7 +8,7 @@ The workflow never uses a long-lived npm publish token.
 1. Publish version `0.0.1` interactively as the one-time bootstrap release so
    `@liaugust/monobank-sdk` exists on npm. Do not create a GitHub Release for
    this version, and do not store the publishing credential in GitHub.
-2. Create a GitHub environment named `npm` and require approval for deployments.
+2. Create a GitHub environment named `npm`.
 3. In the npm package settings, add a GitHub Actions trusted publisher with:
    - organization or user: `liaugust`
    - repository: `monobank-typescript-sdk`
@@ -16,6 +16,10 @@ The workflow never uses a long-lived npm publish token.
    - environment: `npm`
    - allowed action: `npm publish`
 4. Restrict or revoke npm write tokens after the trusted publisher succeeds.
+
+The current GitHub plan does not support required reviewers for environments
+in private repositories, so the `npm` environment has no protection rules.
+Enable a required reviewer if the repository plan gains that capability.
 
 The first trusted-publishing release should be `0.1.0`. Prepare it in a new
 pull request only after the bootstrap publication and trusted-publisher setup
@@ -35,7 +39,8 @@ not claim or request provenance while this repository remains private.
 2. Run `pnpm verify` locally and merge only after review.
 3. Create tag `v<package-version>` on the merged `main` commit.
 4. Publish a GitHub Release for that tag.
-5. Approve the `npm` environment deployment and verify the package on npm.
+5. Monitor the `npm` environment deployment, approve it if protection rules are
+   enabled, and verify the package on npm.
 
 The release workflow rejects a GitHub Release whose tag does not exactly match
 the package version. It verifies the repository, builds and tests the packed
