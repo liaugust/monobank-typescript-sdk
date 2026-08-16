@@ -91,6 +91,56 @@ function createAbortRejectingFetch(): TestFetch {
   });
 }
 
+function createSignalBoundTextFetch(status: number): {
+  readonly fetch: TestFetch;
+  readonly textStarted: Promise<void>;
+} {
+  let markTextStarted: () => void = () => undefined;
+  const textStarted = new Promise<void>((resolve) => {
+    markTextStarted = resolve;
+  });
+  const fetch = vi.fn((_: RequestInfo | URL, init?: RequestInit) => {
+    const response = {
+      headers: new Headers(),
+      ok: status >= 200 && status < 300,
+      status,
+      text: () => {
+        markTextStarted();
+
+        return new Promise<string>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            reject(new DOMException("Body aborted", "AbortError"));
+          });
+        });
+      },
+    } as Response;
+
+    return Promise.resolve(response);
+  });
+
+  return { fetch, textStarted };
+}
+
+async function settleState(request: Promise<unknown>): Promise<unknown> {
+  let state: unknown = "pending";
+  request.then(
+    (value) => {
+      state = value;
+    },
+    (error: unknown) => {
+      state = error;
+    },
+  );
+  await flushMicrotasks();
+
+  return state;
+}
+
+async function flushMicrotasks(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
 function firstRequestInit(
   fetch: ReturnType<typeof createFetchSequence>,
 ): RequestInit | undefined {
@@ -614,18 +664,21 @@ describe("MonobankTransport", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
-  it("does not retry authentication failures", async () => {
-    const fetch = createFetchSequence([
-      new Response(null, { status: 401 }),
-      jsonResponse({ ok: true }),
-    ]);
-    const transport = createRetryingTransport(fetch);
+  it.each([401, 403])(
+    "does not retry authentication failure %i",
+    async (status) => {
+      const fetch = createFetchSequence([
+        new Response(null, { status }),
+        jsonResponse({ ok: true }),
+      ]);
+      const transport = createRetryingTransport(fetch);
 
-    await expect(requestSafeGet(transport)).rejects.toMatchObject({
-      status: 401,
-    });
-    expect(fetch).toHaveBeenCalledTimes(1);
-  });
+      await expect(requestSafeGet(transport)).rejects.toMatchObject({
+        status,
+      });
+      expect(fetch).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it("does not retry schema validation failures", async () => {
     const fetch = createFetchSequence([
@@ -740,6 +793,64 @@ describe("MonobankTransport", () => {
       reason: "timeout",
     });
     expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("classifies caller abort while reading a successful body as aborted", async () => {
+    const controller = new AbortController();
+    const { fetch, textStarted } = createSignalBoundTextFetch(200);
+    const transport = createRetryingTransport(fetch);
+
+    const result = requestSafeGetWithSignal(transport, controller.signal);
+    result.catch(() => undefined);
+    await textStarted;
+    controller.abort();
+    await flushMicrotasks();
+
+    expect(await settleState(result)).toMatchObject({
+      reason: "aborted",
+    });
+  });
+
+  it("classifies timeout while reading a successful body as timeout", async () => {
+    vi.useFakeTimers();
+    const { fetch, textStarted } = createSignalBoundTextFetch(200);
+    const transport = new MonobankTransport({
+      fetch,
+      timeoutMs: 250,
+      token: "secret-token",
+    });
+
+    const result = requestSafeGet(transport);
+    result.catch(() => undefined);
+    await textStarted;
+    await vi.advanceTimersByTimeAsync(250);
+    await flushMicrotasks();
+
+    expect(await settleState(result)).toMatchObject({
+      reason: "timeout",
+    });
+  });
+
+  it("classifies timeout while reading a retryable API error body as timeout", async () => {
+    vi.useFakeTimers();
+    const { fetch, textStarted } = createSignalBoundTextFetch(503);
+    const transport = new MonobankTransport({
+      fetch,
+      retry: shortRetry,
+      timeoutMs: 250,
+      token: "secret-token",
+    });
+
+    const result = requestSafeGet(transport);
+    result.catch(() => undefined);
+    await textStarted;
+    await vi.advanceTimersByTimeAsync(250);
+    await flushMicrotasks();
+
+    expect(await settleState(result)).toMatchObject({
+      reason: "timeout",
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 
   it("removes caller abort listeners after successful requests", async () => {
