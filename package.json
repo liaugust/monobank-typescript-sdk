@@ -1,6 +1,6 @@
 {
   "name": "@liaugust/monobank-sdk",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Strict, runtime-validated TypeScript SDK for Monobank APIs",
   "license": "MIT",
   "type": "module",
@@ -47,7 +47,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:types": "tsc -p tests/types/tsconfig.json --noEmit",
-    "check:dead-code": "knip",
+    "check:dead-code": "knip --treat-config-hints-as-errors",
     "check:duplication": "jscpd",
     "build": "tsup",
     "check:package": "publint && attw --pack . && node tests/consumers/esm.mjs && node tests/consumers/commonjs.cjs && node tests/consumers/declarations.mjs && tsup tests/consumers/browser.ts --format esm --platform browser --out-dir .tmp/browser-smoke --clean && pnpm test:packed-package",
