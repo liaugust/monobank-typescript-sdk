@@ -4,6 +4,9 @@ All notable changes to this package are documented here.
 
 ## Unreleased
 
+- Reject a cleartext `http:` base URL when a token is configured, unless it
+  targets a loopback host, so a credential cannot be sent over the wire in the
+  clear.
 - Stop following HTTP redirects so a redirected request can never replay the
   `X-Token` header or a mutating request body to an unvalidated origin.
 - Add authenticated Acquiring statements with validated time windows,

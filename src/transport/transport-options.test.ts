@@ -61,6 +61,83 @@ describe("MonobankTransport options", () => {
     expect(fetch).toHaveBeenCalledOnce();
   });
 
+  it.each([
+    "http://api.example.test",
+    "http://gateway.example.test:8080/mono/",
+    // Suffix and prefix confusion around the loopback names.
+    "http://127.0.0.1.example.test",
+    "http://notlocalhost",
+    "http://localhost.evil.test",
+    // `*.localhost` is not trusted: Node resolves it through the OS.
+    "http://evil.test.localhost",
+    "http://api.localhost",
+    "http://.localhost",
+    // Userinfo must never be mistaken for the host.
+    "http://user@evil.test",
+    "http://localhost@evil.test",
+    "http://127.0.0.1@evil.test",
+    "http://[::1]@evil.test",
+    // Non-loopback IPs, the unspecified address, and IPv4-mapped IPv6.
+    "http://0.0.0.0",
+    "http://[fe80::1]",
+    "http://[::]",
+    "http://[::ffff:127.0.0.1]",
+  ])("rejects cleartext base URL %s when a token is configured", (baseUrl) => {
+    expect(
+      () =>
+        new MonobankTransport({
+          baseUrl,
+          fetch: createFetchSequence([]),
+          token: "secret-token",
+        }),
+    ).toThrow(
+      expect.objectContaining({
+        constructor: MonobankValidationError,
+        issues: [
+          "baseUrl must use https when a token is configured, unless it targets a loopback host",
+        ],
+      }),
+    );
+  });
+
+  it.each([
+    { baseUrl: "http://127.0.0.1:3000", origin: "http://127.0.0.1:3000" },
+    { baseUrl: "http://127.5.6.7", origin: "http://127.5.6.7" },
+    { baseUrl: "http://localhost:8080", origin: "http://localhost:8080" },
+    { baseUrl: "http://localhost.", origin: "http://localhost." },
+    { baseUrl: "http://LOCALHOST", origin: "http://localhost" },
+    { baseUrl: "http://[::1]:3000", origin: "http://[::1]:3000" },
+    // WHATWG URL canonicalizes these encodings to 127.0.0.1 before the check.
+    { baseUrl: "http://2130706433", origin: "http://127.0.0.1" },
+    { baseUrl: "http://0177.0.0.1", origin: "http://127.0.0.1" },
+    { baseUrl: "http://0x7f000001", origin: "http://127.0.0.1" },
+    { baseUrl: "http://127.1", origin: "http://127.0.0.1" },
+  ])(
+    "allows loopback base URL $baseUrl with a token",
+    async ({ baseUrl, origin }) => {
+      const fetch = createFetchSequence([jsonResponse({ ok: true })]);
+      const transport = new MonobankTransport({
+        baseUrl,
+        fetch,
+        token: "secret-token",
+      });
+
+      await getBankSync(transport);
+
+      expect(firstRequestUrl(fetch).href).toBe(`${origin}/bank/sync`);
+    },
+  );
+
+  it("allows a cleartext base URL when no token is configured", () => {
+    expect(
+      () =>
+        new MonobankTransport({
+          baseUrl: "http://api.example.test",
+          fetch: createFetchSequence([]),
+        }),
+    ).not.toThrow();
+  });
+
   it("rejects invalid transport configuration before requests", () => {
     const invalidOptions = [
       { token: "" },

@@ -426,6 +426,10 @@ try {
 Public errors retain only bounded diagnostic data. They intentionally exclude
 tokens, authorization headers, request objects, and raw API payloads.
 
+A cleartext `http:` base URL is rejected at construction whenever a token is
+configured, unless it targets a loopback host, so a credential is never sent
+over an unencrypted connection.
+
 The SDK sets `redirect: "error"` on every request, so it never follows HTTP
 redirects when using the runtime's built-in Fetch. Fetch keeps custom headers
 such as `X-Token` across a cross-origin redirect and replays the body on

@@ -27,15 +27,18 @@ export function validateTransportOptions(
   options: TransportOptions,
 ): StoredTransportOptions {
   const retry = options.retry;
+  const token =
+    options.token === undefined ? undefined : validateToken(options.token);
 
   return {
     authenticatedPathPrefix: options.authenticatedPathPrefix ?? "/personal/",
-    baseUrl: validateBaseUrl(options.baseUrl ?? defaultBaseUrl),
+    baseUrl: validateBaseUrl(
+      options.baseUrl ?? defaultBaseUrl,
+      token !== undefined,
+    ),
     fetch: options.fetch ?? validateGlobalFetch(),
     timeoutMs: validateTimeout(options.timeoutMs ?? defaultTimeoutMs),
-    ...(options.token === undefined
-      ? {}
-      : { token: validateToken(options.token) }),
+    ...(token === undefined ? {} : { token }),
     ...(retry === undefined ? {} : { retry: validateRetry(retry) }),
   };
 }
@@ -53,7 +56,7 @@ function validateToken(token: string): string {
   return token;
 }
 
-function validateBaseUrl(value: string): URL {
+function validateBaseUrl(value: string, hasToken: boolean): URL {
   let url: URL;
   try {
     url = new URL(value);
@@ -71,7 +74,51 @@ function validateBaseUrl(value: string): URL {
     });
   }
 
+  // A token travels in the X-Token header on every authenticated request, so a
+  // cleartext origin would put the credential on the wire. Loopback stays
+  // allowed because it never leaves the machine, which keeps local proxies and
+  // contract tests workable.
+  if (url.protocol === "http:" && hasToken && !isLoopbackHost(url.hostname)) {
+    throw new MonobankValidationError({
+      issues: [
+        "baseUrl must use https when a token is configured, unless it targets a loopback host",
+      ],
+      message: "Invalid Monobank transport configuration.",
+    });
+  }
+
   return url;
+}
+
+// Deliberately narrower than the W3C "potentially trustworthy origin" set,
+// which also trusts `*.localhost`. Browsers can afford that because they
+// resolve `*.localhost` to loopback in the network stack; Node hands the name
+// to the OS resolver, so on a runtime without RFC 6761 support `evil.localhost`
+// is an ordinary DNS lookup and the token would leave the machine.
+function isLoopbackHost(hostname: string): boolean {
+  const bracketless =
+    hostname.startsWith("[") && hostname.endsWith("]")
+      ? hostname.slice(1, -1)
+      : hostname;
+  // A trailing root dot names the same host: `localhost.` resolves to loopback.
+  const host = bracketless.endsWith(".")
+    ? bracketless.slice(0, -1)
+    : bracketless;
+
+  if (host === "localhost" || host === "::1") {
+    return true;
+  }
+
+  const octets = host.split(".");
+
+  // The range check is redundant while `hostname` comes from a WHATWG URL,
+  // which canonicalizes IPv4 and rejects out-of-range octets outright. It stays
+  // as defence in depth for a runtime whose URL implementation does not.
+  return (
+    octets.length === 4 &&
+    octets[0] === "127" &&
+    octets.every((octet) => /^\d{1,3}$/.test(octet) && Number(octet) <= 255)
+  );
 }
 
 function validateGlobalFetch(): FetchLike {
