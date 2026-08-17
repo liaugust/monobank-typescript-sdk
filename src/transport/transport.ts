@@ -47,6 +47,12 @@ export class MonobankTransport {
     });
   }
 
+  public async deleteEmpty(request: EmptyRequest): Promise<void> {
+    await this.execute("DELETE", request, () => {
+      emptyResponseSchema.safeParse(undefined);
+    });
+  }
+
   private async executeJson<T>(
     method: "GET" | "POST",
     request: JsonRequest<T>,
@@ -68,7 +74,7 @@ export class MonobankTransport {
   }
 
   private async execute<T>(
-    method: "GET" | "POST",
+    method: "DELETE" | "GET" | "POST",
     request: EmptyRequest,
     consumeResponse: (response: Response) => Promise<T> | T,
   ): Promise<T> {

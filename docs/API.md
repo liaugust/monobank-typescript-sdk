@@ -16,6 +16,10 @@ supported contract.
 - [verifyAcquiringWebhookSignature](#verifyacquiringwebhooksignature)
 - [merchant.getDetails](#merchantgetdetails)
 - [acquiring.submerchants.list](#acquiringsubmerchantslist)
+- [acquiring.employees.list](#acquiringemployeeslist)
+- [acquiring.wallet.list](#acquiringwalletlist)
+- [acquiring.wallet.pay](#acquiringwalletpay)
+- [acquiring.wallet.deleteCard](#acquiringwalletdeletecard)
 - [acquiring.qr.list](#acquiringqrlist)
 - [acquiring.qr.getDetails](#acquiringqrgetdetails)
 - [acquiring.qr.resetAmount](#acquiringqrresetamount)
@@ -27,6 +31,8 @@ supported contract.
 - [invoices.finalize](#invoicesfinalize)
 - [invoices.getReceipt](#invoicesgetreceipt)
 - [invoices.getFiscalChecks](#invoicesgetfiscalchecks)
+- [invoices.payDirect](#invoicespaydirect)
+- [invoices.syncPayment](#invoicessyncpayment)
 - [bank.getSync](#bankgetsync)
 - [currency.getRates](#currencygetrates)
 - [client.getInfo](#clientgetinfo)
@@ -181,11 +187,13 @@ const acquiring = new MonobankAcquiringClient({
 
 The client groups operations into resource objects:
 
+- `acquiring.employees`: employee operations for tip routing
 - `acquiring.merchant`: merchant identity operations
 - `acquiring.invoices`: invoice lifecycle operations
 - `acquiring.qr`: QR cashier listing, details, and amount reset
 - `acquiring.statements`: transaction statement operations
 - `acquiring.submerchants`: submerchant terminal operations
+- `acquiring.wallet`: tokenized card operations
 - `acquiring.webhooks`: webhook trust-material operations
 
 ## acquiring.webhooks.getPublicKey
@@ -318,6 +326,100 @@ for (const submerchant of submerchants.list) {
   console.log(submerchant.code, submerchant.iban);
 }
 ```
+
+## acquiring.employees.list
+
+```ts
+acquiring.employees.list(
+  options?: RequestOptions,
+): Promise<AcquiringEmployeeList>
+```
+
+Loads `GET /api/merchant/employee/list`. Each `id` is accepted by
+`tipsEmployeeId` when creating an invoice, and is echoed back in
+`tipsInfo.employeeId` on invoice status.
+
+| Property       | Value                                                      |
+| -------------- | ---------------------------------------------------------- |
+| Authentication | Acquiring token in `X-Token`                               |
+| Retries        | Eligible when a retry policy is configured                 |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds   |
+| Cancellation   | `options.signal` cancels the active request or retry delay |
+| Returns        | `AcquiringEmployeeList` with readonly `list`               |
+
+Rejects with `MonobankApiError`, `MonobankNetworkError`,
+`MonobankResponseValidationError`, or `MonobankValidationError`.
+
+## acquiring.wallet.list
+
+```ts
+acquiring.wallet.list(
+  input: ListAcquiringWalletCardsInput,
+  options?: RequestOptions,
+): Promise<AcquiringWallet>
+```
+
+Loads `GET /api/merchant/wallet` for one payer's `walletId`. Monobank enables
+tokenization per merchant.
+
+| Property       | Value                                                      |
+| -------------- | ---------------------------------------------------------- |
+| Authentication | Acquiring token in `X-Token`                               |
+| Retries        | Eligible when a retry policy is configured                 |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds   |
+| Cancellation   | `options.signal` cancels the active request or retry delay |
+| Returns        | `AcquiringWallet` with readonly `wallet`                   |
+
+Rejects with the four standard SDK error classes. Input validation runs before
+Fetch.
+
+## acquiring.wallet.pay
+
+```ts
+acquiring.wallet.pay(
+  input: PayWithCardTokenInput,
+  options?: RequestOptions,
+): Promise<AcquiringCardPayment>
+```
+
+Charges a stored card token through `POST /api/merchant/wallet/payment`.
+Amounts are integer minor currency units. When Monobank requires 3-D Secure the
+result carries `tdsUrl`, and the payer must complete authentication there
+before the payment reaches a final status.
+
+| Property       | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Authentication | Acquiring token in `X-Token`                             |
+| Retries        | Never; the request moves money                           |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds |
+| Cancellation   | `options.signal` cancels the active request              |
+| Returns        | `AcquiringCardPayment`                                   |
+
+Rejects with the four standard SDK error classes. Input validation runs before
+Fetch.
+
+## acquiring.wallet.deleteCard
+
+```ts
+acquiring.wallet.deleteCard(
+  input: DeleteAcquiringWalletCardInput,
+  options?: RequestOptions,
+): Promise<void>
+```
+
+Removes a tokenized card through `DELETE /api/merchant/wallet/card`. Monobank
+acknowledges with an empty payload, so the method resolves to `undefined`.
+
+| Property       | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Authentication | Acquiring token in `X-Token`                             |
+| Retries        | Never; the request mutates stored payer data             |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds |
+| Cancellation   | `options.signal` cancels the active request              |
+| Returns        | `void`                                                   |
+
+Rejects with `MonobankApiError`, `MonobankNetworkError`, or
+`MonobankValidationError`. Input validation runs before Fetch.
 
 ## acquiring.qr.list
 
@@ -608,6 +710,63 @@ optional status text, tax URL, and base64 PDF.
 This safe GET is eligible for configured retries. Throws the four standard SDK
 error classes.
 
+## invoices.payDirect
+
+```ts
+acquiring.invoices.payDirect(
+  input: PayInvoiceDirectInput,
+  options?: RequestOptions,
+): Promise<AcquiringCardPayment>
+```
+
+Charges raw card details through `POST /api/merchant/invoice/payment-direct`.
+
+> **PCI DSS.** `cardData` carries a primary account number, expiry, and CVV.
+> Handling those values places the calling system in PCI DSS scope. Collect and
+> transmit them only from certified infrastructure, never log or persist them,
+> and confirm your obligations before shipping. Monobank enables this endpoint
+> per merchant. Prefer `invoices.create()` or `wallet.pay()` where possible.
+
+| Property       | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Authentication | Acquiring token in `X-Token`                             |
+| Retries        | Never; the request moves money                           |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds |
+| Cancellation   | `options.signal` cancels the active request              |
+| Returns        | `AcquiringCardPayment`                                   |
+
+Rejects with the four standard SDK error classes. Validation runs before Fetch
+and names only the offending field, never its value, so card details never
+reach public error state.
+
+## invoices.syncPayment
+
+```ts
+acquiring.invoices.syncPayment(
+  input: SyncInvoicePaymentInput,
+  options?: RequestOptions,
+): Promise<Invoice>
+```
+
+Settles one payment through `POST /api/merchant/invoice/sync-payment` and
+returns the resulting invoice. Supply exactly one payment container: `cardData`
+for raw card and 3-D Secure values, or a decrypted `applePay` or `googlePay`
+crypto container. Supplying none, or more than one, fails validation before
+Fetch.
+
+> **PCI DSS.** Every accepted container is cardholder or cryptogram material.
+> The obligations described for `invoices.payDirect()` apply here too.
+
+| Property       | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Authentication | Acquiring token in `X-Token`                             |
+| Retries        | Never; the request moves money                           |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds |
+| Cancellation   | `options.signal` cancels the active request              |
+| Returns        | `Invoice`                                                |
+
+Rejects with the four standard SDK error classes.
+
 ## bank.getSync
 
 ```ts
@@ -891,35 +1050,40 @@ All schemas expose Zod Mini's standard parsing interface. Object schemas are
 loose: documented fields are validated and unknown additive fields are
 preserved.
 
-| Export                                 | Validates                           |
-| -------------------------------------- | ----------------------------------- |
-| `accountSchema`                        | One Personal account                |
-| `acquiringQrCashierListSchema`         | Acquiring QR cashier-list response  |
-| `acquiringQrCashierSchema`             | One Acquiring QR cashier            |
-| `acquiringQrDetailsSchema`             | Acquiring QR cashier details        |
-| `acquiringStatementSchema`             | Acquiring statement response        |
-| `acquiringStatementItemSchema`         | One Acquiring transaction           |
-| `acquiringStatementCancellationSchema` | Nested Acquiring cancellation       |
-| `acquiringSubmerchantListSchema`       | Acquiring submerchant-list response |
-| `acquiringSubmerchantSchema`           | One Acquiring submerchant           |
-| `acquiringWebhookPublicKeySchema`      | Acquiring webhook key response      |
-| `bankSyncSchema`                       | `/bank/sync` response               |
-| `clientInfoSchema`                     | `/personal/client-info` response    |
-| `currencyRateSchema`                   | One exchange-rate item              |
-| `currencyRatesSchema`                  | `/bank/currency` response array     |
-| `jarSchema`                            | One Personal jar                    |
-| `managedAccountSchema`                 | One delegated FOP account           |
-| `managedClientSchema`                  | One delegated FOP client            |
-| `merchantDetailsSchema`                | `/api/merchant/details` response    |
-| `newInvoiceSchema`                     | Create-invoice response             |
-| `invoiceStatusSchema`                  | Invoice status or webhook payload   |
-| `cancelInvoiceResponseSchema`          | Invoice cancellation response       |
-| `finalizeInvoiceResponseSchema`        | Hold finalization response          |
-| `receiptSchema`                        | Invoice receipt response            |
-| `invoiceFiscalChecksSchema`            | Invoice fiscal checks response      |
-| `statementItemSchema`                  | One statement item                  |
-| `statementItemsSchema`                 | Statement response array            |
-| `personalWebhookEventSchema`           | Incoming Personal statement event   |
+| Export                                 | Validates                            |
+| -------------------------------------- | ------------------------------------ |
+| `accountSchema`                        | One Personal account                 |
+| `acquiringCardPaymentSchema`           | Wallet or direct card-payment result |
+| `acquiringEmployeeListSchema`          | Acquiring employee-list response     |
+| `acquiringEmployeeSchema`              | One Acquiring employee               |
+| `acquiringWalletCardSchema`            | One tokenized wallet card            |
+| `acquiringWalletSchema`                | Merchant wallet response             |
+| `acquiringQrCashierListSchema`         | Acquiring QR cashier-list response   |
+| `acquiringQrCashierSchema`             | One Acquiring QR cashier             |
+| `acquiringQrDetailsSchema`             | Acquiring QR cashier details         |
+| `acquiringStatementSchema`             | Acquiring statement response         |
+| `acquiringStatementItemSchema`         | One Acquiring transaction            |
+| `acquiringStatementCancellationSchema` | Nested Acquiring cancellation        |
+| `acquiringSubmerchantListSchema`       | Acquiring submerchant-list response  |
+| `acquiringSubmerchantSchema`           | One Acquiring submerchant            |
+| `acquiringWebhookPublicKeySchema`      | Acquiring webhook key response       |
+| `bankSyncSchema`                       | `/bank/sync` response                |
+| `clientInfoSchema`                     | `/personal/client-info` response     |
+| `currencyRateSchema`                   | One exchange-rate item               |
+| `currencyRatesSchema`                  | `/bank/currency` response array      |
+| `jarSchema`                            | One Personal jar                     |
+| `managedAccountSchema`                 | One delegated FOP account            |
+| `managedClientSchema`                  | One delegated FOP client             |
+| `merchantDetailsSchema`                | `/api/merchant/details` response     |
+| `newInvoiceSchema`                     | Create-invoice response              |
+| `invoiceStatusSchema`                  | Invoice status or webhook payload    |
+| `cancelInvoiceResponseSchema`          | Invoice cancellation response        |
+| `finalizeInvoiceResponseSchema`        | Hold finalization response           |
+| `receiptSchema`                        | Invoice receipt response             |
+| `invoiceFiscalChecksSchema`            | Invoice fiscal checks response       |
+| `statementItemSchema`                  | One statement item                   |
+| `statementItemsSchema`                 | Statement response array             |
+| `personalWebhookEventSchema`           | Incoming Personal statement event    |
 
 ```ts
 import { currencyRatesSchema } from "@liaugust/monobank-sdk";
@@ -970,22 +1134,25 @@ const cashbackType: CashbackTypeValue = CashbackType.UAH;
 
 ### Acquiring values
 
-| Export                      | Wire values                                                                  |
-| --------------------------- | ---------------------------------------------------------------------------- |
-| `InvoicePaymentType`        | `debit`, `hold`                                                              |
-| `AcquiringPaymentScheme`    | `full`, `bnpl_later_30`, `bnpl_parts_4`                                      |
-| `AcquiringQrAmountType`     | `client`, `fix`, `merchant`                                                  |
-| `AcquiringStatementStatus`  | `hold`, `processing`, `success`, `failure`                                   |
-| `InvoiceStatus`             | `created`, `processing`, `hold`, `success`, `failure`, `reversed`, `expired` |
-| `InvoiceCancellationStatus` | `processing`, `success`, `failure`                                           |
-| `InvoicePaymentSystem`      | `visa`, `mastercard`                                                         |
-| `InvoicePaymentMethod`      | `pan`, `apple`, `google`, `monobank`, `wallet`, `direct`                     |
-| `InvoiceWalletStatus`       | `new`, `created`, `failed`                                                   |
-| `DiscountType`              | `DISCOUNT`, `EXTRA_CHARGE`                                                   |
-| `DiscountMode`              | `PERCENT`, `VALUE`                                                           |
-| `FiscalCheckType`           | `sale`, `return`                                                             |
-| `FiscalCheckStatus`         | `new`, `process`, `done`, `failed`                                           |
-| `FiscalizationSource`       | `checkbox`, `monopay`                                                        |
+| Export                           | Wire values                                                                  |
+| -------------------------------- | ---------------------------------------------------------------------------- |
+| `InvoicePaymentType`             | `debit`, `hold`                                                              |
+| `AcquiringPaymentScheme`         | `full`, `bnpl_later_30`, `bnpl_parts_4`                                      |
+| `AcquiringQrAmountType`          | `client`, `fix`, `merchant`                                                  |
+| `AcquiringCardPaymentStatus`     | `processing`, `success`, `failure`                                           |
+| `AcquiringPaymentInitiationKind` | `client`, `merchant`                                                         |
+| `SyncPaymentPanType`             | `FPAN`, `DPAN`                                                               |
+| `AcquiringStatementStatus`       | `hold`, `processing`, `success`, `failure`                                   |
+| `InvoiceStatus`                  | `created`, `processing`, `hold`, `success`, `failure`, `reversed`, `expired` |
+| `InvoiceCancellationStatus`      | `processing`, `success`, `failure`                                           |
+| `InvoicePaymentSystem`           | `visa`, `mastercard`                                                         |
+| `InvoicePaymentMethod`           | `pan`, `apple`, `google`, `monobank`, `wallet`, `direct`                     |
+| `InvoiceWalletStatus`            | `new`, `created`, `failed`                                                   |
+| `DiscountType`                   | `DISCOUNT`, `EXTRA_CHARGE`                                                   |
+| `DiscountMode`                   | `PERCENT`, `VALUE`                                                           |
+| `FiscalCheckType`                | `sale`, `return`                                                             |
+| `FiscalCheckStatus`              | `new`, `process`, `done`, `failed`                                           |
+| `FiscalizationSource`            | `checkbox`, `monopay`                                                        |
 
 ## Response models
 
@@ -1204,6 +1371,15 @@ object containing the target `account` identifier and validated
 | `GetAcquiringStatementsInput`            | Acquiring time window and optional submerchant terminal        |
 | `AcquiringStatementUnixTimeInput`        | `Date \| number` Acquiring statement timestamp input           |
 | `GetAcquiringQrDetailsInput`             | QR cashier identifier for details lookup                       |
+| `ListAcquiringWalletCardsInput`          | Wallet identifier for listing tokenized cards                  |
+| `DeleteAcquiringWalletCardInput`         | Card token to remove from a wallet                             |
+| `PayWithCardTokenInput`                  | Stored-token charge amount, currency, and initiation           |
+| `PayInvoiceDirectInput`                  | Raw card charge; PCI DSS material                              |
+| `DirectPaymentCardData`                  | Raw PAN, expiry, and CVV; PCI DSS material                     |
+| `SyncInvoicePaymentInput`                | Synchronous payment with exactly one container                 |
+| `SyncPaymentCardData`                    | Card and 3-D Secure values; PCI DSS material                   |
+| `SyncPaymentWalletContainer`             | Decrypted Apple Pay or Google Pay container                    |
+| `SyncPaymentMerchantInfo`                | Order details for a synchronous payment                        |
 | `ResetAcquiringQrAmountInput`            | QR cashier identifier for clearing a set amount                |
 | `SetWebhookInput`                        | Webhook URL request body                                       |
 | `VerifyAcquiringWebhookSignatureInput`   | Raw body, public key, and signature verification inputs        |
@@ -1229,7 +1405,9 @@ object containing the target `account` identifier and validated
 
 Response types are inferred from their runtime schemas and exported from the
 package root, including the Personal models plus `MerchantDetails`,
-`AcquiringSubmerchant`, `AcquiringSubmerchantList`, `AcquiringQrCashier`,
+`AcquiringSubmerchant`, `AcquiringSubmerchantList`, `AcquiringEmployee`,
+`AcquiringEmployeeList`, `AcquiringWallet`, `AcquiringWalletCard`,
+`AcquiringCardPayment`, `AcquiringQrCashier`,
 `AcquiringQrCashierList`, `AcquiringQrDetails`,
 `AcquiringWebhookPublicKey`, `AcquiringStatement`, `AcquiringStatementItem`,
 `AcquiringStatementCancellation`, `NewInvoice`, `Invoice`,

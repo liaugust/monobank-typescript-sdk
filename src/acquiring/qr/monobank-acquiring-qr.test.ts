@@ -4,6 +4,7 @@ import {
   acquiringQrCashierListFixture,
   acquiringQrDetailsFixture,
 } from "../../../tests/fixtures/acquiring/qr.js";
+import { expectCallerCancellation } from "../../../tests/support/acquiring-cancellation.js";
 import { createAbortableFetch } from "../../../tests/support/create-abortable-fetch.js";
 import {
   createFetchSequence,
@@ -137,20 +138,7 @@ describe("MonobankAcquiringQr", () => {
   ])(
     "passes caller cancellation to the active $name request",
     async ({ start }) => {
-      const { fetch, requestSignal } = createAbortableFetch();
-      const client = new MonobankAcquiringClient({
-        fetch,
-        token: "acquiring-token",
-      });
-      const controller = new AbortController();
-
-      const request = start(client, controller.signal);
-      request.catch(() => undefined);
-      await Promise.resolve();
-      controller.abort();
-
-      expect(requestSignal()?.aborted).toBe(true);
-      await expect(request).rejects.toMatchObject({ reason: "aborted" });
+      await expectCallerCancellation(start);
     },
   );
 

@@ -69,6 +69,27 @@ Use `MonobankAcquiringClient` with a separate Acquiring token.
   cashiers only, where `invoiceId` is documented as present only while an
   amount is set and `amount`/`ccy` may be omitted for the same reason; safe GET
   eligible for configured retries.
+- `acquiring.employees.list(options?)`: authenticated
+  `/api/merchant/employee/list`; returns `Promise<AcquiringEmployeeList>` with
+  employees eligible for tips; safe GET eligible for configured retries.
+- `acquiring.wallet.list(input, options?)`: authenticated
+  `/api/merchant/wallet`; requires `walletId`; returns
+  `Promise<AcquiringWallet>` with a readonly list of tokenized cards; safe GET.
+- `acquiring.wallet.pay(input, options?)`: authenticated
+  `/api/merchant/wallet/payment`; charges a stored `cardToken`; returns
+  `Promise<AcquiringCardPayment>` carrying `tdsUrl` when 3-D Secure is
+  required; mutating, never retried.
+- `acquiring.wallet.deleteCard(input, options?)`: authenticated HTTP DELETE to
+  `/api/merchant/wallet/card`; returns `Promise<void>`; mutating, never
+  retried.
+- `acquiring.invoices.payDirect(input, options?)`: authenticated
+  `/api/merchant/invoice/payment-direct`; accepts raw `cardData` with `pan`,
+  `exp`, and `cvv`, which places the caller in PCI DSS scope; returns
+  `Promise<AcquiringCardPayment>`; mutating, never retried.
+- `acquiring.invoices.syncPayment(input, options?)`: authenticated
+  `/api/merchant/invoice/sync-payment`; requires exactly one of `cardData`,
+  `applePay`, or `googlePay`, all of which are PCI DSS material; returns
+  `Promise<Invoice>`; mutating, never retried.
 - `acquiring.qr.resetAmount(input, options?)`: authenticated
   `/api/merchant/qr/reset-amount`; POSTs `{ qrId }` to clear the amount set on
   a QR cashier; returns `Promise<void>` because Monobank acknowledges with an
@@ -175,8 +196,13 @@ See `src/index.ts` for the complete authoritative export list, including types.
   `acquiring.webhooks.getPublicKey()`, and reject a `false` result.
 - Never retry `personal.webhooks.set()`, `acquiring.invoices.create()`,
   `acquiring.invoices.cancel()`, `acquiring.invoices.remove()`,
-  `acquiring.invoices.finalize()`, or `acquiring.qr.resetAmount()`
+  `acquiring.invoices.finalize()`, `acquiring.invoices.payDirect()`,
+  `acquiring.invoices.syncPayment()`, `acquiring.wallet.pay()`,
+  `acquiring.wallet.deleteCard()`, or `acquiring.qr.resetAmount()`
   automatically.
+- Never log, persist, or echo raw card details or Apple Pay and Google Pay
+  crypto-container values. Prefer `acquiring.invoices.create()` or
+  `acquiring.wallet.pay()` over `acquiring.invoices.payDirect()`.
 - Do not invent Acquiring APIs beyond the implemented merchant-details,
   submerchant-list, QR, statement, webhook-trust, and invoice-lifecycle
   methods.

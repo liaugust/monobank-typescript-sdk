@@ -37,10 +37,15 @@ claim endorsement by Monobank.
   infrastructure and refresh it only after verification with the cached key
   fails; the SDK intentionally does not own cache policy.
 - Use only documented Acquiring methods. The current surface contains merchant
-  details, submerchant listing, QR cashier listing, details, and amount reset,
-  and statements plus invoice creation, status, cancellation, removal,
-  finalization, receipt, and fiscal-check operations. Do not invent
-  unimplemented payment calls.
+  every documented Acquiring endpoint: merchant details, submerchant listing,
+  employee listing, QR listing, details, and amount reset, statements, the
+  wallet listing, token payment, and card removal, and invoice creation,
+  status, cancellation, removal, finalization, receipt, fiscal checks, direct
+  payment, and synchronous payment. Do not invent calls beyond that set.
+- Treat `acquiring.invoices.payDirect()` and `acquiring.invoices.syncPayment()`
+  as PCI DSS surfaces. Never log, serialize, persist, or echo raw card details
+  or crypto-container values, and prefer a hosted invoice or a stored card
+  token when suggesting an integration.
 
 ## Minimal Correct Usage
 
@@ -108,10 +113,13 @@ before generating calls; do not guess arguments.
 src/index.ts                    public package boundary
 src/acquiring/client/           Acquiring parent client and options
 src/acquiring/merchant/         merchant resource and endpoint slice
+src/acquiring/employees/        employee resource and endpoint slice
 src/acquiring/invoices/         invoice endpoints, models, and request helpers
 src/acquiring/qr/               QR cashier resource, endpoints, and models
 src/acquiring/statements/       statement resource, endpoint, and models
 src/acquiring/submerchants/     submerchant resource, endpoint, and models
+src/acquiring/shared/           request validation and shared response models
+src/acquiring/wallet/           tokenized card resource, endpoints, and models
 src/acquiring/webhooks/         trust-key endpoint and signature verification
 src/public/client/              token-free Public parent client and options
 src/public/bank/                bank resource and sync endpoint
@@ -159,7 +167,9 @@ tests/consumers/                ESM, CJS, browser, declaration, and tarball chec
   public-key, or signature input in public errors.
 - Verify Acquiring signatures against the exact wire bytes with standard Web
   Crypto; do not introduce Node-only crypto imports into the browser surface.
-- Retry only safe GET requests. Never retry mutating requests automatically.
+- Retry only safe GET requests. Never retry mutating requests automatically;
+  the retry policy gates on `method === "GET"`, so POST and DELETE are excluded
+  structurally as well as by their `retryable` flag.
 - Keep endpoint input validation ahead of Fetch.
 - Keep one primary reusable runtime abstraction per source file.
 - Never use untyped `any`, broad lint suppressions, coverage ignores, or unsafe

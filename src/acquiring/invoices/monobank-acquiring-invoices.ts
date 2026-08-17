@@ -1,5 +1,7 @@
 import type { RequestOptions } from "../../shared/request-options.js";
 import type { MonobankTransport } from "../../transport/transport.js";
+import type { AcquiringCardPayment } from "../shared/models/card-payment.js";
+import { acquiringCardPaymentSchema } from "../shared/models/card-payment.js";
 import type { CancelInvoiceInput } from "./cancel-invoice/cancel-invoice.js";
 import {
   cancelInvoiceEndpoint,
@@ -51,11 +53,21 @@ import {
 } from "./get-invoice-status/get-invoice-status.js";
 import type { InvoiceCancellation } from "./models/invoice-cancellation.js";
 import { cancelInvoiceResponseSchema } from "./models/invoice-cancellation.js";
+import type { PayInvoiceDirectInput } from "./pay-direct/pay-direct.js";
+import {
+  createPayInvoiceDirectBody,
+  payInvoiceDirectEndpoint,
+} from "./pay-direct/pay-direct.js";
 import type { RemoveInvoiceInput } from "./remove-invoice/remove-invoice.js";
 import {
   createRemoveInvoiceBody,
   removeInvoiceEndpoint,
 } from "./remove-invoice/remove-invoice.js";
+import type { SyncInvoicePaymentInput } from "./sync-payment/sync-payment.js";
+import {
+  createSyncInvoicePaymentBody,
+  syncInvoicePaymentEndpoint,
+} from "./sync-payment/sync-payment.js";
 
 /** Invoice lifecycle operations available through an authenticated Acquiring client. */
 export class MonobankAcquiringInvoices {
@@ -235,6 +247,74 @@ export class MonobankAcquiringInvoices {
       endpoint,
       retryable: true,
       schema: invoiceFiscalChecksSchema,
+      ...requestSignal(options),
+    });
+  }
+
+  /**
+   * Charges raw card details and returns the resulting payment.
+   *
+   * Passing a primary account number, expiry, and CVV through this method
+   * places the calling system in PCI DSS scope: collect those values only on
+   * certified infrastructure, and never log or persist them. Prefer
+   * `acquiring.wallet.pay()` with a stored token, or a hosted invoice from
+   * `create()`, whenever the flow allows it. Monobank enables this endpoint per
+   * merchant. Amounts are integer minor currency units, and the result carries
+   * `tdsUrl` when 3-D Secure is required. This request moves money and is never
+   * retried.
+   * @param input Amount, raw card details, and optional payment controls.
+   * @param options Optional cancellation controls for this request.
+   * @returns Validated payment result, including `tdsUrl` when 3-D Secure is required.
+   * @throws {MonobankApiError} When Monobank returns a non-success HTTP status.
+   * @throws {MonobankNetworkError} When Fetch fails, times out, or the caller aborts.
+   * @throws {MonobankResponseValidationError} When the successful payload does not match the card-payment schema.
+   * @throws {MonobankValidationError} When the input does not match the documented request contract, rejected before Fetch runs.
+   */
+  public async payDirect(
+    input: PayInvoiceDirectInput,
+    options?: RequestOptions,
+  ): Promise<AcquiringCardPayment> {
+    const body = createPayInvoiceDirectBody(input);
+
+    return await this.transport.postJson({
+      auth: true,
+      body,
+      endpoint: payInvoiceDirectEndpoint,
+      retryable: false,
+      schema: acquiringCardPaymentSchema,
+      ...requestSignal(options),
+    });
+  }
+
+  /**
+   * Settles one payment synchronously and returns the resulting invoice.
+   *
+   * Supply exactly one payment container: `cardData` for raw card and 3-D
+   * Secure values, or a decrypted `applePay` or `googlePay` crypto container.
+   * Handling those values places the calling system in PCI DSS scope, so
+   * collect them only on certified infrastructure and never log or persist
+   * them. Monobank enables this endpoint per merchant. This request moves money
+   * and is never retried.
+   * @param input Amount, currency, and exactly one payment container.
+   * @param options Optional cancellation controls for this request.
+   * @returns Validated invoice describing the settled payment.
+   * @throws {MonobankApiError} When Monobank returns a non-success HTTP status.
+   * @throws {MonobankNetworkError} When Fetch fails, times out, or the caller aborts.
+   * @throws {MonobankResponseValidationError} When the successful payload does not match the invoice schema.
+   * @throws {MonobankValidationError} When the input is invalid or does not carry exactly one payment container, rejected before Fetch runs.
+   */
+  public async syncPayment(
+    input: SyncInvoicePaymentInput,
+    options?: RequestOptions,
+  ): Promise<Invoice> {
+    const body = createSyncInvoicePaymentBody(input);
+
+    return await this.transport.postJson({
+      auth: true,
+      body,
+      endpoint: syncInvoicePaymentEndpoint,
+      retryable: false,
+      schema: invoiceStatusSchema,
       ...requestSignal(options),
     });
   }

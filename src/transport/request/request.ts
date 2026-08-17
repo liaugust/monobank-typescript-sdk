@@ -16,7 +16,7 @@ export interface EmptyRequest {
 }
 
 export function createRequest(
-  method: "GET" | "POST",
+  method: "DELETE" | "GET" | "POST",
   request: EmptyRequest,
   options: StoredTransportOptions,
 ): { readonly init: RequestInit; readonly url: URL } {

@@ -1,11 +1,16 @@
 import type {
   Account,
+  AcquiringCardPayment,
+  AcquiringEmployee,
+  AcquiringEmployeeList,
   AcquiringQrCashier,
   AcquiringQrCashierList,
   AcquiringQrDetails,
   AcquiringStatement,
   AcquiringSubmerchant,
   AcquiringSubmerchantList,
+  AcquiringWallet,
+  AcquiringWalletCard,
   AcquiringWebhookPublicKey,
   BankSync,
   CancelInvoiceInput,
@@ -23,12 +28,16 @@ import type {
   InvoiceReceipt,
   MerchantDetails,
   NewInvoice,
+  PayInvoiceDirectInput,
+  PayWithCardTokenInput,
   PersonalWebhookEvent,
   ResetAcquiringQrAmountInput,
+  SyncInvoicePaymentInput,
   VerifyAcquiringWebhookSignatureInput,
 } from "@liaugust/monobank-sdk";
 import {
   AccountType,
+  AcquiringPaymentInitiationKind,
   AcquiringPaymentScheme,
   AcquiringQrAmountType,
   acquiringQrCashierListSchema,
@@ -147,6 +156,38 @@ const cashbackTypesAreExact = {
   None: true,
   UAH: true,
 } satisfies Record<CashbackType, true>;
+const acquiringEmployees: Promise<AcquiringEmployeeList> =
+  acquiringClient.employees.list();
+const acquiringWalletCards: Promise<AcquiringWallet> =
+  acquiringClient.wallet.list({
+    walletId: "wallet-42",
+  });
+const walletPaymentInput: PayWithCardTokenInput = {
+  amount: 4_200,
+  cardToken: "card-token-42",
+  ccy: 980,
+  initiationKind: AcquiringPaymentInitiationKind.Client,
+};
+const walletPayment: Promise<AcquiringCardPayment> =
+  acquiringClient.wallet.pay(walletPaymentInput);
+const walletCardRemoval: Promise<void> = acquiringClient.wallet.deleteCard({
+  cardToken: "card-token-42",
+});
+const directPaymentInput: PayInvoiceDirectInput = {
+  amount: 4_200,
+  cardData: { cvv: "123", exp: "0642", pan: "4242424242424242" },
+};
+const directPayment: Promise<AcquiringCardPayment> =
+  acquiringClient.invoices.payDirect(directPaymentInput);
+const syncPaymentInput: SyncInvoicePaymentInput = {
+  amount: 4_200,
+  ccy: 980,
+  googlePay: { eciIndicator: "02", exp: "0642", token: "token-42" },
+};
+const syncPayment: Promise<Invoice> =
+  acquiringClient.invoices.syncPayment(syncPaymentInput);
+declare const acquiringEmployee: AcquiringEmployee;
+declare const acquiringWalletCard: AcquiringWalletCard;
 declare const account: Account;
 declare const acquiringSubmerchant: AcquiringSubmerchant;
 declare const untrustedWebhookPayload: unknown;
@@ -189,6 +230,14 @@ void cashbackTypesAreExact;
 void account;
 void acquiringSubmerchant;
 void webhookEvent;
+void acquiringEmployees;
+void acquiringWalletCards;
+void walletPayment;
+void walletCardRemoval;
+void directPayment;
+void syncPayment;
+void acquiringEmployee;
+void acquiringWalletCard;
 
 const removedPersonalPublicMethod: Exclude<
   "getBankSync" | "getCurrencyRates",
@@ -245,6 +294,15 @@ void qrDetailsWithoutShortId;
 // @ts-expect-error -- QR cashier amount types are limited to documented wire values.
 const invalidQrAmountType: AcquiringQrAmountType = "operator";
 void invalidQrAmountType;
+
+void acquiringClient.invoices.payDirect({
+  amount: 4_200,
+  // @ts-expect-error -- Direct payments require full raw card details.
+  cardData: { pan: "4242424242424242" },
+});
+
+// @ts-expect-error -- Wallet card removal requires a card token.
+void acquiringClient.wallet.deleteCard({});
 
 // @ts-expect-error -- Account types are limited to documented wire values.
 const invalidAccountType: AccountType = "gold";

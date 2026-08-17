@@ -107,11 +107,13 @@ assert.ok(
 
 for (const memberName of [
   "constructor",
+  "employees",
   "invoices",
   "merchant",
   "qr",
   "statements",
   "submerchants",
+  "wallet",
   "webhooks",
 ]) {
   assert.ok(
@@ -126,7 +128,9 @@ const resourceContracts = [
   ["MonobankPersonalClientInfo", ["constructor", "getInfo"]],
   ["MonobankPersonalStatements", ["constructor", "get"]],
   ["MonobankPersonalWebhooks", ["constructor", "set"]],
+  ["MonobankAcquiringEmployees", ["constructor", "list"]],
   ["MonobankAcquiringQr", ["constructor", "getDetails", "list", "resetAmount"]],
+  ["MonobankAcquiringWallet", ["constructor", "deleteCard", "list", "pay"]],
   ["MonobankAcquiringStatements", ["constructor", "get"]],
   ["MonobankAcquiringSubmerchants", ["constructor", "list"]],
   ["MonobankAcquiringWebhooks", ["constructor", "getPublicKey"]],
@@ -176,7 +180,9 @@ for (const memberName of [
   "getFiscalChecks",
   "getReceipt",
   "getStatus",
+  "payDirect",
   "remove",
+  "syncPayment",
 ]) {
   assert.ok(
     hasJSDoc(findClassMember(invoicesClass, memberName)),
