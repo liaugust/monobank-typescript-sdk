@@ -696,6 +696,11 @@ Loads `GET /api/merchant/invoice/receipt?invoiceId=...`. Supplying `email` also
 asks Monobank to send the receipt there. The optional `file` response field is
 a base64-encoded PDF.
 
+A receipt exists only once an invoice has been paid. **Requesting one for an
+unpaid invoice fails with `MonobankApiError` and status 400**, using the same
+generic invalid-parameter status Monobank returns for a malformed request, so
+the status alone does not tell the two apart. Handle it as an expected outcome.
+
 This safe GET is eligible for configured retries. Throws the four standard SDK
 error classes.
 
