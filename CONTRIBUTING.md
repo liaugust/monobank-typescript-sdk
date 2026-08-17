@@ -36,6 +36,7 @@ publishing through GitHub OIDC. No `NODE_AUTH_TOKEN` secret is required for
 that workflow.
 
 The package is configured for public scoped publication with
-`publishConfig.access = public`. Because this repository is private, npm
-provenance will not be generated until the repository itself is public; that
-is an npm platform constraint, not a workflow bug.
+`publishConfig.access = public`. Both this repository and the npm package are
+public, so npm generates a provenance attestation automatically for a trusted
+publication from GitHub Actions. The workflow deliberately omits
+`--provenance`; see `RELEASING.md`.

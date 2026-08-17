@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/liaugust/monobank-typescript-sdk/security/advisories/new
+    about: Report privately through a GitHub Security Advisory, never as a public issue.
