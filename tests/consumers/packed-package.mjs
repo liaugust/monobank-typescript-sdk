@@ -12,6 +12,9 @@ import {
 import { dirname, join, resolve } from "node:path";
 
 const repositoryRoot = resolve(import.meta.dirname, "../..");
+const declaredVersion = JSON.parse(
+  readFileSync(join(repositoryRoot, "package.json"), "utf8"),
+).version;
 const temporaryRoot = join(repositoryRoot, ".tmp", "packed-package");
 const archiveDirectory = join(temporaryRoot, "archive");
 const extractedDirectory = join(temporaryRoot, "extracted");
@@ -41,7 +44,7 @@ const packedPackage = packResult[0];
 
 assert.ok(packedPackage);
 assert.equal(packedPackage.name, "@liaugust/monobank-sdk");
-assert.equal(packedPackage.version, "0.1.0");
+assert.equal(packedPackage.version, declaredVersion);
 
 const archivePath = join(archiveDirectory, packedPackage.filename);
 execFileSync("tar", ["-xzf", archivePath, "-C", extractedDirectory]);
