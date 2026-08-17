@@ -15,6 +15,31 @@ validation boundary before it reaches your code.
 > This is an unofficial community package. It is not developed, sponsored, or
 > endorsed by Monobank.
 
+## Contents
+
+- [Why this SDK?](#why-this-sdk)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Quick start](#quick-start)
+- [API at a glance](#api-at-a-glance)
+  - [Acquiring merchant details](#acquiring-merchant-details)
+  - [Acquiring submerchants](#acquiring-submerchants)
+  - [Acquiring QR cashiers](#acquiring-qr-cashiers)
+  - [Acquiring wallet and stored cards](#acquiring-wallet-and-stored-cards)
+  - [Card-present payments and PCI DSS](#card-present-payments-and-pci-dss)
+  - [Acquiring statements](#acquiring-statements)
+  - [Public data](#public-data)
+  - [Client information](#client-information)
+  - [Statements](#statements)
+  - [Webhooks](#webhooks)
+- [Retries, timeouts, and cancellation](#retries-timeouts-and-cancellation)
+- [Errors](#errors)
+- [Runtime schemas](#runtime-schemas)
+- [Data conventions](#data-conventions)
+- [Testing applications](#testing-applications)
+- [Project guides](#project-guides)
+- [License](#license)
+
 ## Why this SDK?
 
 - Runtime validation for successful API responses and webhook payloads
