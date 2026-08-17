@@ -2,6 +2,28 @@
 
 All notable changes to this package are documented here.
 
+## 0.3.0 - 2026-08-18
+
+### Fixed
+
+- Accept `/personal/client-info` responses that omit `jars`, `permissions`, or
+  `webHookUrl`. Neither Monobank specification marks any field on this response
+  required, and the corporate specification's own sample omits `jars` entirely,
+  so `personal.client.getInfo()` previously failed with
+  `MonobankResponseValidationError` on valid payloads. `clientId`, `name`, and
+  `accounts` remain required.
+- Widen the `zod` dependency from the exact version `4.4.3` to `^4.4.3`. An
+  exact runtime dependency cannot be deduplicated, so a consumer already on
+  another `4.x` installed and bundled a second copy of zod.
+
+### Changed
+
+- `ClientInfo.jars` is now `readonly Jar[] | undefined`. Code that reads
+  `info.jars` without a guard will need one. This is the reason the change ships
+  as a minor rather than a patch: the previous type promised a field Monobank
+  omits, and `^0.2.x` would have delivered the corrected type without an
+  explicit upgrade.
+
 ## 0.2.1 - 2026-08-18
 
 Documentation only. Records two upstream behaviors found by probing a live
