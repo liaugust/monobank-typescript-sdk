@@ -76,14 +76,14 @@ describe("MonobankAcquiringStatements", () => {
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
-  it("rejects invalid input before Fetch", () => {
+  it("rejects invalid input before Fetch", async () => {
     const fetch = createFetchSequence([]);
     const client = new MonobankAcquiringClient({
       fetch,
       token: "acquiring-token",
     });
 
-    expect(() => client.statements.get({ from: -1 })).toThrow(
+    await expect(client.statements.get({ from: -1 })).rejects.toBeInstanceOf(
       MonobankValidationError,
     );
     expect(fetch).not.toHaveBeenCalled();

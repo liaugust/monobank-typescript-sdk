@@ -36,15 +36,17 @@ export class MonobankAcquiringStatements {
    * @throws {MonobankApiError} When Monobank returns a non-success HTTP status.
    * @throws {MonobankNetworkError} When Fetch fails, times out, or the caller aborts.
    * @throws {MonobankResponseValidationError} When the successful payload does not match the statement schema.
-   * @throws {MonobankValidationError} When timestamps or the optional terminal code are invalid before Fetch.
+   * @throws {MonobankValidationError} When timestamps or the optional terminal code are invalid, rejected before Fetch runs.
    */
-  public get(
+  public async get(
     input: GetAcquiringStatementsInput,
     options?: RequestOptions,
   ): Promise<AcquiringStatement> {
-    return this.transport.getJson({
+    const endpoint = createAcquiringStatementsEndpoint(input);
+
+    return await this.transport.getJson({
       auth: true,
-      endpoint: createAcquiringStatementsEndpoint(input),
+      endpoint,
       retryable: true,
       schema: acquiringStatementSchema,
       ...(options?.signal === undefined ? {} : { signal: options.signal }),

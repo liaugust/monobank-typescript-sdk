@@ -41,6 +41,27 @@ describe("MonobankTransport", () => {
     ).resolves.toBeUndefined();
   });
 
+  it.each([
+    {
+      method: "POST",
+      start: (transport: MonobankTransport) =>
+        transport.postEmpty({ auth: true, endpoint: "/personal/webhook" }),
+    },
+    {
+      method: "DELETE",
+      start: (transport: MonobankTransport) =>
+        transport.deleteEmpty({ auth: true, endpoint: "/personal/webhook" }),
+    },
+  ])("releases the response body of an empty $method", async ({ start }) => {
+    const response = textResponse("{}", { status: 200 });
+    const fetch = createFetchSequence([response]);
+    const transport = new MonobankTransport({ fetch, token: "secret-token" });
+
+    await start(transport);
+
+    expect(response.bodyUsed).toBe(true);
+  });
+
   it("wraps Fetch failures without retaining request credentials", async () => {
     const fetch = createFetchSequence([
       new Error("socket secret-token closed"),
