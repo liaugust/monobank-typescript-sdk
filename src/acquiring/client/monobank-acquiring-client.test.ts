@@ -122,6 +122,16 @@ describe("MonobankAcquiringClient merchant details", () => {
 });
 
 describe("MonobankAcquiringClient resources", () => {
+  it("rejects a cleartext base URL because the token would travel in the clear", () => {
+    expect(
+      () =>
+        new MonobankAcquiringClient({
+          baseUrl: "http://api.example.test",
+          token: "acquiring-token",
+        }),
+    ).toThrow(MonobankValidationError);
+  });
+
   afterEach(() => {
     vi.useRealTimers();
   });
