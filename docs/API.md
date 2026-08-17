@@ -76,7 +76,8 @@ The Public client exposes token-free `/bank/*` endpoints. It cannot retain or
 send a Personal or Acquiring token because its constructor has no token option.
 
 Its optional `baseUrl`, `fetch`, `timeoutMs`, and `retry` settings have the same
-contracts and defaults as the authenticated clients.
+contracts and defaults as the authenticated clients. Because the Public client never
+holds a token, its `baseUrl` may use cleartext `http:` for any host.
 
 ```ts
 import { MonobankPublicClient } from "@liaugust/monobank-sdk";
@@ -102,13 +103,13 @@ used for Public or Acquiring requests.
 
 ### Constructor options
 
-| Option      | Type           | Default                   | Contract                                                                                   |
-| ----------- | -------------- | ------------------------- | ------------------------------------------------------------------------------------------ |
-| `token`     | `string`       | Required                  | Nonempty and without surrounding whitespace                                                |
-| `baseUrl`   | `string`       | `https://api.monobank.ua` | Absolute HTTP(S) origin, primarily for controlled proxies and tests                        |
-| `fetch`     | `FetchLike`    | `globalThis.fetch`        | Required when the runtime does not provide global Fetch; must honor `RequestInit.redirect` |
-| `timeoutMs` | `number`       | `10_000`                  | Positive finite per-attempt timeout in milliseconds                                        |
-| `retry`     | `RetryOptions` | Disabled                  | Bounded policy for retry-eligible safe GET requests                                        |
+| Option      | Type           | Default                   | Contract                                                                                                                |
+| ----------- | -------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `token`     | `string`       | Required                  | Nonempty and without surrounding whitespace                                                                             |
+| `baseUrl`   | `string`       | `https://api.monobank.ua` | Absolute HTTP(S) origin, primarily for controlled proxies and tests; must use `https` unless it targets a loopback host |
+| `fetch`     | `FetchLike`    | `globalThis.fetch`        | Required when the runtime does not provide global Fetch; must honor `RequestInit.redirect`                              |
+| `timeoutMs` | `number`       | `10_000`                  | Positive finite per-attempt timeout in milliseconds                                                                     |
+| `retry`     | `RetryOptions` | Disabled                  | Bounded policy for retry-eligible safe GET requests                                                                     |
 
 Invalid constructor configuration throws `MonobankValidationError` before a
 request is made.
@@ -161,13 +162,13 @@ cannot cross API families. Its token is attached only to authenticated
 
 ### Constructor options
 
-| Option      | Type           | Default                   | Contract                                                                                   |
-| ----------- | -------------- | ------------------------- | ------------------------------------------------------------------------------------------ |
-| `token`     | `string`       | Required                  | Nonempty Acquiring token without surrounding whitespace                                    |
-| `baseUrl`   | `string`       | `https://api.monobank.ua` | Absolute HTTP(S) origin, primarily for controlled proxies and tests                        |
-| `fetch`     | `FetchLike`    | `globalThis.fetch`        | Required when the runtime does not provide global Fetch; must honor `RequestInit.redirect` |
-| `timeoutMs` | `number`       | `10_000`                  | Positive finite per-attempt timeout in milliseconds                                        |
-| `retry`     | `RetryOptions` | Disabled                  | Bounded policy for retry-eligible safe GET requests                                        |
+| Option      | Type           | Default                   | Contract                                                                                                                |
+| ----------- | -------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `token`     | `string`       | Required                  | Nonempty Acquiring token without surrounding whitespace                                                                 |
+| `baseUrl`   | `string`       | `https://api.monobank.ua` | Absolute HTTP(S) origin, primarily for controlled proxies and tests; must use `https` unless it targets a loopback host |
+| `fetch`     | `FetchLike`    | `globalThis.fetch`        | Required when the runtime does not provide global Fetch; must honor `RequestInit.redirect`                              |
+| `timeoutMs` | `number`       | `10_000`                  | Positive finite per-attempt timeout in milliseconds                                                                     |
+| `retry`     | `RetryOptions` | Disabled                  | Bounded policy for retry-eligible safe GET requests                                                                     |
 
 Invalid constructor configuration throws `MonobankValidationError` before a
 request is made.

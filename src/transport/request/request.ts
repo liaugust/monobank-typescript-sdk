@@ -15,6 +15,19 @@ export interface EmptyRequest {
   readonly signal?: AbortSignal;
 }
 
+/**
+ * Builds the validated URL and Fetch init for one Monobank request.
+ *
+ * Redirects are refused because only the initial URL can be validated here.
+ * Fetch keeps custom headers such as `X-Token` across a cross-origin redirect
+ * and replays the method and body on 307/308, so following one would send the
+ * token, and repeat a mutation, at an origin this transport never checked.
+ * @param method HTTP method for the request.
+ * @param request Endpoint, authentication, body, and cancellation inputs.
+ * @param options Validated transport configuration.
+ * @returns Absolute request URL and its Fetch init.
+ * @throws {MonobankValidationError} When the endpoint escapes the base URL, targets the wrong authenticated prefix, or needs a token that is not configured.
+ */
 export function createRequest(
   method: "DELETE" | "GET" | "POST",
   request: EmptyRequest,
@@ -36,10 +49,6 @@ export function createRequest(
     );
   }
 
-  // `validateEndpointUrl` can only vet the initial URL. Fetch keeps custom
-  // headers such as `X-Token` across a cross-origin redirect, and 307/308
-  // replays the method and body, so following one would send credentials and
-  // repeat mutations somewhere this transport never validated.
   const init: RequestInit = { headers, method, redirect: "error" };
 
   if (request.signal !== undefined) {

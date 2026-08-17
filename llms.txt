@@ -124,7 +124,7 @@ Each optional request `options` object accepts `signal?: AbortSignal`.
   credentials are sent only to `/personal/*`, and Acquiring credentials only
   to `/api/merchant/*`.
 - `fetch?: FetchLike`: injected Fetch-compatible implementation.
-- `baseUrl?: string`: absolute HTTP(S) origin for controlled proxies or tests.
+- `baseUrl?: string`: absolute HTTP(S) origin for controlled proxies or tests, https-only when a token is configured unless the host is loopback.
 - `timeoutMs?: number`: per-attempt timeout in milliseconds.
 - `retry?: { baseDelayMs; maxAttempts; maxDelayMs }`: bounded retry policy for
   safe GET requests. Retries are disabled when omitted.
@@ -208,6 +208,8 @@ See `src/index.ts` for the complete authoritative export list, including types.
   methods.
 - Prefer exported SDK types, schemas, value objects, and error classes over
   duplicate local definitions.
+- Never configure a cleartext `http:` `baseUrl` together with a token; the SDK
+  rejects it at construction unless the host is loopback.
 - Validate environment configuration before constructing the client.
 
 ## Authoritative project documents

@@ -27,15 +27,18 @@ export function validateTransportOptions(
   options: TransportOptions,
 ): StoredTransportOptions {
   const retry = options.retry;
+  const token =
+    options.token === undefined ? undefined : validateToken(options.token);
 
   return {
     authenticatedPathPrefix: options.authenticatedPathPrefix ?? "/personal/",
-    baseUrl: validateBaseUrl(options.baseUrl ?? defaultBaseUrl),
+    baseUrl: validateBaseUrl(
+      options.baseUrl ?? defaultBaseUrl,
+      token !== undefined,
+    ),
     fetch: options.fetch ?? validateGlobalFetch(),
     timeoutMs: validateTimeout(options.timeoutMs ?? defaultTimeoutMs),
-    ...(options.token === undefined
-      ? {}
-      : { token: validateToken(options.token) }),
+    ...(token === undefined ? {} : { token }),
     ...(retry === undefined ? {} : { retry: validateRetry(retry) }),
   };
 }
@@ -53,7 +56,18 @@ function validateToken(token: string): string {
   return token;
 }
 
-function validateBaseUrl(value: string): URL {
+/**
+ * Validates the configured base URL.
+ *
+ * A token is sent in the `X-Token` header on every authenticated request, so a
+ * cleartext origin would put the credential on the wire. Loopback is exempt
+ * because that traffic never leaves the machine.
+ * @param value Configured base URL.
+ * @param hasToken Whether authenticated requests will carry a token.
+ * @returns The parsed base URL.
+ * @throws {MonobankValidationError} When the URL is not absolute HTTP(S), or is cleartext with a token and a non-loopback host.
+ */
+function validateBaseUrl(value: string, hasToken: boolean): URL {
   let url: URL;
   try {
     url = new URL(value);
@@ -71,7 +85,48 @@ function validateBaseUrl(value: string): URL {
     });
   }
 
+  if (url.protocol === "http:" && hasToken && !isLoopbackHost(url.hostname)) {
+    throw new MonobankValidationError({
+      issues: [
+        "baseUrl must use https when a token is configured, unless it targets a loopback host",
+      ],
+      message: "Invalid Monobank transport configuration.",
+    });
+  }
+
   return url;
+}
+
+/**
+ * Reports whether a parsed hostname addresses the local machine.
+ *
+ * Narrower than the W3C potentially-trustworthy origin set, which also trusts
+ * `*.localhost`. Browsers resolve `*.localhost` to loopback inside the network
+ * stack, while Node defers to the OS resolver, so `evil.test.localhost` can
+ * leave the machine and must not be trusted here.
+ * @param hostname Canonical `URL.hostname`, which excludes any userinfo.
+ * @returns True only for `localhost`, `127.0.0.0/8`, and `::1`.
+ */
+function isLoopbackHost(hostname: string): boolean {
+  const bracketless =
+    hostname.startsWith("[") && hostname.endsWith("]")
+      ? hostname.slice(1, -1)
+      : hostname;
+  const host = bracketless.endsWith(".")
+    ? bracketless.slice(0, -1)
+    : bracketless;
+
+  if (host === "localhost" || host === "::1") {
+    return true;
+  }
+
+  const octets = host.split(".");
+
+  return (
+    octets.length === 4 &&
+    octets[0] === "127" &&
+    octets.every((octet) => /^\d{1,3}$/.test(octet) && Number(octet) <= 255)
+  );
 }
 
 function validateGlobalFetch(): FetchLike {

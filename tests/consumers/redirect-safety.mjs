@@ -1,9 +1,3 @@
-// Proves the built package refuses redirects against a real Fetch runtime.
-// Two loopback servers stand in for Monobank and an unvalidated origin; the
-// first replies 307 so the second would receive the X-Token header and, for
-// 307/308, a replayed method and body if the SDK ever followed redirects.
-// Everything here is synthetic and bound to 127.0.0.1, so no live Monobank
-// credentials are involved.
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 

@@ -144,6 +144,11 @@ tests/consumers/                ESM, CJS, browser, declaration, and tarball chec
 - Preserve the separation between Public, Personal, and Acquiring clients.
 - Send Personal `X-Token` only to `/personal/*` and Acquiring `X-Token` only to
   `/api/merchant/*`. Public `/bank/*` requests must never receive either token.
+- Reject a cleartext `http:` base URL whenever a token is configured. Only
+  `localhost`, `127.0.0.0/8`, and `::1` stay allowed, so local proxies and
+  contract tests keep working while the token never travels in the clear. Do
+  not widen this to `*.localhost`: browsers resolve that to loopback in the
+  network stack, but Node defers to the OS resolver.
 - Keep every API family grouped by resource and each endpoint in its own named
   folder with colocated tests. Put response models under the owning resource's
   `models` folder and request-only helpers under `shared` when reused.

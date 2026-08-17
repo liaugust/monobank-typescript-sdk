@@ -7,6 +7,9 @@ All notable changes to this package are documented here.
 - Complete the documented Acquiring surface with employee listing, the wallet
   listing, token payment, and card removal, and invoice direct and synchronous
   payments, including HTTP DELETE support in the transport.
+- Reject a cleartext `http:` base URL when a token is configured, unless it
+  targets a loopback host, so a credential cannot be sent over the wire in the
+  clear.
 - Stop following HTTP redirects so a redirected request can never replay the
   `X-Token` header or a mutating request body to an unvalidated origin.
 - Add authenticated Acquiring statements with validated time windows,
