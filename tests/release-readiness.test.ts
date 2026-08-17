@@ -27,7 +27,7 @@ describe("release readiness", () => {
         type: "git",
         url: "git+https://github.com/liaugust/monobank-typescript-sdk.git",
       },
-      version: "0.2.0",
+      version: "0.2.1",
     });
     expect(packageJson).not.toHaveProperty("private");
   });
@@ -58,7 +58,7 @@ describe("release readiness", () => {
   });
 
   it("accepts only a release tag matching the package version", () => {
-    const matching = spawnSync("pnpm", ["check:release-tag", "--", "v0.2.0"], {
+    const matching = spawnSync("pnpm", ["check:release-tag", "--", "v0.2.1"], {
       cwd: repositoryRoot,
       encoding: "utf8",
     });
@@ -74,7 +74,7 @@ describe("release readiness", () => {
     expect(matching.status).toBe(0);
     expect(mismatching.status).not.toBe(0);
     expect(mismatching.stderr).toContain(
-      'Release tag "v9.9.9" must match package version "0.2.0".',
+      'Release tag "v9.9.9" must match package version "0.2.1".',
     );
   });
 
