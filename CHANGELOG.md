@@ -2,16 +2,13 @@
 
 All notable changes to this package are documented here.
 
-## Unreleased
+## 0.2.0 - 2026-08-17
 
-- Complete the documented Acquiring surface with employee listing, the wallet
-  listing, token payment, and card removal, and invoice direct and synchronous
-  payments, including HTTP DELETE support in the transport.
-- Reject a cleartext `http:` base URL when a token is configured, unless it
-  targets a loopback host, so a credential cannot be sent over the wire in the
-  clear.
-- Stop following HTTP redirects so a redirected request can never replay the
-  `X-Token` header or a mutating request body to an unvalidated origin.
+The Acquiring API surface is now complete: every endpoint Monobank documents is
+implemented, alongside the already-complete Public and Personal surfaces.
+
+### Added
+
 - Add authenticated Acquiring statements with validated time windows,
   submerchant filtering, retry and cancellation support, response schemas, and
   importable transaction status and payment-scheme values.
@@ -21,6 +18,24 @@ All notable changes to this package are documented here.
   identifiers, cancellation, schemas, public types, and importable amount-type
   values. Listing and details are safe GETs eligible for configured retries;
   `acquiring.qr.resetAmount()` mutates merchant state and is never retried.
+- Add Acquiring employee listing for merchants that route tips.
+- Add the Acquiring wallet resource: list tokenized cards, charge a stored card
+  token, and remove a token over HTTP DELETE. The two mutations are never
+  retried.
+- Add `acquiring.invoices.payDirect()` and `acquiring.invoices.syncPayment()`.
+  Both accept cardholder or crypto-container material and therefore place the
+  calling system in PCI DSS scope; both are documented accordingly and are
+  never retried.
+- Support HTTP DELETE in the transport, excluded from retries like every other
+  mutating method.
+
+### Security
+
+- Stop following HTTP redirects so a redirected request can never replay the
+  `X-Token` header or a mutating request body to an unvalidated origin.
+- Reject a cleartext `http:` base URL when a token is configured, unless it
+  targets a loopback host, so a credential cannot be sent over the wire in the
+  clear.
 
 ## 0.1.0 - 2026-08-16
 
