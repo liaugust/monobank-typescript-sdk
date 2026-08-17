@@ -3,7 +3,26 @@ import { describe, expect, it } from "vitest";
 import { clientInfoFixture } from "../../../../tests/fixtures/personal/client-info.js";
 import { clientInfoSchema } from "./get-info.js";
 
+function withoutField(field: string): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(clientInfoFixture).filter(([key]) => key !== field),
+  );
+}
+
 describe("client info schema", () => {
+  it.each(["jars", "webHookUrl", "permissions"])(
+    "accepts a response that omits %s",
+    (field) => {
+      expect(clientInfoSchema.safeParse(withoutField(field)).success).toBe(
+        true,
+      );
+    },
+  );
+
+  it.each(["accounts", "clientId", "name"])("still requires %s", (field) => {
+    expect(clientInfoSchema.safeParse(withoutField(field)).success).toBe(false);
+  });
+
   it("accepts complete Personal client information with accounts, jars, and managed clients", () => {
     expect(clientInfoSchema.parse(clientInfoFixture)).toEqual(
       clientInfoFixture,
