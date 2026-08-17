@@ -203,6 +203,10 @@ export class MonobankAcquiringInvoices {
 
   /**
    * Loads an invoice receipt and optionally asks Monobank to email it.
+   *
+   * A receipt exists only once the invoice has been paid, so requesting one for
+   * an unpaid invoice fails with `MonobankApiError` and status 400 rather than
+   * returning an empty payload.
    * @param input Invoice identifier and optional delivery email.
    * @param options Optional cancellation controls for this request.
    * @returns Validated receipt payload containing a base64-encoded PDF when available.

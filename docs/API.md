@@ -464,11 +464,15 @@ acquiring.qr.getDetails(
 ```
 
 Loads `GET /api/merchant/qr/details`. Monobank answers only for activated QR
-cashiers and documents `invoiceId` as present only while an amount is set on
-the cashier; `amount` and `ccy` may be omitted for the same reason, so treat
-all three as absent unless present. `amount` is an integer minor currency unit
-and `ccy` is an ISO 4217 numeric code. `qrId` must be a nonempty string without
-surrounding whitespace.
+cashiers, so **a cashier returned by `acquiring.qr.list()` can still fail with
+status 404** — handle that as an expected outcome, not an error condition.
+
+Monobank documents `invoiceId` as present only while an amount is set on the
+cashier; `amount` and `ccy` may be omitted for the same reason, so treat all
+three as absent unless present. A successful response may therefore carry
+`shortQrId` alone. `amount` is an integer minor currency unit and `ccy` is an
+ISO 4217 numeric code. Pass the cashier's `qrId`, not its `shortQrId`; `qrId`
+must be a nonempty string without surrounding whitespace.
 
 | Property       | Value                                                      |
 | -------------- | ---------------------------------------------------------- |
@@ -691,6 +695,11 @@ acquiring.invoices.getReceipt(
 Loads `GET /api/merchant/invoice/receipt?invoiceId=...`. Supplying `email` also
 asks Monobank to send the receipt there. The optional `file` response field is
 a base64-encoded PDF.
+
+A receipt exists only once an invoice has been paid. **Requesting one for an
+unpaid invoice fails with `MonobankApiError` and status 400**, using the same
+generic invalid-parameter status Monobank returns for a malformed request, so
+the status alone does not tell the two apart. Handle it as an expected outcome.
 
 This safe GET is eligible for configured retries. Throws the four standard SDK
 error classes.
