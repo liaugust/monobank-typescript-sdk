@@ -69,8 +69,6 @@ describe("MonobankTransport request security", () => {
   });
 
   it("surfaces a blocked redirect as a credential-safe network error", async () => {
-    // undici rejects a blocked redirect as TypeError("fetch failed") whose
-    // cause carries the detail; the transport discards both.
     const fetch = createFetchSequence([
       new TypeError("fetch failed", {
         cause: new Error("unexpected redirect"),

@@ -64,20 +64,16 @@ describe("MonobankTransport options", () => {
   it.each([
     "http://api.example.test",
     "http://gateway.example.test:8080/mono/",
-    // Suffix and prefix confusion around the loopback names.
     "http://127.0.0.1.example.test",
     "http://notlocalhost",
     "http://localhost.evil.test",
-    // `*.localhost` is not trusted: Node resolves it through the OS.
     "http://evil.test.localhost",
     "http://api.localhost",
     "http://.localhost",
-    // Userinfo must never be mistaken for the host.
     "http://user@evil.test",
     "http://localhost@evil.test",
     "http://127.0.0.1@evil.test",
     "http://[::1]@evil.test",
-    // Non-loopback IPs, the unspecified address, and IPv4-mapped IPv6.
     "http://0.0.0.0",
     "http://[fe80::1]",
     "http://[::]",
@@ -107,7 +103,6 @@ describe("MonobankTransport options", () => {
     { baseUrl: "http://localhost.", origin: "http://localhost." },
     { baseUrl: "http://LOCALHOST", origin: "http://localhost" },
     { baseUrl: "http://[::1]:3000", origin: "http://[::1]:3000" },
-    // WHATWG URL canonicalizes these encodings to 127.0.0.1 before the check.
     { baseUrl: "http://2130706433", origin: "http://127.0.0.1" },
     { baseUrl: "http://0177.0.0.1", origin: "http://127.0.0.1" },
     { baseUrl: "http://0x7f000001", origin: "http://127.0.0.1" },

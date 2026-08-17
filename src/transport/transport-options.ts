@@ -56,6 +56,17 @@ function validateToken(token: string): string {
   return token;
 }
 
+/**
+ * Validates the configured base URL.
+ *
+ * A token is sent in the `X-Token` header on every authenticated request, so a
+ * cleartext origin would put the credential on the wire. Loopback is exempt
+ * because that traffic never leaves the machine.
+ * @param value Configured base URL.
+ * @param hasToken Whether authenticated requests will carry a token.
+ * @returns The parsed base URL.
+ * @throws {MonobankValidationError} When the URL is not absolute HTTP(S), or is cleartext with a token and a non-loopback host.
+ */
 function validateBaseUrl(value: string, hasToken: boolean): URL {
   let url: URL;
   try {
@@ -74,10 +85,6 @@ function validateBaseUrl(value: string, hasToken: boolean): URL {
     });
   }
 
-  // A token travels in the X-Token header on every authenticated request, so a
-  // cleartext origin would put the credential on the wire. Loopback stays
-  // allowed because it never leaves the machine, which keeps local proxies and
-  // contract tests workable.
   if (url.protocol === "http:" && hasToken && !isLoopbackHost(url.hostname)) {
     throw new MonobankValidationError({
       issues: [
@@ -90,17 +97,21 @@ function validateBaseUrl(value: string, hasToken: boolean): URL {
   return url;
 }
 
-// Deliberately narrower than the W3C "potentially trustworthy origin" set,
-// which also trusts `*.localhost`. Browsers can afford that because they
-// resolve `*.localhost` to loopback in the network stack; Node hands the name
-// to the OS resolver, so on a runtime without RFC 6761 support `evil.localhost`
-// is an ordinary DNS lookup and the token would leave the machine.
+/**
+ * Reports whether a parsed hostname addresses the local machine.
+ *
+ * Narrower than the W3C potentially-trustworthy origin set, which also trusts
+ * `*.localhost`. Browsers resolve `*.localhost` to loopback inside the network
+ * stack, while Node defers to the OS resolver, so `evil.test.localhost` can
+ * leave the machine and must not be trusted here.
+ * @param hostname Canonical `URL.hostname`, which excludes any userinfo.
+ * @returns True only for `localhost`, `127.0.0.0/8`, and `::1`.
+ */
 function isLoopbackHost(hostname: string): boolean {
   const bracketless =
     hostname.startsWith("[") && hostname.endsWith("]")
       ? hostname.slice(1, -1)
       : hostname;
-  // A trailing root dot names the same host: `localhost.` resolves to loopback.
   const host = bracketless.endsWith(".")
     ? bracketless.slice(0, -1)
     : bracketless;
@@ -111,9 +122,6 @@ function isLoopbackHost(hostname: string): boolean {
 
   const octets = host.split(".");
 
-  // The range check is redundant while `hostname` comes from a WHATWG URL,
-  // which canonicalizes IPv4 and rejects out-of-range octets outright. It stays
-  // as defence in depth for a runtime whose URL implementation does not.
   return (
     octets.length === 4 &&
     octets[0] === "127" &&
