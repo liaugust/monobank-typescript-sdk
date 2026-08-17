@@ -2,6 +2,24 @@
 
 All notable changes to this package are documented here.
 
+## 0.2.1 - 2026-08-18
+
+Documentation only. Records two upstream behaviors found by probing a live
+Monobank sandbox merchant, both of which a caller meets on an ordinary first
+integration.
+
+### Fixed
+
+- Document that a QR cashier returned by `acquiring.qr.list()` can still fail
+  `acquiring.qr.getDetails()` with status 404, because Monobank answers only for
+  activated cashiers. State explicitly that `getDetails()` takes the cashier's
+  `qrId` and not its `shortQrId`, which the upstream specification leaves
+  ambiguous, and that a successful response may carry `shortQrId` alone.
+- Document that `acquiring.invoices.getReceipt()` fails with status 400 for an
+  unpaid invoice, reusing the same generic invalid-parameter status Monobank
+  returns for a malformed request, so the status alone does not distinguish the
+  two.
+
 ## 0.2.0 - 2026-08-17
 
 The Acquiring API surface is now complete: every endpoint Monobank documents is

@@ -9,9 +9,11 @@ The workflow never uses a long-lived npm publish token.
    `@liaugust/monobank-sdk` exists on npm. Do not create a GitHub Release for
    this version, and do not store the publishing credential in GitHub.
 2. Create a GitHub environment named `npm`. Because this repository is public,
-   environment protection rules are available on current GitHub plans. When a
-   second trusted maintainer is available, require their review and prevent
-   self-review so publishing needs independent approval.
+   environment protection rules are available on current GitHub plans. The
+   environment intentionally has no protection rules while a single maintainer
+   owns the package, because a required review only that maintainer can give
+   blocks the release without adding oversight. Add a required reviewer and
+   prevent self-review as soon as a second trusted maintainer exists.
 3. In the npm package settings, add a GitHub Actions trusted publisher with:
    - organization or user: `liaugust`
    - repository: `monobank-typescript-sdk`
@@ -45,3 +47,25 @@ trusted publication from GitHub Actions.
 The release workflow rejects a GitHub Release whose tag does not exactly match
 the package version. It verifies the repository, builds and tests the packed
 tarball, then publishes the public scoped package through npm OIDC.
+
+## Manual live check
+
+The automated suite validates every response against synthetic fixtures, so it
+cannot catch a schema that disagrees with production. Two documented behaviors
+were found only by calling the live API, so a short manual probe against a
+sandbox Acquiring token is worth running before a release that changes schemas
+or adds endpoints.
+
+Probe the read-only Acquiring endpoints, plus a created-then-removed test
+invoice, and compare the outcome classes:
+
+- `MonobankResponseValidationError` is the finding that matters. It means the
+  SDK disagrees with production and the schema must change before release.
+- `MonobankApiError` is usually expected. A permission the token lacks answers
+  403, an inactive QR cashier answers 404, and an unpaid invoice answers 400
+  for its receipt.
+
+Keep the probe outside the repository. It needs a live credential, so it can
+never run in CI, and `SECURITY.md` requires the committed test suite to keep
+using injected Fetch stubs. Never paste a token into a shell command that lands
+in history, a commit, or an issue.
