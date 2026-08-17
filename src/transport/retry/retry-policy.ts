@@ -7,7 +7,7 @@ const retryableStatusCodes = new Set([429, 500, 502, 503, 504]);
 
 export function retryDelayForApiError(
   error: MonobankApiError,
-  method: "GET" | "POST",
+  method: "DELETE" | "GET" | "POST",
   request: EmptyRequest,
   policy: RetryOptions | undefined,
   attempt: number,
@@ -24,7 +24,7 @@ export function retryDelayForApiError(
 
 export function retryDelayForNetworkError(
   error: MonobankNetworkError,
-  method: "GET" | "POST",
+  method: "DELETE" | "GET" | "POST",
   request: EmptyRequest,
   policy: RetryOptions | undefined,
   attempt: number,
@@ -40,7 +40,7 @@ export function retryDelayForNetworkError(
 }
 
 function canRetryRequest(
-  method: "GET" | "POST",
+  method: "DELETE" | "GET" | "POST",
   request: EmptyRequest,
   policy: RetryOptions | undefined,
   attempt: number,

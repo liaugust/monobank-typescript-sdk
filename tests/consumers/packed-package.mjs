@@ -84,7 +84,7 @@ writeFileSync(
     'const acquiring = new MonobankAcquiringClient({ token: "acquiring" });\n' +
     'const personal = new MonobankPersonalClient({ token: "personal" });\n' +
     "const publicApi = new MonobankPublicClient();\n" +
-    'if (AccountType.Black !== "black" || !publicApi.bank || !publicApi.currency || !personal.client || !personal.statements || !personal.webhooks || !acquiring.invoices || !acquiring.merchant || !acquiring.qr || !acquiring.statements || !acquiring.submerchants || !acquiring.webhooks || typeof verifyAcquiringWebhookSignature !== "function") process.exitCode = 1;\n',
+    'if (AccountType.Black !== "black" || !publicApi.bank || !publicApi.currency || !personal.client || !personal.statements || !personal.webhooks || !acquiring.invoices || !acquiring.merchant || !acquiring.employees || !acquiring.qr || !acquiring.wallet || !acquiring.statements || !acquiring.submerchants || !acquiring.webhooks || typeof verifyAcquiringWebhookSignature !== "function") process.exitCode = 1;\n',
 );
 writeFileSync(
   join(consumerDirectory, "commonjs.cjs"),
@@ -92,7 +92,7 @@ writeFileSync(
     'const acquiring = new MonobankAcquiringClient({ token: "acquiring" });\n' +
     'const personal = new MonobankPersonalClient({ token: "personal" });\n' +
     "const publicApi = new MonobankPublicClient();\n" +
-    'if (CashbackType.UAH !== "UAH" || !publicApi.bank || !publicApi.currency || !personal.client || !personal.statements || !personal.webhooks || !acquiring.invoices || !acquiring.merchant || !acquiring.qr || !acquiring.statements || !acquiring.submerchants || !acquiring.webhooks || typeof verifyAcquiringWebhookSignature !== "function") process.exitCode = 1;\n',
+    'if (CashbackType.UAH !== "UAH" || !publicApi.bank || !publicApi.currency || !personal.client || !personal.statements || !personal.webhooks || !acquiring.invoices || !acquiring.merchant || !acquiring.employees || !acquiring.qr || !acquiring.wallet || !acquiring.statements || !acquiring.submerchants || !acquiring.webhooks || typeof verifyAcquiringWebhookSignature !== "function") process.exitCode = 1;\n',
 );
 
 for (const consumer of ["esm.mjs", "commonjs.cjs"]) {

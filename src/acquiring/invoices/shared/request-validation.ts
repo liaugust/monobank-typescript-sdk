@@ -1,8 +1,8 @@
-import { MonobankValidationError } from "../../../errors/monobank-validation-error.js";
 import type { ResponseSchema } from "../../../transport/response-schema.js";
+import { parseAcquiringRequest } from "../../shared/request-validation.js";
 
 /**
- * Parses Acquiring invoice request data and converts schema issues into the SDK validation error.
+ * Parses Acquiring invoice request data ahead of Fetch.
  * @param schema Runtime request schema.
  * @param input Untrusted method input.
  * @param endpoint Endpoint receiving the validated data.
@@ -14,17 +14,10 @@ export function parseInvoiceRequest<T>(
   input: unknown,
   endpoint: string,
 ): T {
-  const parsed = schema.safeParse(input);
-
-  if (!parsed.success) {
-    throw new MonobankValidationError({
-      endpoint,
-      issues: parsed.error.issues.map(
-        (issue) => `${issue.path.join(".")}: ${issue.message}`,
-      ),
-      message: "Invalid Acquiring invoice request.",
-    });
-  }
-
-  return parsed.data;
+  return parseAcquiringRequest(
+    schema,
+    input,
+    endpoint,
+    "Invalid Acquiring invoice request.",
+  );
 }

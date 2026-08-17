@@ -87,6 +87,12 @@ example focused; production code should validate the environment value first.
 | `acquiring.qr.list()`                       | Acquiring token | `AcquiringQrCashierList`    | QR cashiers registered for the merchant        |
 | `acquiring.qr.getDetails(input)`            | Acquiring token | `AcquiringQrDetails`        | State of one activated QR cashier              |
 | `acquiring.qr.resetAmount(input)`           | Acquiring token | `void`                      | Clears a QR amount; never retried              |
+| `acquiring.employees.list()`                | Acquiring token | `AcquiringEmployeeList`     | Employees eligible to receive tips             |
+| `acquiring.wallet.list(input)`              | Acquiring token | `AcquiringWallet`           | Cards tokenized for one payer                  |
+| `acquiring.wallet.pay(input)`               | Acquiring token | `AcquiringCardPayment`      | Charges a stored token; never retried          |
+| `acquiring.wallet.deleteCard(input)`        | Acquiring token | `void`                      | Removes a token; never retried                 |
+| `acquiring.invoices.payDirect(input)`       | Acquiring token | `AcquiringCardPayment`      | Raw card details; puts callers in PCI scope    |
+| `acquiring.invoices.syncPayment(input)`     | Acquiring token | `Invoice`                   | Synchronous payment; never retried             |
 | `acquiring.webhooks.getPublicKey()`         | Acquiring token | `AcquiringWebhookPublicKey` | Key used to authenticate webhook signatures    |
 | `acquiring.invoices.create(input)`          | Acquiring token | `NewInvoice`                | Creates a hosted payment page                  |
 | `acquiring.invoices.getStatus(input)`       | Acquiring token | `Invoice`                   | Safe GET; eligible for configured retries      |
@@ -184,6 +190,67 @@ await acquiring.qr.resetAmount({ qrId: "XJ_DiM4rTd5V" });
 the client has a retry policy. Monobank acknowledges the reset with an empty
 payload, so the method resolves to `undefined`. It validates `qrId` exactly as
 `getDetails()` does, before any request is sent.
+
+### Acquiring wallet and stored cards
+
+Merchants with tokenization enabled can list, charge, and remove the cards
+stored for one payer:
+
+```ts
+import { AcquiringPaymentInitiationKind } from "@liaugust/monobank-sdk";
+
+const wallet = await acquiring.wallet.list({ walletId: "wallet-42" });
+
+for (const card of wallet.wallet) {
+  console.log(card.cardToken, card.maskedPan);
+}
+
+const [card] = wallet.wallet;
+
+if (card !== undefined) {
+  const payment = await acquiring.wallet.pay({
+    amount: 4_200,
+    cardToken: card.cardToken,
+    ccy: 980,
+    initiationKind: AcquiringPaymentInitiationKind.Client,
+  });
+
+  if (payment.tdsUrl !== undefined) {
+    console.log("Send the payer to 3-D Secure:", payment.tdsUrl);
+  }
+
+  await acquiring.wallet.deleteCard({ cardToken: card.cardToken });
+}
+```
+
+`wallet.wallet` is readonly. Paying and removing a card both mutate state and
+are never retried by the SDK.
+
+### Card-present payments and PCI DSS
+
+`acquiring.invoices.payDirect()` and `acquiring.invoices.syncPayment()` accept
+raw cardholder data — primary account number, expiry, and CVV — or a decrypted
+Apple Pay or Google Pay crypto container.
+
+> **Handling these values places your system in PCI DSS scope.** Collect and
+> transmit them only from infrastructure certified for cardholder data, never
+> log or persist them, and confirm your obligations before shipping. Monobank
+> enables both endpoints per merchant.
+
+Prefer a hosted invoice from `acquiring.invoices.create()`, or
+`acquiring.wallet.pay()` with a stored token, whenever the flow allows it —
+neither exposes your system to raw card details.
+
+```ts
+const payment = await acquiring.invoices.payDirect({
+  amount: 4_200,
+  cardData: { cvv: "123", exp: "0642", pan: "4242424242424242" },
+});
+```
+
+The SDK validates these inputs before any request and names only the offending
+field in `MonobankValidationError`, never its value, so card details never
+reach public error state. Both calls mutate state and are never retried.
 
 ### Acquiring statements
 

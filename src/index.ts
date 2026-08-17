@@ -1,5 +1,13 @@
 export { MonobankAcquiringClient } from "./acquiring/client/monobank-acquiring-client.js";
 export type { MonobankAcquiringClientOptions } from "./acquiring/client/monobank-acquiring-client-options.js";
+export type {
+  AcquiringEmployee,
+  AcquiringEmployeeList,
+} from "./acquiring/employees/models/acquiring-employee.js";
+export {
+  acquiringEmployeeListSchema,
+  acquiringEmployeeSchema,
+} from "./acquiring/employees/models/acquiring-employee.js";
 export type { CancelInvoiceInput } from "./acquiring/invoices/cancel-invoice/cancel-invoice.js";
 export type {
   CreateInvoiceInput,
@@ -56,7 +64,18 @@ export type {
   InvoiceBasketItem,
   MerchantPaymentInfo,
 } from "./acquiring/invoices/models/merchant-payment-info.js";
+export type {
+  DirectPaymentCardData,
+  PayInvoiceDirectInput,
+} from "./acquiring/invoices/pay-direct/pay-direct.js";
 export type { RemoveInvoiceInput } from "./acquiring/invoices/remove-invoice/remove-invoice.js";
+export type {
+  SyncInvoicePaymentInput,
+  SyncPaymentCardData,
+  SyncPaymentMerchantInfo,
+  SyncPaymentWalletContainer,
+} from "./acquiring/invoices/sync-payment/sync-payment.js";
+export { SyncPaymentPanType } from "./acquiring/invoices/sync-payment/sync-payment.js";
 export type { MerchantDetails } from "./acquiring/merchant/get-merchant-details/get-merchant-details.js";
 export { merchantDetailsSchema } from "./acquiring/merchant/get-merchant-details/get-merchant-details.js";
 export type { GetAcquiringQrDetailsInput } from "./acquiring/qr/get-qr-details/get-qr-details.js";
@@ -72,6 +91,11 @@ export {
 export type { AcquiringQrDetails } from "./acquiring/qr/models/acquiring-qr-details.js";
 export { acquiringQrDetailsSchema } from "./acquiring/qr/models/acquiring-qr-details.js";
 export type { ResetAcquiringQrAmountInput } from "./acquiring/qr/reset-qr-amount/reset-qr-amount.js";
+export type { AcquiringCardPayment } from "./acquiring/shared/models/card-payment.js";
+export {
+  acquiringCardPaymentSchema,
+  AcquiringCardPaymentStatus,
+} from "./acquiring/shared/models/card-payment.js";
 export type {
   AcquiringStatementUnixTimeInput,
   GetAcquiringStatementsInput,
@@ -96,6 +120,18 @@ export {
   acquiringSubmerchantListSchema,
   acquiringSubmerchantSchema,
 } from "./acquiring/submerchants/models/acquiring-submerchant.js";
+export type { DeleteAcquiringWalletCardInput } from "./acquiring/wallet/delete-wallet-card/delete-wallet-card.js";
+export type { ListAcquiringWalletCardsInput } from "./acquiring/wallet/list-wallet-cards/list-wallet-cards.js";
+export type {
+  AcquiringWallet,
+  AcquiringWalletCard,
+} from "./acquiring/wallet/models/wallet-card.js";
+export {
+  acquiringWalletCardSchema,
+  acquiringWalletSchema,
+} from "./acquiring/wallet/models/wallet-card.js";
+export type { PayWithCardTokenInput } from "./acquiring/wallet/pay-with-card-token/pay-with-card-token.js";
+export { AcquiringPaymentInitiationKind } from "./acquiring/wallet/pay-with-card-token/pay-with-card-token.js";
 export type { AcquiringWebhookPublicKey } from "./acquiring/webhooks/get-public-key/get-public-key.js";
 export { acquiringWebhookPublicKeySchema } from "./acquiring/webhooks/get-public-key/get-public-key.js";
 export type { VerifyAcquiringWebhookSignatureInput } from "./acquiring/webhooks/verify-signature/verify-acquiring-webhook-signature.js";

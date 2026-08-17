@@ -29,7 +29,7 @@ export interface EmptyRequest {
  * @throws {MonobankValidationError} When the endpoint escapes the base URL, targets the wrong authenticated prefix, or needs a token that is not configured.
  */
 export function createRequest(
-  method: "GET" | "POST",
+  method: "DELETE" | "GET" | "POST",
   request: EmptyRequest,
   options: StoredTransportOptions,
 ): { readonly init: RequestInit; readonly url: URL } {

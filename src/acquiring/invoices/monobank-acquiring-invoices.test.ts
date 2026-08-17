@@ -8,6 +8,7 @@ import {
   newInvoiceFixture,
   receiptFixture,
 } from "../../../tests/fixtures/acquiring/invoices.js";
+import { acquiringCardPaymentFixture } from "../../../tests/fixtures/acquiring/wallet.js";
 import {
   createFetchSequence,
   jsonResponse,
@@ -21,6 +22,7 @@ import { MonobankResponseValidationError } from "../../errors/monobank-response-
 import { MonobankValidationError } from "../../errors/monobank-validation-error.js";
 import { MonobankAcquiringClient } from "../client/monobank-acquiring-client.js";
 import { InvoicePaymentType } from "./models/invoice-payment-info.js";
+import { SyncPaymentPanType } from "./sync-payment/sync-payment.js";
 
 describe("MonobankAcquiringInvoices", () => {
   afterEach(() => {
@@ -95,6 +97,51 @@ describe("MonobankAcquiringInvoices", () => {
       extRef: "refund-42",
       invoiceId: "invoice-42",
     });
+  });
+
+  it("charges raw card details without retrying the payment", async () => {
+    const fetch = createFetchSequence([
+      new Response(null, { status: 503 }),
+      jsonResponse(acquiringCardPaymentFixture),
+    ]);
+    const client = new MonobankAcquiringClient({
+      fetch,
+      retry: { baseDelayMs: 1, maxAttempts: 3, maxDelayMs: 2 },
+      token: "token",
+    });
+
+    await expect(
+      client.invoices.payDirect({
+        amount: 4_200,
+        cardData: { cvv: "123", exp: "0642", pan: "4242424242424242" },
+      }),
+    ).rejects.toMatchObject({ status: 503 });
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(firstRequestUrl(fetch).pathname).toBe(
+      "/api/merchant/invoice/payment-direct",
+    );
+  });
+
+  it("settles a payment synchronously and returns the invoice", async () => {
+    const fetch = createFetchSequence([jsonResponse(invoiceStatusFixture)]);
+    const client = new MonobankAcquiringClient({ fetch, token: "token" });
+
+    await expect(
+      client.invoices.syncPayment({
+        amount: 4_200,
+        cardData: {
+          eciIndicator: "02",
+          exp: "0642",
+          pan: "4242424242424242",
+          type: SyncPaymentPanType.Fpan,
+        },
+        ccy: 980,
+      }),
+    ).resolves.toEqual(invoiceStatusFixture);
+    expect(firstRequestUrl(fetch).pathname).toBe(
+      "/api/merchant/invoice/sync-payment",
+    );
+    expect(fetch.mock.calls[0]?.[1]?.method).toBe("POST");
   });
 
   it("removes an unpaid invoice", async () => {
