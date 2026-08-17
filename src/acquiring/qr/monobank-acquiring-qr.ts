@@ -55,10 +55,15 @@ export class MonobankAcquiringQr {
   /**
    * Loads the current state of one activated QR cashier.
    *
+   * Monobank answers only for activated cashiers, so a cashier returned by
+   * `list()` can still fail with `MonobankApiError` and status 404. Treat that
+   * as an expected outcome rather than an error condition.
+   *
    * Monobank documents `invoiceId` as present only while an amount is set on
-   * the cashier; `amount` and `ccy` may be omitted for the same reason, and
-   * amounts are minor currency units. This safe authenticated GET is retried
-   * only when the parent client has a bounded retry policy. A provided
+   * the cashier; `amount` and `ccy` may be omitted for the same reason, so a
+   * successful response may carry `shortQrId` alone. Amounts are minor
+   * currency units. This safe authenticated GET is retried only when the
+   * parent client has a bounded retry policy. A provided
    * `RequestOptions.signal` cancels the active attempt or retry delay.
    * @example
    * ```ts

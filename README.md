@@ -171,14 +171,16 @@ if (first !== undefined) {
 ```
 
 `cashiers.list` is readonly. `amountType` reports who sets the payment amount:
-`merchant`, `client`, or `fix`. `getDetails()` answers only for activated
-cashiers; Monobank documents `invoiceId` as present only while an amount is set
-on the cashier, and `amount` and `ccy` may be omitted for the same reason, so
-treat all three as absent unless present. Amounts are integer minor units.
-`list()` and `getDetails()` are safe GETs eligible for configured retries.
-`getDetails()` rejects a
-`qrId` that is not a nonempty string without surrounding whitespace with
-`MonobankValidationError`, before any request is sent.
+`merchant`, `client`, or `fix`. `getDetails()` takes the cashier's `qrId`, not
+its `shortQrId`, and answers only for activated cashiers — so a cashier that
+`list()` returned can still fail with `MonobankApiError` and status 404. Treat
+that as an expected outcome. Monobank documents `invoiceId` as present only
+while an amount is set on the cashier, and `amount` and `ccy` may be omitted for
+the same reason, so a successful response may carry `shortQrId` alone. Amounts
+are integer minor units. `list()` and `getDetails()` are safe GETs eligible for
+configured retries. `getDetails()` rejects a `qrId` that is not a nonempty
+string without surrounding whitespace with `MonobankValidationError`, before any
+request is sent.
 
 Clear an amount a merchant previously set on a cashier:
 

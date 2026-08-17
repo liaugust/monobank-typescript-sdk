@@ -66,8 +66,10 @@ Use `MonobankAcquiringClient` with a separate Acquiring token.
   `/api/merchant/qr/details`; requires a nonempty string `qrId` without
   surrounding whitespace and rejects with `MonobankValidationError` before
   Fetch otherwise; returns `Promise<AcquiringQrDetails>` for activated QR
-  cashiers only, where `invoiceId` is documented as present only while an
-  amount is set and `amount`/`ccy` may be omitted for the same reason; safe GET
+  cashiers only, so a cashier returned by `acquiring.qr.list()` can still fail
+  with status 404; pass `qrId`, not `shortQrId`. `invoiceId` is documented as
+  present only while an amount is set and `amount`/`ccy` may be omitted for the
+  same reason, so a successful response may carry `shortQrId` alone; safe GET
   eligible for configured retries.
 - `acquiring.employees.list(options?)`: authenticated
   `/api/merchant/employee/list`; returns `Promise<AcquiringEmployeeList>` with

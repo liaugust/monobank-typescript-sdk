@@ -464,11 +464,15 @@ acquiring.qr.getDetails(
 ```
 
 Loads `GET /api/merchant/qr/details`. Monobank answers only for activated QR
-cashiers and documents `invoiceId` as present only while an amount is set on
-the cashier; `amount` and `ccy` may be omitted for the same reason, so treat
-all three as absent unless present. `amount` is an integer minor currency unit
-and `ccy` is an ISO 4217 numeric code. `qrId` must be a nonempty string without
-surrounding whitespace.
+cashiers, so **a cashier returned by `acquiring.qr.list()` can still fail with
+status 404** — handle that as an expected outcome, not an error condition.
+
+Monobank documents `invoiceId` as present only while an amount is set on the
+cashier; `amount` and `ccy` may be omitted for the same reason, so treat all
+three as absent unless present. A successful response may therefore carry
+`shortQrId` alone. `amount` is an integer minor currency unit and `ccy` is an
+ISO 4217 numeric code. Pass the cashier's `qrId`, not its `shortQrId`; `qrId`
+must be a nonempty string without surrounding whitespace.
 
 | Property       | Value                                                      |
 | -------------- | ---------------------------------------------------------- |
