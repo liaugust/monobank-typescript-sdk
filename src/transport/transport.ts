@@ -1,5 +1,3 @@
-import * as z from "zod/mini";
-
 import { MonobankApiError } from "../errors/monobank-api-error.js";
 import type { MonobankNetworkErrorReason } from "../errors/monobank-network-error.js";
 import { MonobankNetworkError } from "../errors/monobank-network-error.js";
@@ -24,8 +22,6 @@ import type {
 } from "./transport-options.js";
 import { validateTransportOptions } from "./transport-options.js";
 
-const emptyResponseSchema = z.undefined();
-
 export class MonobankTransport {
   private readonly options: StoredTransportOptions;
 
@@ -42,14 +38,19 @@ export class MonobankTransport {
   }
 
   public async postEmpty(request: EmptyRequest): Promise<void> {
-    await this.execute("POST", request, () => {
-      emptyResponseSchema.safeParse(undefined);
-    });
+    await this.executeEmpty("POST", request);
   }
 
   public async deleteEmpty(request: EmptyRequest): Promise<void> {
-    await this.execute("DELETE", request, () => {
-      emptyResponseSchema.safeParse(undefined);
+    await this.executeEmpty("DELETE", request);
+  }
+
+  private async executeEmpty(
+    method: "DELETE" | "POST",
+    request: EmptyRequest,
+  ): Promise<void> {
+    await this.execute(method, request, async (response) => {
+      await response.text();
     });
   }
 
@@ -143,6 +144,7 @@ export class MonobankTransport {
           throw networkError;
         }
 
+        attemptSignal.cleanup();
         await delayBeforeRetry(delayMs, request.endpoint, request.signal);
         attempt += 1;
         continue;
