@@ -2,6 +2,18 @@
 
 All notable changes to this package are documented here.
 
+## Unreleased
+
+### Changed
+
+- Raise the supported runtime floor from Node.js 20.19.5 to 22.12.0. Node 20
+  reached end of life on 2026-04-30 and no longer receives security patches, so
+  it is no longer declared or verified. `22.12.0` is the Node 22 release that
+  enabled `require(esm)`, matching why the previous floor was `20.19.5`. The
+  built output uses nothing newer than ES2022 and still runs on Node 20, but
+  installing under pnpm now fails the `engines` check there, and the CI matrix
+  verifies Node 22 and 24 only.
+
 ## 0.3.0 - 2026-08-18
 
 ### Fixed

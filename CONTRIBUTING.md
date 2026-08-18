@@ -1,7 +1,9 @@
 # Contributing
 
-Use Node.js 20.19.5+ and pnpm 10.34.5. Corepack should select the
-package-manager version declared in `package.json`.
+Use Node.js 22.22.2+ or 24.15.0+ and pnpm 10.34.5. Corepack should select the
+package-manager version declared in `package.json`. The published package
+supports Node.js 22.12.0+; the narrower range here is what the development
+toolchain itself requires.
 
 All behavior changes are test-first: write the failing test, confirm the RED
 failure, then make the smallest implementation that turns it GREEN. Public API
