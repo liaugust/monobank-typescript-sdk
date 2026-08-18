@@ -1,10 +1,17 @@
+import * as z from "zod/mini";
+
 import { MonobankValidationError } from "../errors/monobank-validation-error.js";
+import type {
+  CorporateCredential,
+  CorporateSigner,
+} from "./corporate-signer.js";
 import type { FetchLike } from "./fetch-like.js";
 import type { RetryOptions } from "./retry-options.js";
 
 export interface TransportOptions {
   readonly authenticatedPathPrefix?: "/api/merchant/" | "/personal/";
   readonly baseUrl?: string;
+  readonly corporate?: CorporateCredential;
   readonly fetch?: FetchLike;
   readonly retry?: RetryOptions;
   readonly timeoutMs?: number;
@@ -14,6 +21,7 @@ export interface TransportOptions {
 export interface StoredTransportOptions {
   readonly authenticatedPathPrefix: "/api/merchant/" | "/personal/";
   readonly baseUrl: URL;
+  readonly corporate?: CorporateCredential;
   readonly fetch: FetchLike;
   readonly retry?: RetryOptions;
   readonly timeoutMs: number;
@@ -29,18 +37,62 @@ export function validateTransportOptions(
   const retry = options.retry;
   const token =
     options.token === undefined ? undefined : validateToken(options.token);
+  const corporate =
+    options.corporate === undefined
+      ? undefined
+      : validateCorporateCredential(options.corporate);
+
+  if (token !== undefined && corporate !== undefined) {
+    throw new MonobankValidationError({
+      issues: [
+        "token and corporate must not be configured on the same transport",
+      ],
+      message: "Invalid Monobank transport configuration.",
+    });
+  }
 
   return {
     authenticatedPathPrefix: options.authenticatedPathPrefix ?? "/personal/",
     baseUrl: validateBaseUrl(
       options.baseUrl ?? defaultBaseUrl,
-      token !== undefined,
+      token !== undefined || corporate !== undefined,
     ),
     fetch: options.fetch ?? validateGlobalFetch(),
     timeoutMs: validateTimeout(options.timeoutMs ?? defaultTimeoutMs),
+    ...(corporate === undefined ? {} : { corporate }),
     ...(token === undefined ? {} : { token }),
     ...(retry === undefined ? {} : { retry: validateRetry(retry) }),
   };
+}
+
+const corporateCredentialSchema = z.object({
+  keyId: z.string().check(z.refine((value) => /^[!-~]+$/u.test(value))),
+  sign: z.custom<CorporateSigner>((value) => typeof value === "function"),
+});
+
+/**
+ * Validates the Corporate key identifier and signer before any request.
+ *
+ * The identifier is restricted to printable ASCII without spaces because it is
+ * sent verbatim as `X-Key-Id`; a control character would otherwise make
+ * `Headers.set` throw per request instead of failing once here.
+ * @param credential Configured key identifier and signing function.
+ * @returns The unchanged credential.
+ * @throws {MonobankValidationError} When the identifier is unusable as a header value or the signer is not callable.
+ */
+function validateCorporateCredential(
+  credential: CorporateCredential,
+): CorporateCredential {
+  if (!corporateCredentialSchema.safeParse(credential).success) {
+    throw new MonobankValidationError({
+      issues: [
+        "corporate.keyId must be printable ASCII without spaces, and corporate.sign must be a function",
+      ],
+      message: "Invalid Monobank transport configuration.",
+    });
+  }
+
+  return credential;
 }
 
 function validateToken(token: string): string {
@@ -59,15 +111,15 @@ function validateToken(token: string): string {
 /**
  * Validates the configured base URL.
  *
- * A token is sent in the `X-Token` header on every authenticated request, so a
- * cleartext origin would put the credential on the wire. Loopback is exempt
- * because that traffic never leaves the machine.
+ * Every authenticated request carries a credential on the wire, either a token
+ * in `X-Token` or a Corporate signature in `X-Sign`, so a cleartext origin would
+ * expose it. Loopback is exempt because that traffic never leaves the machine.
  * @param value Configured base URL.
- * @param hasToken Whether authenticated requests will carry a token.
+ * @param hasCredential Whether authenticated requests will carry a credential.
  * @returns The parsed base URL.
- * @throws {MonobankValidationError} When the URL is not absolute HTTP(S), or is cleartext with a token and a non-loopback host.
+ * @throws {MonobankValidationError} When the URL is not absolute HTTP(S), or is cleartext with a credential and a non-loopback host.
  */
-function validateBaseUrl(value: string, hasToken: boolean): URL {
+function validateBaseUrl(value: string, hasCredential: boolean): URL {
   let url: URL;
   try {
     url = new URL(value);
@@ -85,10 +137,14 @@ function validateBaseUrl(value: string, hasToken: boolean): URL {
     });
   }
 
-  if (url.protocol === "http:" && hasToken && !isLoopbackHost(url.hostname)) {
+  if (
+    url.protocol === "http:" &&
+    hasCredential &&
+    !isLoopbackHost(url.hostname)
+  ) {
     throw new MonobankValidationError({
       issues: [
-        "baseUrl must use https when a token is configured, unless it targets a loopback host",
+        "baseUrl must use https when a credential is configured, unless it targets a loopback host",
       ],
       message: "Invalid Monobank transport configuration.",
     });

@@ -1,0 +1,40 @@
+import { MonobankTransport } from "../../transport/transport.js";
+import { MonobankCorporateCompany } from "../company/monobank-corporate-company.js";
+import type { MonobankCorporateClientOptions } from "./monobank-corporate-client-options.js";
+
+/**
+ * Client for Monobank Corporate provider resources, authenticated by request signing.
+ *
+ * The Corporate API does not use `X-Token`. Every request carries `X-Key-Id`,
+ * `X-Time`, `X-Sign`, and for some endpoints `X-Request-Id`. Because the keys are
+ * secp256k1, which Web Crypto cannot sign with, the private key stays in the
+ * application and only a signing function is injected.
+ * @example
+ * ```ts
+ * const client = new MonobankCorporateClient({
+ *   keyId: "28a75537175a018645e6f8b14be7681791e701e0",
+ *   sign: ({ payload }) => signWithSecp256k1(payload),
+ * });
+ * const settings = await client.company.getSettings({ requestId: "req-1" });
+ * ```
+ */
+export class MonobankCorporateClient {
+  /** Company registration and settings operations sharing this client's key and transport settings. */
+  public readonly company: MonobankCorporateCompany;
+
+  /**
+   * Creates a Corporate client and its resource classes over one validated transport.
+   * @param options Corporate key identifier and signer, plus optional Fetch, base URL, timeout, and retry controls.
+   * @throws {MonobankValidationError} When the key identifier, signer, base URL, timeout, retry, or Fetch configuration is invalid.
+   */
+  public constructor(options: MonobankCorporateClientOptions) {
+    const { keyId, sign, ...transportOptions } = options;
+    const transport = new MonobankTransport({
+      ...transportOptions,
+      authenticatedPathPrefix: "/personal/",
+      corporate: { keyId, sign },
+    });
+
+    this.company = new MonobankCorporateCompany(transport);
+  }
+}

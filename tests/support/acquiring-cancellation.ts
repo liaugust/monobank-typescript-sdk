@@ -11,7 +11,7 @@ export type AcquiringCall = (
 export async function expectCallerCancellation(
   start: AcquiringCall,
 ): Promise<void> {
-  const { fetch, requestSignal } = createAbortableFetch();
+  const { entered, fetch, requestSignal } = createAbortableFetch();
   const client = new MonobankAcquiringClient({
     fetch,
     token: "acquiring-token",
@@ -20,7 +20,7 @@ export async function expectCallerCancellation(
 
   const request = start(client, controller.signal);
   request.catch(() => undefined);
-  await Promise.resolve();
+  await entered;
   controller.abort();
 
   expect(requestSignal()?.aborted).toBe(true);

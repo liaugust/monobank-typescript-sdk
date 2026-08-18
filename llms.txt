@@ -1,7 +1,7 @@
 # @liaugust/monobank-sdk
 
 > Unofficial, strict, runtime-validated TypeScript SDK for Monobank Public,
-> Personal, and Acquiring API endpoints. Supports Node.js 22.12.0+, ESM,
+> Personal, Acquiring, and Corporate API endpoints. Supports Node.js 22.12.0+, ESM,
 > CommonJS, and modern browser bundlers. Zod Mini validates every successful
 > JSON response.
 
@@ -32,6 +32,27 @@ const personal = new MonobankPersonalClient({
 
 Use `MonobankAcquiringClient` with a separate Acquiring token.
 
+Use `MonobankCorporateClient` for the Corporate provider API. It takes no
+token: pass the service `keyId` and a `sign` function. Keys are secp256k1,
+which Web Crypto cannot sign with, so the private key stays in the application
+and the SDK only calls the signer.
+
+```ts
+import { MonobankCorporateClient } from "@liaugust/monobank-sdk";
+
+const corporate = new MonobankCorporateClient({
+  keyId: validatedConfig.monobankCorporateKeyId,
+  sign: ({ payload }) => signSecp256k1Raw(payload),
+});
+```
+
+The signer returns the `X-Sign` value: base64 of the raw 64-byte `r || s`
+pair, not DER. Monobank documents neither the digest nor whether `URL` in
+`Sign (X-Time | URL)` includes the query, so the signer also receives `time`,
+`requestId`, and `url` and can rebuild the payload. This SDK signs the path
+with its query. The signer runs once per attempt, inside `timeoutMs`, because
+`X-Time` is signed and a retry must not replay a stale timestamp.
+
 ## Client methods
 
 - `publicApi.bank.getSync(options?)`: public `/bank/sync`; no `X-Token`; returns
@@ -48,6 +69,9 @@ Use `MonobankAcquiringClient` with a separate Acquiring token.
   automatically.
 - `parsePersonalWebhookEvent(input)`: validates webhook JSON shape; does not
   authenticate the sender.
+- `corporate.company.getSettings(input, options?)`: signed
+  `/personal/corp/settings`; requires `input.requestId`; returns
+  `Promise<CorporateSettings>`; safe GET and re-signed on each retry.
 - `acquiring.merchant.getDetails(options?)`: authenticated
   `/api/merchant/details`; returns `Promise<MerchantDetails>`.
 - `acquiring.statements.get(input, options?)`: authenticated

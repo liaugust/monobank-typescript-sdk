@@ -12,6 +12,7 @@ supported contract.
 - [MonobankPublicClient](#monobankpublicclient)
 - [MonobankPersonalClient](#monobankpersonalclient)
 - [MonobankAcquiringClient](#monobankacquiringclient)
+- [MonobankCorporateClient](#monobankcorporateclient)
 - [acquiring.webhooks.getPublicKey](#acquiringwebhooksgetpublickey)
 - [verifyAcquiringWebhookSignature](#verifyacquiringwebhooksignature)
 - [merchant.getDetails](#merchantgetdetails)
@@ -39,6 +40,7 @@ supported contract.
 - [statements.get](#statementsget)
 - [webhooks.set](#webhooksset)
 - [parsePersonalWebhookEvent](#parsepersonalwebhookevent)
+- [corporate.company.getSettings](#corporatecompanygetsettings)
 - [Errors](#errors)
 - [Runtime schemas](#runtime-schemas)
 - [Enum-like values](#enum-like-values)
@@ -196,6 +198,84 @@ The client groups operations into resource objects:
 - `acquiring.submerchants`: submerchant terminal operations
 - `acquiring.wallet`: tokenized card operations
 - `acquiring.webhooks`: webhook trust-material operations
+
+## MonobankCorporateClient
+
+```ts
+new MonobankCorporateClient(options: MonobankCorporateClientOptions)
+```
+
+The Corporate provider API does not authenticate with `X-Token`. Every request
+carries `X-Key-Id`, `X-Time`, and `X-Sign`, and some endpoints also send
+`X-Request-Id`. Monobank issues the service key only after approving the company
+as a provider.
+
+Service keys are **secp256k1**, which Web Crypto cannot sign with. Adding a
+crypto dependency would break the package's single-runtime-dependency rule, and a
+`node:crypto` import would break the browser build, so the signing function is
+injected and the SDK never holds the private key.
+
+### Constructor options
+
+| Option      | Type              | Default                   | Contract                                                                                                                |
+| ----------- | ----------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `keyId`     | `string`          | Required                  | Nonempty service key identifier without surrounding whitespace                                                          |
+| `sign`      | `CorporateSigner` | Required                  | Function returning the `X-Sign` value; may be synchronous or asynchronous                                               |
+| `baseUrl`   | `string`          | `https://api.monobank.ua` | Absolute HTTP(S) origin, primarily for controlled proxies and tests; must use `https` unless it targets a loopback host |
+| `fetch`     | `FetchLike`       | `globalThis.fetch`        | Required when the runtime does not provide global Fetch; must honor `RequestInit.redirect`                              |
+| `timeoutMs` | `number`          | `10_000`                  | Positive finite per-attempt timeout in milliseconds; bounds the request, not the signer                                 |
+| `retry`     | `RetryOptions`    | Disabled                  | Bounded policy for retry-eligible safe GET requests                                                                     |
+
+A transport cannot hold both a `token` and a Corporate credential; attempting it
+throws `MonobankValidationError`. Invalid constructor configuration throws before
+a request is made.
+
+The client groups operations into resource objects:
+
+- `corporate.company`: company registration and settings operations
+
+### Signing contract
+
+`sign` receives a `CorporateSignatureInput`:
+
+| Field       | Type     | Meaning                                                         |
+| ----------- | -------- | --------------------------------------------------------------- |
+| `payload`   | `string` | Exact string this SDK expects to be signed                      |
+| `time`      | `string` | Value sent as `X-Time`: current UTC time in whole seconds       |
+| `requestId` | `string` | Value sent as `X-Request-Id`; absent for endpoints that omit it |
+| `url`       | `URL`    | Absolute request URL the payload was derived from               |
+
+The return value is sent verbatim as `X-Sign`. Monobank's own documented example
+decodes to the raw 64-byte `r || s` pair, not a DER structure, so a DER signature
+is rejected. With `node:crypto`, that means
+`sign({ dsaEncoding: "ieee-p1363", key }, "base64")`.
+
+Two properties of the signature are **not documented by Monobank** and cannot be
+verified without provider approval:
+
+- the digest applied before signing; `SHA256` matches the wider ecosystem
+- whether `URL` in `Sign (X-Time | URL)` means the path, the path with its query,
+  or an absolute URL
+
+This SDK signs the path together with its query. Because `payload` arrives
+alongside `time`, `requestId`, and `url`, an application can rebuild the payload
+itself if the bank expects a different composition, without forking the SDK.
+
+Monobank documents two payload compositions, and they do not follow from which
+headers a request sends. `/personal/corp/settings` sends `X-Request-Id` while
+signing the variant that excludes it, so each operation states its own variant.
+
+`sign` is invoked **once per attempt**, not once per request, because `X-Time` is
+part of the payload and a retry after a backoff delay must not replay a stale
+timestamp.
+
+`timeoutMs` does **not** bound the signer. No signal is passed into `sign`, so a
+signing call that never settles blocks the request instead of timing out. Give a
+remote signer its own timeout.
+
+A signer that throws, or returns an empty string, produces
+`MonobankValidationError` before Fetch runs. The signer's own failure is never
+attached as a cause, because a crypto library's error text can echo key material.
 
 ## acquiring.webhooks.getPublicKey
 
@@ -976,6 +1056,52 @@ const event = parsePersonalWebhookEvent(await request.json());
 // Authenticate delivery separately, then pass `event` to application logic.
 ```
 
+## corporate.company.getSettings
+
+```ts
+corporate.company.getSettings(
+  input: GetCorporateSettingsInput,
+  options?: RequestOptions,
+): Promise<CorporateSettings>
+```
+
+Reads the company data Monobank holds for the configured Corporate key from the
+signed `GET /personal/corp/settings` endpoint.
+
+| Input       | Type     | Contract                                                        |
+| ----------- | -------- | --------------------------------------------------------------- |
+| `requestId` | `string` | Nonempty printable ASCII without spaces; sent as `X-Request-Id` |
+
+Signed with the `X-Time` and URL payload. `X-Request-Id` is sent but is
+deliberately **not** part of the signed payload, matching what Monobank
+documents for this endpoint.
+
+Safe GET; eligible for configured retries. Each retry is signed again.
+
+| Response field | Type     | Notes                                                     |
+| -------------- | -------- | --------------------------------------------------------- |
+| `name`         | `string` | Company name                                              |
+| `permission`   | `string` | Granted permissions, one letter each, for example `"psf"` |
+| `pubkey`       | `string` | Registered secp256k1 public key PEM, base64 encoded       |
+| `logo`         | `string` | Company logo image, base64 encoded                        |
+| `webhook`      | `string` | Optional transaction callback address                     |
+
+Monobank lists `id` in this response's `required` array but never defines the
+property or gives an example, so its type is unknown. It is intentionally left
+unmodeled rather than guessed; the loose response object still preserves it at
+runtime.
+
+```ts
+const settings = await corporate.company.getSettings({
+  requestId: "corp-request-id",
+});
+```
+
+Throws `MonobankValidationError` when `requestId` is invalid or the signer fails,
+`MonobankApiError` on a non-success status, `MonobankNetworkError` on transport
+failure, and `MonobankResponseValidationError` when the payload does not match
+the schema.
+
 ## Errors
 
 ### MonobankValidationError
@@ -1406,6 +1532,9 @@ object containing the target `account` identifier and validated
 | `InvoiceDiscount`                        | Basket or order adjustment                                     |
 | `FiscalizationItem`                      | Item sent for cancellation/finalization fiscalization          |
 | `FetchLike`                              | Injectable Fetch-compatible function                           |
+| `CorporateSigner`                        | Injectable Corporate signing function returning `X-Sign`       |
+| `CorporateSignatureInput`                | Payload and components handed to a Corporate signer            |
+| `GetCorporateSettingsInput`              | Request identifier for a corporate settings read               |
 | `ResponseValidationIssue`                | Safe schema issue retained by validation errors                |
 | `MonobankApiErrorOptions`                | Public API-error constructor data                              |
 | `MonobankNetworkErrorOptions`            | Public network-error constructor data                          |
@@ -1421,5 +1550,5 @@ package root, including the Personal models plus `MerchantDetails`,
 `AcquiringQrCashierList`, `AcquiringQrDetails`,
 `AcquiringWebhookPublicKey`, `AcquiringStatement`, `AcquiringStatementItem`,
 `AcquiringStatementCancellation`, `NewInvoice`, `Invoice`,
-`InvoiceCancellation`, `InvoiceFinalization`, `InvoiceReceipt`, and
-`InvoiceFiscalChecks`.
+`InvoiceCancellation`, `InvoiceFinalization`, `InvoiceReceipt`,
+`InvoiceFiscalChecks`, and `CorporateSettings`.

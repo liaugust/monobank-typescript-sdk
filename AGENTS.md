@@ -16,6 +16,9 @@ claim endorsement by Monobank.
 - Construct `MonobankPublicClient` without a token for `/bank/*` calls.
 - Construct `MonobankPersonalClient` with a validated Personal token.
 - Construct `MonobankAcquiringClient` with a separate validated Acquiring token.
+- Construct `MonobankCorporateClient` with a service `keyId` and a `sign`
+  function. It takes no token. Never place a private key inside the SDK or in
+  application logs; the signer is the only thing that touches it.
 - Never hardcode, log, serialize, or commit real tokens or API payloads.
 - Treat all monetary integers as minor currency units.
 - Treat rate and Personal statement timestamps as Unix seconds. Acquiring
@@ -42,6 +45,11 @@ claim endorsement by Monobank.
   wallet listing, token payment, and card removal, and invoice creation,
   status, cancellation, removal, finalization, receipt, fiscal checks, direct
   payment, and synchronous payment. Do not invent calls beyond that set.
+- Treat a Corporate `sign` result as credential material. The SDK sends it as
+  `X-Sign` and never logs it. Return base64 of the raw 64-byte `r || s` pair,
+  not a DER structure. Monobank documents neither the digest nor whether the
+  signed `URL` includes the query, so those are unverified assumptions; the
+  signer receives the payload components to rebuild it if the bank disagrees.
 - Treat `acquiring.invoices.payDirect()` and `acquiring.invoices.syncPayment()`
   as PCI DSS surfaces. Never log, serialize, persist, or echo raw card details
   or crypto-container values, and prefer a hosted invoice or a stored card
@@ -86,6 +94,7 @@ The root entry point exports:
 - `MonobankPersonalClient`
 - `MonobankPublicClient`
 - `MonobankAcquiringClient`
+- `MonobankCorporateClient`
 - eleven resource properties exposed through the three parent clients: `bank`,
   `currency`, `client`, Personal `statements`, Personal `webhooks`, `merchant`,
   `invoices`, Acquiring `statements`, `submerchants`, `qr`, and Acquiring
@@ -121,6 +130,8 @@ src/acquiring/submerchants/     submerchant resource, endpoint, and models
 src/acquiring/shared/           shared Acquiring response models
 src/acquiring/wallet/           tokenized card resource, endpoints, and models
 src/acquiring/webhooks/         trust-key endpoint and signature verification
+src/corporate/client/           Corporate parent client and options
+src/corporate/company/          company resource, endpoint, and response model
 src/public/client/              token-free Public parent client and options
 src/public/bank/                bank resource and sync endpoint
 src/public/currency/            currency resource and rates endpoint
@@ -142,10 +153,27 @@ tests/consumers/                ESM, CJS, browser, declaration, and tarball chec
 
 ## Architectural Invariants
 
-- Preserve the separation between Public, Personal, and Acquiring clients.
+- Preserve the separation between Public, Personal, Acquiring, and Corporate
+  clients. A single transport must never hold both a token and a Corporate
+  credential; configuring both is rejected.
+- Sign Corporate requests once per attempt, never once per request. `X-Time` is
+  part of the signed payload, so a retry after a backoff delay would otherwise
+  replay a stale timestamp. `timeoutMs` does not bound the signer: no signal is
+  passed into `sign`, so document that a remote signer must time itself out.
+- Send only printable ASCII without spaces in `X-Key-Id`, `X-Request-Id`, and
+  `X-Sign`. `Headers.set` throws a bare `TypeError` on a control character, which
+  the transport would misread as a retryable network failure, so these are
+  validated before the request is built.
+- State each Corporate operation's signed-payload variant explicitly. Monobank
+  documents two, and they do not follow from which headers a request sends:
+  `/personal/corp/settings` and `/personal/corp/webhook` send `X-Request-Id`
+  while signing the variant that excludes it.
+- Never attach a Corporate signer's own failure as an error cause; a crypto
+  library's message can echo key material.
 - Send Personal `X-Token` only to `/personal/*` and Acquiring `X-Token` only to
   `/api/merchant/*`. Public `/bank/*` requests must never receive either token.
-- Reject a cleartext `http:` base URL whenever a token is configured. Only
+- Reject a cleartext `http:` base URL whenever any credential is configured,
+  token or Corporate signer. Only
   `localhost`, `127.0.0.0/8`, and `::1` stay allowed, so local proxies and
   contract tests keep working while the token never travels in the clear. Do
   not widen this to `*.localhost`: browsers resolve that to loopback in the

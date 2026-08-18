@@ -78,23 +78,26 @@ describe("MonobankTransport options", () => {
     "http://[fe80::1]",
     "http://[::]",
     "http://[::ffff:127.0.0.1]",
-  ])("rejects cleartext base URL %s when a token is configured", (baseUrl) => {
-    expect(
-      () =>
-        new MonobankTransport({
-          baseUrl,
-          fetch: createFetchSequence([]),
-          token: "secret-token",
+  ])(
+    "rejects cleartext base URL %s when a credential is configured",
+    (baseUrl) => {
+      expect(
+        () =>
+          new MonobankTransport({
+            baseUrl,
+            fetch: createFetchSequence([]),
+            token: "secret-token",
+          }),
+      ).toThrow(
+        expect.objectContaining({
+          constructor: MonobankValidationError,
+          issues: [
+            "baseUrl must use https when a credential is configured, unless it targets a loopback host",
+          ],
         }),
-    ).toThrow(
-      expect.objectContaining({
-        constructor: MonobankValidationError,
-        issues: [
-          "baseUrl must use https when a token is configured, unless it targets a loopback host",
-        ],
-      }),
-    );
-  });
+      );
+    },
+  );
 
   it.each([
     { baseUrl: "http://127.0.0.1:3000", origin: "http://127.0.0.1:3000" },
