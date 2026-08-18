@@ -36,20 +36,36 @@ describe("corporate registration status schema", () => {
     },
   );
 
-  it("rejects an undocumented status", () => {
-    expect(
-      corporateRegistrationStatusSchema.safeParse({
-        ...corporateRegistrationStatusFixture,
-        status: "Pending",
-      }).success,
-    ).toBe(false);
+  it("accepts a pending application that carries no key yet", () => {
+    const parsed = corporateRegistrationStatusSchema.parse({ status: "New" });
+
+    expect(parsed.keyId).toBeUndefined();
   });
 
-  it("rejects a response missing the issued key", () => {
-    expect(
-      corporateRegistrationStatusSchema.safeParse({ status: "Approved" })
-        .success,
-    ).toBe(false);
+  it("accepts an undocumented status rather than discarding a valid key", () => {
+    const payload = {
+      ...corporateRegistrationStatusFixture,
+      status: "Pending",
+    };
+
+    expect(corporateRegistrationStatusSchema.parse(payload)).toEqual(payload);
+  });
+
+  it("rejects malformed status and key types", () => {
+    const result = corporateRegistrationStatusSchema.safeParse({
+      keyId: 42,
+      status: null,
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ path: ["keyId"] }),
+          expect.objectContaining({ path: ["status"] }),
+        ]),
+      );
+    }
   });
 });
 
@@ -73,7 +89,12 @@ describe("company.getRegistrationStatus", () => {
     expect(firstRequestBody(fetch)).toEqual({
       pubkey: "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUZZd0VBWUhLb1pJemow",
     });
-    expect(firstRequestHeaders(fetch).has("X-Key-Id")).toBe(false);
+    const headers = firstRequestHeaders(fetch);
+    expect(headers.has("X-Key-Id")).toBe(false);
+    expect(headers.get("X-Time")).toMatch(/^\d+$/);
+    expect(sign.mock.calls[0]?.[0]?.payload).toBe(
+      `${headers.get("X-Time") ?? ""}/personal/auth/registration/status`,
+    );
   });
 
   it("rejects a blank public key before Fetch", async () => {

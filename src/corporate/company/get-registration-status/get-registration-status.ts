@@ -29,12 +29,19 @@ const getCorporateRegistrationStatusSchema = z.object({
 /**
  * Runtime validator for the `/personal/auth/registration/status` response.
  *
- * `keyId` is what bootstraps every later Corporate request, so both documented
- * required fields stay required here.
+ * Both fields are deliberately looser than the specification's `required`
+ * array. No service key exists while an application is `New`, so requiring
+ * `keyId` would reject the pending response and leave a caller unable to
+ * observe status at all — and this poll is the only documented way to obtain the
+ * key every other Corporate operation needs. `status` is a plain string because
+ * the specification declares no `enum` for it: the three known values appear
+ * only in its prose description, so an added or re-cased value would otherwise
+ * discard a valid `keyId`. Compare against `CorporateRegistrationStatus`
+ * instead. Revisit both if a live pending response is ever observed.
  */
 export const corporateRegistrationStatusSchema = z.looseObject({
-  keyId: z.string(),
-  status: z.enum(CorporateRegistrationStatus),
+  keyId: z.optional(z.string()),
+  status: z.string(),
 });
 
 /** Validated status of a Corporate authorization application. */

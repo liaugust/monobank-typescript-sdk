@@ -390,10 +390,12 @@ void registrationStatus;
 void approvedStatus;
 void corporateWebhook;
 
-// @ts-expect-error -- Registration status values are limited to documented wire values.
-const invalidRegistrationStatus: CorporateRegistrationStatusResult["status"] =
+const undocumentedRegistrationStatus: CorporateRegistrationStatusResult["status"] =
   "Pending";
-void invalidRegistrationStatus;
+const pendingRegistrationKey: string | undefined = (await registrationStatus)
+  .keyId;
+void undocumentedRegistrationStatus;
+void pendingRegistrationKey;
 
 // @ts-expect-error -- The Corporate webhook mutation requires a request identifier.
 void corporateClient.company.setWebhook({ webHookUrl: "https://example.com" });

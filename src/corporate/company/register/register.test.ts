@@ -57,6 +57,21 @@ describe("company.register", () => {
     );
   });
 
+  it("suppresses the key header even when the client has one configured", async () => {
+    const fetch = createFetchSequence([
+      jsonResponse(corporateRegistrationFixture),
+    ]);
+    const client = new MonobankCorporateClient({
+      fetch,
+      keyId: "28a75537175a018645e6f8b14be7681791e701e0",
+      sign: () => "c2ln",
+    });
+
+    await client.company.register(corporateRegistrationInputFixture);
+
+    expect(firstRequestHeaders(fetch).has("X-Key-Id")).toBe(false);
+  });
+
   it("rejects an application with a blank required field before Fetch", async () => {
     const fetch = createFetchSequence([
       jsonResponse(corporateRegistrationFixture),

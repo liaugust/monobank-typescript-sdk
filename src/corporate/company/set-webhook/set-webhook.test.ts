@@ -12,6 +12,7 @@ import {
 import { MonobankValidationError } from "../../../errors/monobank-validation-error.js";
 import type { CorporateSigner } from "../../../transport/corporate-signer.js";
 import { MonobankCorporateClient } from "../../client/monobank-corporate-client.js";
+import type { SetCorporateWebhookInput } from "./set-webhook.js";
 
 function createClient(
   fetch: ReturnType<typeof createFetchSequence>,
@@ -72,6 +73,37 @@ describe("company.setWebhook", () => {
       client.company.setWebhook({ requestId: "corp-request-id", webHookUrl }),
     ).rejects.toBeInstanceOf(MonobankValidationError);
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["an absent request identifier", undefined],
+    ["a blank request identifier", " "],
+    ["a request identifier that would inject a header", "req\r\nX-Token: x"],
+  ])("rejects %s before Fetch", async (_label, requestId) => {
+    const fetch = createFetchSequence([jsonResponse({})]);
+    const client = createClient(fetch);
+
+    await expect(
+      client.company.setWebhook({
+        webHookUrl: "https://example.com/webhook",
+        ...(requestId === undefined ? {} : { requestId }),
+      } as SetCorporateWebhookInput),
+    ).rejects.toBeInstanceOf(MonobankValidationError);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("reports the corporate endpoint rather than the personal one", async () => {
+    const fetch = createFetchSequence([jsonResponse({})]);
+    const client = createClient(fetch);
+
+    const rejection = await client.company
+      .setWebhook({ requestId: "corp-request-id", webHookUrl: "mono/webhook" })
+      .catch((error: unknown) => error);
+
+    expect(rejection).toMatchObject({
+      endpoint: "/personal/corp/webhook",
+      message: "Invalid corporate webhook request.",
+    });
   });
 
   it("rejects the mutation when the client has no key identifier", async () => {

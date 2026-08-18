@@ -209,9 +209,9 @@ new MonobankCorporateClient(options: MonobankCorporateClientOptions)
 ```
 
 The Corporate provider API does not authenticate with `X-Token`. Every request
-carries `X-Key-Id`, `X-Time`, and `X-Sign`, and some endpoints also send
-`X-Request-Id`. Monobank issues the service key only after approving the company
-as a provider.
+carries `X-Time` and `X-Sign`, plus `X-Key-Id` for every operation except the two
+registration calls that issue the key, and `X-Request-Id` where documented.
+Monobank issues the service key only after approving the company as a provider.
 
 Service keys are **secp256k1**, which Web Crypto cannot sign with. A crypto
 dependency would break the single-runtime-dependency rule and a `node:crypto`

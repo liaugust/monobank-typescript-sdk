@@ -29,11 +29,11 @@ import {
 } from "./register/register.js";
 import type { SetCorporateWebhookInput } from "./set-webhook/set-webhook.js";
 import {
-  createSetCorporateWebhookBody,
+  parseSetCorporateWebhookInput,
   setCorporateWebhookEndpoint,
 } from "./set-webhook/set-webhook.js";
 
-/** Company registration and settings operations available to an approved Corporate key. */
+/** Company registration, settings, and webhook operations for a Corporate provider. */
 export class MonobankCorporateCompany {
   private readonly transport: MonobankTransport;
 
@@ -125,14 +125,14 @@ export class MonobankCorporateCompany {
     input: SetCorporateWebhookInput,
     options?: RequestOptions,
   ): Promise<void> {
-    const body = createSetCorporateWebhookBody(input);
+    const parsed = parseSetCorporateWebhookInput(input);
 
     await this.transport.postEmpty({
       auth: true,
-      body,
+      body: parsed.body,
       endpoint: setCorporateWebhookEndpoint,
       retryable: false,
-      signature: { requestId: input.requestId, variant: "time-and-url" },
+      signature: { requestId: parsed.requestId, variant: "time-and-url" },
       ...(options?.signal === undefined ? {} : { signal: options.signal }),
     });
   }

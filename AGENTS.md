@@ -142,7 +142,7 @@ src/personal/webhooks/          webhook resource, input, and event parser
 src/transport/request/          request security and attempt-signal ownership
 src/transport/retry/            retry policy, delay, and Retry-After parsing
 src/transport/response/         successful and failed response normalization
-src/shared/                     request options, request validation, and unix time
+src/shared/                     request options, validation, webhook body, unix time
 src/errors/                     public credential-safe error classes
 tests/fixtures/{public,personal,acquiring}/ synthetic contract fixtures
 tests/types/                    compile-time public API assertions
@@ -188,6 +188,12 @@ tests/consumers/                ESM, CJS, browser, declaration, and tarball chec
   where Monobank's OpenAPI `required` array omits it, matching the statement,
   submerchant, and QR schemas. Revisit all three together if an account with no
   records is observed to return a bare `{}`.
+- Model the Corporate registration status response looser than its `required`
+  array: `keyId` is optional because no key exists while an application is
+  `New`, and `status` is a plain string because the specification declares no
+  `enum` and lists the three values only in prose. Requiring either would let a
+  pending response break the one flow that issues the key. Revisit if a live
+  pending response is observed.
 - Keep Zod as the only runtime dependency unless a design change is explicitly
   approved.
 - Keep transport failures credential-safe: never retain tokens, authorization

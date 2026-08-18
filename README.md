@@ -59,8 +59,8 @@ validation boundary before it reaches your code.
 - No token for `MonobankPublicClient`
 - A Monobank Personal API token for `MonobankPersonalClient`
 - A Monobank Acquiring token for `MonobankAcquiringClient`
-- An approved Corporate service key and a signing function for
-  `MonobankCorporateClient`
+- A signing function for `MonobankCorporateClient`, plus an approved Corporate
+  service key for every operation except registration
 
 ## Installation
 
