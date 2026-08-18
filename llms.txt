@@ -50,8 +50,10 @@ The signer returns the `X-Sign` value: base64 of the raw 64-byte `r || s`
 pair, not DER. Monobank documents neither the digest nor whether `URL` in
 `Sign (X-Time | URL)` includes the query, so the signer also receives `time`,
 `requestId`, and `url` and can rebuild the payload. This SDK signs the path
-with its query. The signer runs once per attempt, inside `timeoutMs`, because
-`X-Time` is signed and a retry must not replay a stale timestamp.
+with its query. The signer runs once per attempt, because `X-Time` is signed
+and a retry must not replay a stale timestamp. `timeoutMs` does not bound the
+signer — no signal is passed into `sign` — so give a remote signer its own
+timeout.
 
 ## Client methods
 

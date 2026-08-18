@@ -75,9 +75,11 @@ const corporateCredentialSchema = z.object({
  *
  * The identifier is restricted to printable ASCII without spaces because it is
  * sent verbatim as `X-Key-Id`; a control character would otherwise make
- * `Headers.set` throw per request instead of failing once here.
+ * `Headers.set` throw per request instead of failing once here. A copy is
+ * returned so mutating the caller's object cannot bypass this one-time check,
+ * matching how the retry policy is stored.
  * @param credential Configured key identifier and signing function.
- * @returns The unchanged credential.
+ * @returns A copy of the validated credential.
  * @throws {MonobankValidationError} When the identifier is unusable as a header value or the signer is not callable.
  */
 function validateCorporateCredential(
@@ -92,7 +94,7 @@ function validateCorporateCredential(
     });
   }
 
-  return credential;
+  return { keyId: credential.keyId, sign: credential.sign };
 }
 
 function validateToken(token: string): string {
