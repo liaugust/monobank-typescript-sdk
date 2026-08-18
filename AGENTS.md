@@ -135,7 +135,7 @@ src/errors/                     public credential-safe error classes
 tests/fixtures/{public,personal,acquiring}/ synthetic contract fixtures
 tests/types/                    compile-time public API assertions
 tests/consumers/                ESM, CJS, browser, declaration, and tarball checks
-.github/workflows/ci.yml        Node 20/22/24 verification matrix
+.github/workflows/ci.yml        Node 22/24 verification matrix
 .github/workflows/release.yml   npm trusted-publishing workflow
 ```
 
@@ -220,6 +220,9 @@ The repository requires:
 - Knip with config hints treated as errors
 - JSCPD with zero accepted duplication
 - ESM, CommonJS, declaration, browser, and packed-package checks
+- agreement between the declared `engines.node` floor, the lowest Node major in
+  the CI matrix, and the `@types/node` major, so a supported runtime is always a
+  tested runtime
 
 Run everything with:
 

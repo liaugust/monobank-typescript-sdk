@@ -53,7 +53,7 @@ validation boundary before it reaches your code.
 
 ## Requirements
 
-- Node.js 20.19.5 or newer, or a modern browser with standard Fetch and Web Crypto
+- Node.js 22.12.0 or newer, or a modern browser with standard Fetch and Web Crypto
 - No token for `MonobankPublicClient`
 - A Monobank Personal API token for `MonobankPersonalClient`
 - A Monobank Acquiring token for `MonobankAcquiringClient`
