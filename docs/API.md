@@ -1248,40 +1248,43 @@ All schemas expose Zod Mini's standard parsing interface. Object schemas are
 loose: documented fields are validated and unknown additive fields are
 preserved.
 
-| Export                                 | Validates                            |
-| -------------------------------------- | ------------------------------------ |
-| `accountSchema`                        | One Personal account                 |
-| `acquiringCardPaymentSchema`           | Wallet or direct card-payment result |
-| `acquiringEmployeeListSchema`          | Acquiring employee-list response     |
-| `acquiringEmployeeSchema`              | One Acquiring employee               |
-| `acquiringWalletCardSchema`            | One tokenized wallet card            |
-| `acquiringWalletSchema`                | Merchant wallet response             |
-| `acquiringQrCashierListSchema`         | Acquiring QR cashier-list response   |
-| `acquiringQrCashierSchema`             | One Acquiring QR cashier             |
-| `acquiringQrDetailsSchema`             | Acquiring QR cashier details         |
-| `acquiringStatementSchema`             | Acquiring statement response         |
-| `acquiringStatementItemSchema`         | One Acquiring transaction            |
-| `acquiringStatementCancellationSchema` | Nested Acquiring cancellation        |
-| `acquiringSubmerchantListSchema`       | Acquiring submerchant-list response  |
-| `acquiringSubmerchantSchema`           | One Acquiring submerchant            |
-| `acquiringWebhookPublicKeySchema`      | Acquiring webhook key response       |
-| `bankSyncSchema`                       | `/bank/sync` response                |
-| `clientInfoSchema`                     | `/personal/client-info` response     |
-| `currencyRateSchema`                   | One exchange-rate item               |
-| `currencyRatesSchema`                  | `/bank/currency` response array      |
-| `jarSchema`                            | One Personal jar                     |
-| `managedAccountSchema`                 | One delegated FOP account            |
-| `managedClientSchema`                  | One delegated FOP client             |
-| `merchantDetailsSchema`                | `/api/merchant/details` response     |
-| `newInvoiceSchema`                     | Create-invoice response              |
-| `invoiceStatusSchema`                  | Invoice status or webhook payload    |
-| `cancelInvoiceResponseSchema`          | Invoice cancellation response        |
-| `finalizeInvoiceResponseSchema`        | Hold finalization response           |
-| `receiptSchema`                        | Invoice receipt response             |
-| `invoiceFiscalChecksSchema`            | Invoice fiscal checks response       |
-| `statementItemSchema`                  | One statement item                   |
-| `statementItemsSchema`                 | Statement response array             |
-| `personalWebhookEventSchema`           | Incoming Personal statement event    |
+| Export                                 | Validates                             |
+| -------------------------------------- | ------------------------------------- |
+| `accountSchema`                        | One Personal account                  |
+| `acquiringCardPaymentSchema`           | Wallet or direct card-payment result  |
+| `acquiringEmployeeListSchema`          | Acquiring employee-list response      |
+| `acquiringEmployeeSchema`              | One Acquiring employee                |
+| `acquiringWalletCardSchema`            | One tokenized wallet card             |
+| `acquiringWalletSchema`                | Merchant wallet response              |
+| `acquiringQrCashierListSchema`         | Acquiring QR cashier-list response    |
+| `acquiringQrCashierSchema`             | One Acquiring QR cashier              |
+| `acquiringQrDetailsSchema`             | Acquiring QR cashier details          |
+| `acquiringStatementSchema`             | Acquiring statement response          |
+| `acquiringStatementItemSchema`         | One Acquiring transaction             |
+| `acquiringStatementCancellationSchema` | Nested Acquiring cancellation         |
+| `acquiringSubmerchantListSchema`       | Acquiring submerchant-list response   |
+| `acquiringSubmerchantSchema`           | One Acquiring submerchant             |
+| `acquiringWebhookPublicKeySchema`      | Acquiring webhook key response        |
+| `bankSyncSchema`                       | `/bank/sync` response                 |
+| `clientInfoSchema`                     | `/personal/client-info` response      |
+| `corporateRegistrationSchema`          | Corporate application acknowledgement |
+| `corporateRegistrationStatusSchema`    | Corporate application status and key  |
+| `corporateSettingsSchema`              | `/personal/corp/settings` response    |
+| `currencyRateSchema`                   | One exchange-rate item                |
+| `currencyRatesSchema`                  | `/bank/currency` response array       |
+| `jarSchema`                            | One Personal jar                      |
+| `managedAccountSchema`                 | One delegated FOP account             |
+| `managedClientSchema`                  | One delegated FOP client              |
+| `merchantDetailsSchema`                | `/api/merchant/details` response      |
+| `newInvoiceSchema`                     | Create-invoice response               |
+| `invoiceStatusSchema`                  | Invoice status or webhook payload     |
+| `cancelInvoiceResponseSchema`          | Invoice cancellation response         |
+| `finalizeInvoiceResponseSchema`        | Hold finalization response            |
+| `receiptSchema`                        | Invoice receipt response              |
+| `invoiceFiscalChecksSchema`            | Invoice fiscal checks response        |
+| `statementItemSchema`                  | One statement item                    |
+| `statementItemsSchema`                 | Statement response array              |
+| `personalWebhookEventSchema`           | Incoming Personal statement event     |
 
 ```ts
 import { currencyRatesSchema } from "@liaugust/monobank-sdk";
@@ -1351,6 +1354,17 @@ const cashbackType: CashbackTypeValue = CashbackType.UAH;
 | `FiscalCheckType`                | `sale`, `return`                                                             |
 | `FiscalCheckStatus`              | `new`, `process`, `done`, `failed`                                           |
 | `FiscalizationSource`            | `checkbox`, `monopay`                                                        |
+
+### Corporate values
+
+| Export                        | Wire values                   |
+| ----------------------------- | ----------------------------- |
+| `CorporateRegistrationStatus` | `New`, `Declined`, `Approved` |
+
+Monobank declares no `enum` for the registration `status` field and lists these
+three values only in its prose description, so
+`CorporateRegistrationStatusResult.status` is typed as `string`. Compare against
+this const rather than relying on the response type to narrow.
 
 ## Response models
 

@@ -188,8 +188,11 @@ objects, or raw API payloads.
   `AcquiringStatementStatus`, `InvoicePaymentType`,
   `InvoiceStatus`, `InvoiceCancellationStatus`, `InvoicePaymentSystem`,
   `InvoicePaymentMethod`, `InvoiceWalletStatus`, `DiscountType`, `DiscountMode`,
-  `FiscalCheckType`, `FiscalCheckStatus`, `FiscalizationSource`.
+  `FiscalCheckType`, `FiscalCheckStatus`, `FiscalizationSource`,
+  `CorporateRegistrationStatus`.
 - Schemas: `accountSchema`, `bankSyncSchema`, `clientInfoSchema`,
+  `corporateRegistrationSchema`, `corporateRegistrationStatusSchema`,
+  `corporateSettingsSchema`,
   `currencyRateSchema`, `currencyRatesSchema`, `jarSchema`,
   `managedAccountSchema`, `managedClientSchema`, `statementItemSchema`,
   `statementItemsSchema`, `personalWebhookEventSchema`,
