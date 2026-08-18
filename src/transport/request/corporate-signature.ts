@@ -3,10 +3,9 @@ import type { CorporateSignatureInput } from "../corporate-signer.js";
 /**
  * Signed-payload composition an endpoint uses.
  *
- * Monobank documents two, and they do not follow from which headers a request
- * sends: `/personal/corp/settings` and `/personal/corp/webhook` both send
- * `X-Request-Id` while signing the variant that excludes it. Each operation
- * therefore states its own variant rather than inferring one.
+ * Monobank documents two, and they do not follow from the headers sent:
+ * `/personal/corp/settings` and `/personal/corp/webhook` send `X-Request-Id`
+ * while signing the variant that excludes it, so each operation states its own.
  */
 export type CorporateSignatureSpec =
   | {

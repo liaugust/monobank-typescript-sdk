@@ -45,11 +45,10 @@ claim endorsement by Monobank.
   wallet listing, token payment, and card removal, and invoice creation,
   status, cancellation, removal, finalization, receipt, fiscal checks, direct
   payment, and synchronous payment. Do not invent calls beyond that set.
-- Treat a Corporate `sign` result as credential material. The SDK sends it as
-  `X-Sign` and never logs it. Return base64 of the raw 64-byte `r || s` pair,
-  not a DER structure. Monobank documents neither the digest nor whether the
-  signed `URL` includes the query, so those are unverified assumptions; the
-  signer receives the payload components to rebuild it if the bank disagrees.
+- Treat a Corporate `sign` result as credential material; the SDK sends it as
+  `X-Sign` and never logs it. Return base64 of the raw 64-byte `r || s` pair, not
+  DER. Monobank documents neither the digest nor whether the signed `URL` includes
+  the query, so both are unverified assumptions.
 - Treat `acquiring.invoices.payDirect()` and `acquiring.invoices.syncPayment()`
   as PCI DSS surfaces. Never log, serialize, persist, or echo raw card details
   or crypto-container values, and prefer a hosted invoice or a stored card
@@ -157,13 +156,11 @@ tests/consumers/                ESM, CJS, browser, declaration, and tarball chec
   clients. A single transport must never hold both a token and a Corporate
   credential; configuring both is rejected.
 - Sign Corporate requests once per attempt, never once per request. `X-Time` is
-  part of the signed payload, so a retry after a backoff delay would otherwise
-  replay a stale timestamp. `timeoutMs` does not bound the signer: no signal is
-  passed into `sign`, so document that a remote signer must time itself out.
+  signed, so a retry after a backoff delay would replay a stale timestamp.
+  `timeoutMs` does not bound the signer, since no signal is passed into `sign`.
 - Send only printable ASCII without spaces in `X-Key-Id`, `X-Request-Id`, and
   `X-Sign`. `Headers.set` throws a bare `TypeError` on a control character, which
-  the transport would misread as a retryable network failure, so these are
-  validated before the request is built.
+  the transport would misread as a retryable network failure.
 - State each Corporate operation's signed-payload variant explicitly. Monobank
   documents two, and they do not follow from which headers a request sends:
   `/personal/corp/settings` and `/personal/corp/webhook` send `X-Request-Id`

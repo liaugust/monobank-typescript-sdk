@@ -25,8 +25,8 @@ export interface EmptyRequest {
 /**
  * Validates the endpoint and resolves it against the configured base URL.
  *
- * Runs once per request rather than once per attempt, so a malformed endpoint
- * fails before any Fetch and before a signer is ever invoked.
+ * Runs once per request, so a malformed endpoint fails before any Fetch and
+ * before a signer is invoked.
  * @param request Endpoint and authentication inputs.
  * @param options Validated transport configuration.
  * @returns Absolute request URL.
@@ -47,14 +47,13 @@ export function resolveRequestUrl(
 /**
  * Builds the Fetch init for one request attempt.
  *
- * Called per attempt because a Corporate signature covers `X-Time`, so a retry
- * after a backoff delay must be signed again rather than replay a stale
- * timestamp.
+ * Per attempt, because a Corporate signature covers `X-Time` and a retry must be
+ * signed again rather than replay a stale timestamp.
  *
- * Redirects are refused because only the initial URL was validated. Fetch keeps
- * custom headers such as `X-Token` across a cross-origin redirect and replays
- * the method and body on 307/308, so following one would send the credential,
- * and repeat a mutation, at an origin this transport never checked.
+ * Redirects are refused because only the initial URL was validated: Fetch keeps
+ * custom headers such as `X-Token` across a cross-origin redirect and replays the
+ * method and body on 307/308, so following one would send the credential, and
+ * repeat a mutation, at an unchecked origin.
  * @param method HTTP method for the request.
  * @param request Authentication, body, signature, and cancellation inputs.
  * @param options Validated transport configuration.
@@ -143,10 +142,9 @@ const unsafeHeaderValue = /[^!-~]/u;
 /**
  * Rejects a credential header value that cannot be sent verbatim.
  *
- * `Headers.set` throws a bare `TypeError` for a value containing a control
- * character, and that would escape as an unclassified failure the transport
- * treats as a network error and retries. Failing here instead reports the
- * offending field before any request is made.
+ * `Headers.set` throws a bare `TypeError` on a control character, which the
+ * transport catch would misread as a retryable network failure. Failing here
+ * names the offending field before any request is made.
  * @param value Candidate header value.
  * @param field Name of the input that produced it.
  * @param endpoint Endpoint the header was built for.
@@ -173,8 +171,7 @@ function requireSafeHeaderValue(
  * Invokes the application's signer and rejects an unusable result.
  *
  * The signer's own failure is never attached as a cause, because a crypto
- * library's error text can echo key material into an error this SDK treats as
- * safe to surface.
+ * library's error text can echo key material.
  * @param sign Application-supplied signing function.
  * @param input Payload and components to sign.
  * @param endpoint Endpoint the signature is for.

@@ -1,13 +1,11 @@
 /** Components the Corporate API binds together into a single request signature. */
 export interface CorporateSignatureInput {
   /**
-   * Exact string this SDK expects to be signed for the request.
+   * Exact string this SDK expects to be signed.
    *
-   * Monobank documents the composition only as `Sign (X-Time | URL)`, which
-   * does not state whether `URL` means the path, the path with its query, or an
-   * absolute URL. This SDK signs the path together with its query. The
-   * components are supplied alongside the payload so an application can rebuild
-   * it if the bank turns out to expect a different composition.
+   * Monobank documents only `Sign (X-Time | URL)`, never whether `URL` includes
+   * the query. This SDK signs the path with its query; the other fields let an
+   * application rebuild the payload if the bank expects a different composition.
    */
   readonly payload: string;
   /** Value sent as `X-Request-Id`, present only for endpoints that send one. */
@@ -19,17 +17,13 @@ export interface CorporateSignatureInput {
 }
 
 /**
- * Signing function that returns the `X-Sign` value for one Corporate request.
+ * Signing function returning the `X-Sign` value for one Corporate request.
  *
- * Corporate service keys are secp256k1, which Web Crypto cannot sign with, so
- * the SDK never holds the private key and delegates signing to the application.
- * The returned string is sent verbatim as `X-Sign`. Monobank's own documented
- * example decodes to the raw 64-byte `r || s` pair rather than a DER structure,
- * and the digest applied before signing is not documented at all.
- *
- * The function is invoked once per request attempt, because `X-Time` is part of
- * the signed payload and a retry after a backoff delay must not replay a stale
- * timestamp.
+ * Service keys are secp256k1, which Web Crypto cannot sign with, so the private
+ * key stays in the application. Return base64 of the raw 64-byte `r || s` pair,
+ * matching Monobank's documented example, not a DER structure; the digest it
+ * applies is undocumented. Called once per attempt, because `X-Time` is signed
+ * and a retry must not replay a stale timestamp.
  */
 export type CorporateSigner = (
   input: CorporateSignatureInput,

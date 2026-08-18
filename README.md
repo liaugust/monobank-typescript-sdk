@@ -7,7 +7,8 @@
 
 A strict, runtime-validated TypeScript SDK for the Monobank API.
 
-It gives applications typed Public, Personal, and Acquiring API responses
+It gives applications typed Public, Personal, Acquiring, and Corporate API
+responses
 without trusting the wire: every successful JSON payload crosses a Zod
 validation boundary before it reaches your code.
 
@@ -58,6 +59,8 @@ validation boundary before it reaches your code.
 - No token for `MonobankPublicClient`
 - A Monobank Personal API token for `MonobankPersonalClient`
 - A Monobank Acquiring token for `MonobankAcquiringClient`
+- An approved Corporate service key and a signing function for
+  `MonobankCorporateClient`
 
 ## Installation
 
@@ -461,12 +464,12 @@ application so storage and refresh policy stay explicit.
 
 ### Corporate provider API
 
-The Corporate provider API does not use `X-Token`. Every request is signed, and
+The Corporate provider API does not use `X-Token`: every request is signed, and
 Monobank issues the service key only after approving the company as a provider.
 
-The signing key is **secp256k1**, which Web Crypto cannot sign with. Rather than
-add a crypto dependency or a Node-only import that would break the browser
-build, the SDK takes a signing function and never holds the private key:
+The key is **secp256k1**, which Web Crypto cannot sign with. Rather than add a
+crypto dependency or a Node-only import that would break the browser build, the
+SDK takes a signing function and never holds the private key:
 
 ```ts
 import { createSign } from "node:crypto";
@@ -488,34 +491,24 @@ const settings = await corporate.company.getSettings({
 });
 ```
 
-`dsaEncoding: "ieee-p1363"` produces the raw 64-byte `r || s` pair rather than a
-DER structure. Monobank's own documented `X-Sign` example decodes to exactly
-that, so a DER signature would be rejected.
+`dsaEncoding: "ieee-p1363"` produces the raw 64-byte `r || s` pair. Monobank's
+documented `X-Sign` example decodes to exactly that, so DER is rejected.
 
-Two details about signing are worth stating plainly, because Monobank does not
-document them:
+Two things Monobank does not document:
 
-- **The digest is not specified.** `SHA256` above matches the wider ecosystem,
-  but the official documentation names no hash. If the bank rejects a signature
-  whose payload you believe is correct, this is the first thing to vary.
-- **The meaning of `URL` in `Sign (X-Time | URL)` is ambiguous.** This SDK signs
-  the path together with its query. The signer receives `time`, `requestId`, and
-  the absolute `url` alongside the ready-made `payload`, so you can rebuild the
-  payload yourself if the bank turns out to expect something else.
+- **The digest.** `SHA256` matches the wider ecosystem, but no hash is named. If
+  the bank rejects a payload you believe is right, vary this first.
+- **What `URL` means** in `Sign (X-Time | URL)`. This SDK signs the path with its
+  query. The signer also receives `time`, `requestId`, and `url`, so you can
+  rebuild the payload if the bank expects something else.
 
-The signer is invoked once per attempt, not once per request, because `X-Time` is
-part of the signed payload and a retry after a backoff delay must not replay a
-stale timestamp.
+The signer runs once per attempt, because `X-Time` is signed and a retry must not
+replay a stale timestamp. `timeoutMs` does **not** bound it — no signal is passed
+into `sign` — so give a remote signer its own timeout.
 
-`timeoutMs` does **not** bound the signer. The SDK does not pass a signal into
-`sign`, so a signing call that never settles blocks the request rather than
-timing out. Give any remote signer — a KMS or HSM call, for example — its own
-timeout.
-
-A signer that throws, or returns an empty string, produces a
-`MonobankValidationError` before Fetch runs. The underlying failure is never
-attached as a cause, because a crypto library's error text can echo key
-material.
+A signer that throws or returns an empty string produces a
+`MonobankValidationError` before Fetch runs, with no cause attached, because a
+crypto library's error text can echo key material.
 
 This surface is verified against synthetic fixtures only. Exercising it live
 requires Monobank to approve the company as a provider, which is why the

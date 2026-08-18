@@ -7,12 +7,10 @@ All notable changes to this package are documented here.
 ### Added
 
 - `MonobankCorporateClient` for the Corporate provider API, which authenticates
-  by request signing rather than `X-Token`. It sends `X-Key-Id`, `X-Time`,
+  by request signing rather than `X-Token`, sending `X-Key-Id`, `X-Time`,
   `X-Sign`, and where documented `X-Request-Id`. Service keys are secp256k1,
   which Web Crypto cannot sign with, so the client takes an injected `sign`
-  function and never holds the private key: adding a crypto dependency would
-  break the single-runtime-dependency rule, and a `node:crypto` import would
-  break the browser build.
+  function and never holds the private key.
 - `corporate.company.getSettings(input)` reading the signed
   `GET /personal/corp/settings` endpoint, plus `corporateSettingsSchema`,
   `CorporateSettings`, `GetCorporateSettingsInput`, `CorporateSigner`, and

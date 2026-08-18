@@ -25,9 +25,8 @@ export class MonobankCorporateCompany {
   /**
    * Loads the company data Monobank holds for the configured Corporate key.
    *
-   * Signed with the `X-Time` and URL payload. `X-Request-Id` is sent but is
-   * deliberately not part of the signed payload, matching what Monobank
-   * documents for this endpoint.
+   * Signed with the `X-Time` and URL payload; `X-Request-Id` is sent but
+   * deliberately not signed, as Monobank documents for this endpoint.
    * @param input Request identifier sent as `X-Request-Id`.
    * @param options Optional cancellation controls for this request.
    * @returns Validated company name, permissions, logo, public key, and webhook address.

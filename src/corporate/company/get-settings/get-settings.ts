@@ -19,10 +19,9 @@ const getCorporateSettingsSchema = z.object({
 /**
  * Runtime validator for the signed `/personal/corp/settings` response.
  *
- * Monobank lists `id` in the response's `required` array but never defines the
- * property or gives an example, so its type is unknown and it is left unmodeled
- * rather than guessed; the loose object still preserves it at runtime. `webhook`
- * is absent from that `required` array and is modeled optional.
+ * `id` is listed as required upstream but never defined, so its type is unknown
+ * and it stays unmodeled rather than guessed; the loose object preserves it at
+ * runtime. `webhook` is absent from that `required` array, so it is optional.
  */
 export const corporateSettingsSchema = z.looseObject({
   logo: z.string(),

@@ -210,10 +210,10 @@ carries `X-Key-Id`, `X-Time`, and `X-Sign`, and some endpoints also send
 `X-Request-Id`. Monobank issues the service key only after approving the company
 as a provider.
 
-Service keys are **secp256k1**, which Web Crypto cannot sign with. Adding a
-crypto dependency would break the package's single-runtime-dependency rule, and a
-`node:crypto` import would break the browser build, so the signing function is
-injected and the SDK never holds the private key.
+Service keys are **secp256k1**, which Web Crypto cannot sign with. A crypto
+dependency would break the single-runtime-dependency rule and a `node:crypto`
+import would break the browser build, so the signer is injected and the SDK never
+holds the private key.
 
 ### Constructor options
 
@@ -250,20 +250,18 @@ decodes to the raw 64-byte `r || s` pair, not a DER structure, so a DER signatur
 is rejected. With `node:crypto`, that means
 `sign({ dsaEncoding: "ieee-p1363", key }, "base64")`.
 
-Two properties of the signature are **not documented by Monobank** and cannot be
-verified without provider approval:
+Two properties are **not documented by Monobank** and cannot be verified without
+provider approval: the digest applied before signing (`SHA256` matches the wider
+ecosystem), and whether `URL` means the path, the path with its query, or an
+absolute URL.
 
-- the digest applied before signing; `SHA256` matches the wider ecosystem
-- whether `URL` in `Sign (X-Time | URL)` means the path, the path with its query,
-  or an absolute URL
+This SDK signs the path with its query. Because `payload` arrives alongside
+`time`, `requestId`, and `url`, an application can rebuild it if the bank expects
+a different composition, without forking the SDK.
 
-This SDK signs the path together with its query. Because `payload` arrives
-alongside `time`, `requestId`, and `url`, an application can rebuild the payload
-itself if the bank expects a different composition, without forking the SDK.
-
-Monobank documents two payload compositions, and they do not follow from which
-headers a request sends. `/personal/corp/settings` sends `X-Request-Id` while
-signing the variant that excludes it, so each operation states its own variant.
+Monobank documents two compositions, and they do not follow from the headers sent:
+`/personal/corp/settings` sends `X-Request-Id` while signing the variant that
+excludes it, so each operation states its own.
 
 `sign` is invoked **once per attempt**, not once per request, because `X-Time` is
 part of the payload and a retry after a backoff delay must not replay a stale
@@ -1072,11 +1070,10 @@ signed `GET /personal/corp/settings` endpoint.
 | ----------- | -------- | --------------------------------------------------------------- |
 | `requestId` | `string` | Nonempty printable ASCII without spaces; sent as `X-Request-Id` |
 
-Signed with the `X-Time` and URL payload. `X-Request-Id` is sent but is
-deliberately **not** part of the signed payload, matching what Monobank
-documents for this endpoint.
+Signed with the `X-Time` and URL payload; `X-Request-Id` is sent but deliberately
+**not** signed, as Monobank documents for this endpoint.
 
-Safe GET; eligible for configured retries. Each retry is signed again.
+Safe GET; eligible for configured retries, and each retry is signed again.
 
 | Response field | Type     | Notes                                                     |
 | -------------- | -------- | --------------------------------------------------------- |
@@ -1086,10 +1083,9 @@ Safe GET; eligible for configured retries. Each retry is signed again.
 | `logo`         | `string` | Company logo image, base64 encoded                        |
 | `webhook`      | `string` | Optional transaction callback address                     |
 
-Monobank lists `id` in this response's `required` array but never defines the
-property or gives an example, so its type is unknown. It is intentionally left
-unmodeled rather than guessed; the loose response object still preserves it at
-runtime.
+Monobank lists `id` as required but never defines the property or gives an
+example, so its type is unknown. It is left unmodeled rather than guessed; the
+loose response object still preserves it at runtime.
 
 ```ts
 const settings = await corporate.company.getSettings({

@@ -6,9 +6,9 @@ import type { MonobankCorporateClientOptions } from "./monobank-corporate-client
  * Client for Monobank Corporate provider resources, authenticated by request signing.
  *
  * The Corporate API does not use `X-Token`. Every request carries `X-Key-Id`,
- * `X-Time`, `X-Sign`, and for some endpoints `X-Request-Id`. Because the keys are
- * secp256k1, which Web Crypto cannot sign with, the private key stays in the
- * application and only a signing function is injected.
+ * `X-Time`, `X-Sign`, and for some endpoints `X-Request-Id`. Keys are secp256k1,
+ * which Web Crypto cannot sign with, so only a signing function is injected and
+ * the private key stays in the application.
  * @example
  * ```ts
  * const client = new MonobankCorporateClient({
