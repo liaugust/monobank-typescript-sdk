@@ -1,6 +1,6 @@
 import * as z from "zod/mini";
 
-import { parseAcquiringRequest } from "../../shared/request-validation.js";
+import { parseMonobankRequest } from "../../../shared/request-validation.js";
 
 /** Input identifying the tokenized card to remove from a merchant wallet. */
 export interface DeleteAcquiringWalletCardInput {
@@ -23,7 +23,7 @@ const deleteAcquiringWalletCardSchema = z.object({
 export function createDeleteAcquiringWalletCardEndpoint(
   input: DeleteAcquiringWalletCardInput,
 ): string {
-  const parsed = parseAcquiringRequest(
+  const parsed = parseMonobankRequest(
     deleteAcquiringWalletCardSchema,
     input,
     deleteAcquiringWalletCardEndpoint,

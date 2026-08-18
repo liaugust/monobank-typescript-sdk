@@ -118,7 +118,7 @@ src/acquiring/invoices/         invoice endpoints, models, and request helpers
 src/acquiring/qr/               QR cashier resource, endpoints, and models
 src/acquiring/statements/       statement resource, endpoint, and models
 src/acquiring/submerchants/     submerchant resource, endpoint, and models
-src/acquiring/shared/           request validation and shared response models
+src/acquiring/shared/           shared Acquiring response models
 src/acquiring/wallet/           tokenized card resource, endpoints, and models
 src/acquiring/webhooks/         trust-key endpoint and signature verification
 src/public/client/              token-free Public parent client and options
@@ -131,6 +131,7 @@ src/personal/webhooks/          webhook resource, input, and event parser
 src/transport/request/          request security and attempt-signal ownership
 src/transport/retry/            retry policy, delay, and Retry-After parsing
 src/transport/response/         successful and failed response normalization
+src/shared/                     request options, request validation, and unix time
 src/errors/                     public credential-safe error classes
 tests/fixtures/{public,personal,acquiring}/ synthetic contract fixtures
 tests/types/                    compile-time public API assertions

@@ -1,5 +1,5 @@
+import { parseMonobankRequest } from "../../../shared/request-validation.js";
 import type { ResponseSchema } from "../../../transport/response-schema.js";
-import { parseAcquiringRequest } from "../../shared/request-validation.js";
 
 /**
  * Parses Acquiring invoice request data ahead of Fetch.
@@ -14,7 +14,7 @@ export function parseInvoiceRequest<T>(
   input: unknown,
   endpoint: string,
 ): T {
-  return parseAcquiringRequest(
+  return parseMonobankRequest(
     schema,
     input,
     endpoint,

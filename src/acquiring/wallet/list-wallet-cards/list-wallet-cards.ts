@@ -1,6 +1,6 @@
 import * as z from "zod/mini";
 
-import { parseAcquiringRequest } from "../../shared/request-validation.js";
+import { parseMonobankRequest } from "../../../shared/request-validation.js";
 
 /** Input selecting which merchant wallet to read. */
 export interface ListAcquiringWalletCardsInput {
@@ -23,7 +23,7 @@ const listAcquiringWalletCardsSchema = z.object({
 export function createAcquiringWalletEndpoint(
   input: ListAcquiringWalletCardsInput,
 ): string {
-  const parsed = parseAcquiringRequest(
+  const parsed = parseMonobankRequest(
     listAcquiringWalletCardsSchema,
     input,
     listAcquiringWalletCardsEndpoint,
