@@ -8,7 +8,7 @@ import {
   createAttemptSignal,
 } from "./request/attempt-signal.js";
 import type { EmptyRequest, JsonRequest } from "./request/request.js";
-import { createRequest } from "./request/request.js";
+import { createRequestInit, resolveRequestUrl } from "./request/request.js";
 import { createApiError } from "./response/create-api-error.js";
 import { parseSuccessJson } from "./response/parse-success-json.js";
 import { delayBeforeRetry } from "./retry/delay-before-retry.js";
@@ -79,7 +79,7 @@ export class MonobankTransport {
     request: EmptyRequest,
     consumeResponse: (response: Response) => Promise<T> | T,
   ): Promise<T> {
-    const { init, url } = createRequest(method, request, this.options);
+    const url = resolveRequestUrl(request, this.options);
     let attempt = 1;
 
     for (;;) {
@@ -92,6 +92,12 @@ export class MonobankTransport {
         request.signal,
       );
       try {
+        const init = await createRequestInit(
+          method,
+          request,
+          this.options,
+          url,
+        );
         const response = await this.options.fetch(url, {
           ...init,
           signal: attemptSignal.signal,

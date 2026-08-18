@@ -4,6 +4,18 @@ All notable changes to this package are documented here.
 
 ## Unreleased
 
+### Added
+
+- `MonobankCorporateClient` for the Corporate provider API, which authenticates
+  by request signing rather than `X-Token`, sending `X-Key-Id`, `X-Time`,
+  `X-Sign`, and where documented `X-Request-Id`. Service keys are secp256k1,
+  which Web Crypto cannot sign with, so the client takes an injected `sign`
+  function and never holds the private key.
+- `corporate.company.getSettings(input)` reading the signed
+  `GET /personal/corp/settings` endpoint, plus `corporateSettingsSchema`,
+  `CorporateSettings`, `GetCorporateSettingsInput`, `CorporateSigner`, and
+  `CorporateSignatureInput`.
+
 ### Changed
 
 - Raise the supported runtime floor from Node.js 20.19.5 to 22.12.0. Node 20

@@ -136,6 +136,13 @@ export type { AcquiringWebhookPublicKey } from "./acquiring/webhooks/get-public-
 export { acquiringWebhookPublicKeySchema } from "./acquiring/webhooks/get-public-key/get-public-key.js";
 export type { VerifyAcquiringWebhookSignatureInput } from "./acquiring/webhooks/verify-signature/verify-acquiring-webhook-signature.js";
 export { verifyAcquiringWebhookSignature } from "./acquiring/webhooks/verify-signature/verify-acquiring-webhook-signature.js";
+export { MonobankCorporateClient } from "./corporate/client/monobank-corporate-client.js";
+export type { MonobankCorporateClientOptions } from "./corporate/client/monobank-corporate-client-options.js";
+export type {
+  CorporateSettings,
+  GetCorporateSettingsInput,
+} from "./corporate/company/get-settings/get-settings.js";
+export { corporateSettingsSchema } from "./corporate/company/get-settings/get-settings.js";
 export type { MonobankApiErrorOptions } from "./errors/monobank-api-error.js";
 export { MonobankApiError } from "./errors/monobank-api-error.js";
 export type {
@@ -192,6 +199,10 @@ export {
   currencyRatesSchema,
 } from "./public/currency/get-rates/get-rates.js";
 export type { RequestOptions } from "./shared/request-options.js";
+export type {
+  CorporateSignatureInput,
+  CorporateSigner,
+} from "./transport/corporate-signer.js";
 export type { FetchLike } from "./transport/fetch-like.js";
 export type { ResponseValidationIssue } from "./transport/response-schema.js";
 export type { RetryOptions } from "./transport/retry-options.js";

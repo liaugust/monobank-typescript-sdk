@@ -15,11 +15,15 @@ import type {
   BankSync,
   CancelInvoiceInput,
   ClientInfo,
+  CorporateSettings,
+  CorporateSignatureInput,
+  CorporateSigner,
   CreateInvoiceInput,
   CreateInvoiceOptions,
   CurrencyRate,
   GetAcquiringQrDetailsInput,
   GetAcquiringStatementsInput,
+  GetCorporateSettingsInput,
   GetStatementsInput,
   Invoice,
   InvoiceCancellation,
@@ -44,9 +48,11 @@ import {
   AcquiringStatementStatus,
   acquiringSubmerchantListSchema,
   CashbackType,
+  corporateSettingsSchema,
   InvoicePaymentType,
   InvoiceStatus,
   MonobankAcquiringClient,
+  MonobankCorporateClient,
   MonobankPersonalClient,
   MonobankPublicClient,
   parsePersonalWebhookEvent,
@@ -56,6 +62,23 @@ import {
 const client = new MonobankPersonalClient({ token: "token" });
 const publicClient = new MonobankPublicClient();
 const acquiringClient = new MonobankAcquiringClient({ token: "token" });
+const corporateClient = new MonobankCorporateClient({
+  keyId: "28a75537175a018645e6f8b14be7681791e701e0",
+  sign: ({ payload }: CorporateSignatureInput) => payload,
+});
+const corporateSettingsInput: GetCorporateSettingsInput = {
+  requestId: "corp-request-id",
+};
+const corporateSettings: Promise<CorporateSettings> =
+  corporateClient.company.getSettings(corporateSettingsInput);
+const parsedCorporateSettings: CorporateSettings =
+  corporateSettingsSchema.parse({
+    logo: "logo",
+    name: "company",
+    permission: "psf",
+    pubkey: "pubkey",
+  });
+const corporateSigner: CorporateSigner = () => Promise.resolve("c2ln");
 const input: GetStatementsInput = { from: new Date(0) };
 const bankSync: Promise<BankSync> = publicClient.bank.getSync();
 const statements = client.statements.get(input);
@@ -312,3 +335,18 @@ const invalidCashbackType: CashbackType = "Cash";
 
 void invalidAccountType;
 void invalidCashbackType;
+
+void corporateSettings;
+void parsedCorporateSettings;
+void corporateSigner;
+
+// @ts-expect-error -- A Corporate key identifier and signer are both required.
+new MonobankCorporateClient({
+  keyId: "28a75537175a018645e6f8b14be7681791e701e0",
+});
+
+// @ts-expect-error -- A Corporate token is not an accepted credential.
+new MonobankCorporateClient({ token: "token" });
+
+// @ts-expect-error -- Corporate settings require a request identifier.
+void corporateClient.company.getSettings({});

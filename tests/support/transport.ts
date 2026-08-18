@@ -1,6 +1,7 @@
 import { expect, vi } from "vitest";
 import * as z from "zod/mini";
 
+import type { CorporateSigner } from "../../src/transport/corporate-signer.js";
 import { MonobankTransport } from "../../src/transport/transport.js";
 import type { createFetchSequence } from "./create-fetch-sequence.js";
 
@@ -71,6 +72,46 @@ export function requestSafeGetWithSignal(
   });
 }
 
+export function createCorporateTransport(
+  fetch: TestFetch,
+  sign: CorporateSigner,
+  retry?: { baseDelayMs: number; maxAttempts: number; maxDelayMs: number },
+): MonobankTransport {
+  return new MonobankTransport({
+    corporate: { keyId: "corporate-key-id", sign },
+    fetch,
+    ...(retry === undefined ? {} : { retry }),
+  });
+}
+
+export async function getCorporateSettings(
+  transport: MonobankTransport,
+  options: {
+    readonly requestId?: string;
+    readonly retryable?: boolean;
+    readonly signed?: boolean;
+  } = {},
+) {
+  return transport.getJson({
+    auth: true,
+    endpoint: "/personal/corp/settings",
+    schema: passthroughSchema,
+    ...(options.retryable === undefined
+      ? {}
+      : { retryable: options.retryable }),
+    ...(options.signed === false
+      ? {}
+      : {
+          signature: {
+            variant: "time-and-url" as const,
+            ...(options.requestId === undefined
+              ? {}
+              : { requestId: options.requestId }),
+          },
+        }),
+  });
+}
+
 export function createRetryingTransport(fetch: TestFetch): MonobankTransport {
   return new MonobankTransport({
     fetch,
@@ -82,9 +123,17 @@ export function createRetryingTransport(fetch: TestFetch): MonobankTransport {
 export function createAbortRejectingFetch(): TestFetch {
   return vi.fn((_: RequestInfo | URL, init?: RequestInit) => {
     return new Promise<Response>((_resolve, reject) => {
-      init?.signal?.addEventListener("abort", () => {
+      const abort = () => {
         reject(new DOMException("Request aborted", "AbortError"));
-      });
+      };
+
+      if (init?.signal?.aborted === true) {
+        abort();
+
+        return;
+      }
+
+      init?.signal?.addEventListener("abort", abort);
     });
   });
 }

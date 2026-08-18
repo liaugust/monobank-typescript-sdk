@@ -7,7 +7,8 @@
 
 A strict, runtime-validated TypeScript SDK for the Monobank API.
 
-It gives applications typed Public, Personal, and Acquiring API responses
+It gives applications typed Public, Personal, Acquiring, and Corporate API
+responses
 without trusting the wire: every successful JSON payload crosses a Zod
 validation boundary before it reaches your code.
 
@@ -32,6 +33,7 @@ validation boundary before it reaches your code.
   - [Client information](#client-information)
   - [Statements](#statements)
   - [Webhooks](#webhooks)
+  - [Corporate provider API](#corporate-provider-api)
 - [Retries, timeouts, and cancellation](#retries-timeouts-and-cancellation)
 - [Errors](#errors)
 - [Runtime schemas](#runtime-schemas)
@@ -57,6 +59,8 @@ validation boundary before it reaches your code.
 - No token for `MonobankPublicClient`
 - A Monobank Personal API token for `MonobankPersonalClient`
 - A Monobank Acquiring token for `MonobankAcquiringClient`
+- An approved Corporate service key and a signing function for
+  `MonobankCorporateClient`
 
 ## Installation
 
@@ -127,12 +131,14 @@ example focused; production code should validate the environment value first.
 | `acquiring.invoices.finalize(input)`        | Acquiring token | `InvoiceFinalization`       | Captures a held payment                        |
 | `acquiring.invoices.getReceipt(input)`      | Acquiring token | `InvoiceReceipt`            | Gets and optionally emails a receipt           |
 | `acquiring.invoices.getFiscalChecks(input)` | Acquiring token | `InvoiceFiscalChecks`       | Loads fiscalization results                    |
+| `corporate.company.getSettings(input)`      | Corporate key   | `CorporateSettings`         | Signed request; company registration data      |
 
 See the [complete API reference](docs/API.md) for signatures, parameters,
 returns, errors, retry behavior, data models, and focused examples.
 
 Each client represents one credential boundary. Public calls use a token-free
 client; Personal and Acquiring tokens cannot accidentally cross API families.
+The Corporate client carries no token at all and signs every request instead.
 
 ### Acquiring merchant details
 
@@ -455,6 +461,58 @@ parse, reserialize, trim, or otherwise transform it before verification.
 Monobank recommends caching the public key and fetching it again only after
 verification with the cached key fails; cache ownership remains with the
 application so storage and refresh policy stay explicit.
+
+### Corporate provider API
+
+The Corporate provider API does not use `X-Token`: every request is signed, and
+Monobank issues the service key only after approving the company as a provider.
+
+The key is **secp256k1**, which Web Crypto cannot sign with. Rather than add a
+crypto dependency or a Node-only import that would break the browser build, the
+SDK takes a signing function and never holds the private key:
+
+```ts
+import { createSign } from "node:crypto";
+
+import { MonobankCorporateClient } from "@liaugust/monobank-sdk";
+
+const privateKeyPem = process.env.MONOBANK_CORPORATE_PRIVATE_KEY ?? "";
+
+const corporate = new MonobankCorporateClient({
+  keyId: process.env.MONOBANK_CORPORATE_KEY_ID ?? "",
+  sign: ({ payload }) =>
+    createSign("SHA256")
+      .update(payload)
+      .sign({ dsaEncoding: "ieee-p1363", key: privateKeyPem }, "base64"),
+});
+
+const settings = await corporate.company.getSettings({
+  requestId: "corp-request-id",
+});
+```
+
+`dsaEncoding: "ieee-p1363"` produces the raw 64-byte `r || s` pair. Monobank's
+documented `X-Sign` example decodes to exactly that, so DER is rejected.
+
+Two things Monobank does not document:
+
+- **The digest.** `SHA256` matches the wider ecosystem, but no hash is named. If
+  the bank rejects a payload you believe is right, vary this first.
+- **What `URL` means** in `Sign (X-Time | URL)`. This SDK signs the path with its
+  query. The signer also receives `time`, `requestId`, and `url`, so you can
+  rebuild the payload if the bank expects something else.
+
+The signer runs once per attempt, because `X-Time` is signed and a retry must not
+replay a stale timestamp. `timeoutMs` does **not** bound it — no signal is passed
+into `sign` — so give a remote signer its own timeout.
+
+A signer that throws or returns an empty string produces a
+`MonobankValidationError` before Fetch runs, with no cause attached, because a
+crypto library's error text can echo key material.
+
+This surface is verified against synthetic fixtures only. Exercising it live
+requires Monobank to approve the company as a provider, which is why the
+response schema treats every undocumented field conservatively.
 
 ## Retries, timeouts, and cancellation
 

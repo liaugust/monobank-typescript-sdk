@@ -201,7 +201,7 @@ describe("MonobankAcquiringClient resources", () => {
   });
 
   it("passes caller cancellation to webhook public-key requests", async () => {
-    const { fetch, requestSignal } = createAbortableFetch();
+    const { entered, fetch, requestSignal } = createAbortableFetch();
     const client = new MonobankAcquiringClient({
       fetch,
       token: "acquiring-token",
@@ -210,7 +210,7 @@ describe("MonobankAcquiringClient resources", () => {
 
     const request = client.webhooks.getPublicKey({ signal: controller.signal });
     request.catch(() => undefined);
-    await Promise.resolve();
+    await entered;
     controller.abort();
 
     expect(requestSignal()?.aborted).toBe(true);
