@@ -137,29 +137,30 @@ async function applyCredentialHeaders(
   );
 }
 
-const unsafeHeaderValue = /[^!-~]/u;
+const safeHeaderValue = /^[!-~]+$/u;
 
 /**
  * Rejects a credential header value that cannot be sent verbatim.
  *
  * `Headers.set` throws a bare `TypeError` on a control character, which the
- * transport catch would misread as a retryable network failure. Failing here
- * names the offending field before any request is made.
+ * transport catch would misread as a retryable network failure, and an empty
+ * value would silently send a blank header. Failing here names the offending
+ * field before any request is made.
  * @param value Candidate header value.
  * @param field Name of the input that produced it.
  * @param endpoint Endpoint the header was built for.
  * @returns The unchanged value.
- * @throws {MonobankValidationError} When the value is not printable ASCII without spaces.
+ * @throws {MonobankValidationError} When the value is empty or not printable ASCII without spaces.
  */
 function requireSafeHeaderValue(
   value: string,
   field: string,
   endpoint: string,
 ): string {
-  if (unsafeHeaderValue.test(value)) {
+  if (!safeHeaderValue.test(value)) {
     throw new MonobankValidationError({
       endpoint,
-      issues: [`${field} must contain only printable ASCII without spaces`],
+      issues: [`${field} must be nonempty printable ASCII without spaces`],
       message: "Invalid Monobank transport request.",
     });
   }

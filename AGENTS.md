@@ -94,10 +94,10 @@ The root entry point exports:
 - `MonobankPublicClient`
 - `MonobankAcquiringClient`
 - `MonobankCorporateClient`
-- eleven resource properties exposed through the three parent clients: `bank`,
+- fourteen resource properties exposed through the four parent clients: `bank`,
   `currency`, `client`, Personal `statements`, Personal `webhooks`, `merchant`,
-  `invoices`, Acquiring `statements`, `submerchants`, `qr`, and Acquiring
-  `webhooks`
+  `employees`, `invoices`, Acquiring `statements`, `submerchants`, `qr`,
+  `wallet`, Acquiring `webhooks`, and Corporate `company`
 - Personal and Acquiring enum-like const values, including `AccountType`,
   `CashbackType`, `AcquiringPaymentScheme`, `AcquiringQrAmountType`,
   `AcquiringStatementStatus`, `InvoicePaymentType`, and `InvoiceStatus`

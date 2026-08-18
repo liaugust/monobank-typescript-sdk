@@ -11,9 +11,7 @@ export interface GetCorporateSettingsInput {
 export const corporateSettingsEndpoint = "/personal/corp/settings";
 
 const getCorporateSettingsSchema = z.object({
-  requestId: z
-    .string()
-    .check(z.refine((value) => value.length > 0 && value.trim() === value)),
+  requestId: z.string().check(z.refine((value) => /^[!-~]+$/u.test(value))),
 });
 
 /**
@@ -38,7 +36,7 @@ export type CorporateSettings = z.infer<typeof corporateSettingsSchema>;
  * Validates the corporate settings request ahead of Fetch.
  * @param input Request identifier for this call.
  * @returns Parsed request data.
- * @throws {MonobankValidationError} When `requestId` is empty or has surrounding whitespace.
+ * @throws {MonobankValidationError} When `requestId` is empty or not printable ASCII without spaces.
  */
 export function parseGetCorporateSettingsInput(
   input: GetCorporateSettingsInput,

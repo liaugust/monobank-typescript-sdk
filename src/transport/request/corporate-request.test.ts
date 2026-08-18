@@ -66,6 +66,16 @@ describe("Corporate transport credentials", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it("rejects an empty request id rather than sending a blank header", async () => {
+    const fetch = createFetchSequence([jsonResponse({ ok: true })]);
+    const transport = createCorporateTransport(fetch, () => "c2ln");
+
+    await expect(
+      getCorporateSettings(transport, { requestId: "" }),
+    ).rejects.toBeInstanceOf(MonobankValidationError);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("rejects a request id that would inject a second header", async () => {
     const fetch = createFetchSequence([jsonResponse({ ok: true })]);
     const transport = createCorporateTransport(fetch, () => "c2ln");
