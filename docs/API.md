@@ -40,7 +40,10 @@ supported contract.
 - [statements.get](#statementsget)
 - [webhooks.set](#webhooksset)
 - [parsePersonalWebhookEvent](#parsepersonalwebhookevent)
+- [corporate.company.register](#corporatecompanyregister)
+- [corporate.company.getRegistrationStatus](#corporatecompanygetregistrationstatus)
 - [corporate.company.getSettings](#corporatecompanygetsettings)
+- [corporate.company.setWebhook](#corporatecompanysetwebhook)
 - [Errors](#errors)
 - [Runtime schemas](#runtime-schemas)
 - [Enum-like values](#enum-like-values)
@@ -219,7 +222,7 @@ holds the private key.
 
 | Option      | Type              | Default                   | Contract                                                                                                                |
 | ----------- | ----------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `keyId`     | `string`          | Required                  | Nonempty service key identifier without surrounding whitespace                                                          |
+| `keyId`     | `string`          | Optional                  | Printable ASCII service key identifier; omit only for the registration flow, which is what issues it                    |
 | `sign`      | `CorporateSigner` | Required                  | Function returning the `X-Sign` value; may be synchronous or asynchronous                                               |
 | `baseUrl`   | `string`          | `https://api.monobank.ua` | Absolute HTTP(S) origin, primarily for controlled proxies and tests; must use `https` unless it targets a loopback host |
 | `fetch`     | `FetchLike`       | `globalThis.fetch`        | Required when the runtime does not provide global Fetch; must honor `RequestInit.redirect`                              |
@@ -1054,6 +1057,45 @@ const event = parsePersonalWebhookEvent(await request.json());
 // Authenticate delivery separately, then pass `event` to application logic.
 ```
 
+## corporate.company.register
+
+```ts
+corporate.company.register(
+  input: RegisterCorporateCompanyInput,
+  options?: RequestOptions,
+): Promise<CorporateRegistration>
+```
+
+Submits the company authorization application over the signed
+`POST /personal/auth/registration` endpoint. Runs **before a service key
+exists**: the request is signed with `X-Time` and the URL alone and sends no
+`X-Key-Id`, so the client may be constructed with only `sign`.
+
+All seven documented fields are required and must be non-blank:
+`contactPerson`, `description`, `email`, `logo` (base64 image), `name`,
+`phone`, and `pubkey` (base64 PEM of the secp256k1 public key).
+
+Mutating request; never retried. The response documents no required field, so
+`CorporateRegistration.status` is optional.
+
+## corporate.company.getRegistrationStatus
+
+```ts
+corporate.company.getRegistrationStatus(
+  input: GetCorporateRegistrationStatusInput,
+  options?: RequestOptions,
+): Promise<CorporateRegistrationStatusResult>
+```
+
+Polls the application status over the signed
+`POST /personal/auth/registration/status` endpoint, identified by the same
+base64 `pubkey` the application was submitted with. Also runs before a key
+exists and sends no `X-Key-Id`.
+
+Returns `status` — one of `CorporateRegistrationStatus.New`, `.Declined`, or
+`.Approved` — and `keyId`, which is what every later Corporate request
+authenticates with. POST upstream; never retried.
+
 ## corporate.company.getSettings
 
 ```ts
@@ -1097,6 +1139,30 @@ Throws `MonobankValidationError` when `requestId` is invalid or the signer fails
 `MonobankApiError` on a non-success status, `MonobankNetworkError` on transport
 failure, and `MonobankResponseValidationError` when the payload does not match
 the schema.
+
+## corporate.company.setWebhook
+
+```ts
+corporate.company.setWebhook(
+  input: SetCorporateWebhookInput,
+  options?: RequestOptions,
+): Promise<void>
+```
+
+Sets or removes the webhook that receives client payment updates, over the
+signed `POST /personal/corp/webhook` endpoint.
+
+| Input        | Type     | Contract                                                        |
+| ------------ | -------- | --------------------------------------------------------------- |
+| `requestId`  | `string` | Nonempty printable ASCII without spaces; sent as `X-Request-Id` |
+| `webHookUrl` | `string` | Absolute HTTP(S) URL, or an empty string to remove the webhook  |
+
+Monobank sends a **test POST** to the URL during this call and fails the call
+unless it answers `200 OK`, so the mutation can fail for reasons outside the
+request itself. Signed with the `X-Time` and URL payload; `X-Request-Id` is
+sent but deliberately not signed. Requires a configured `keyId`. Never
+retried. Removal via an empty string mirrors the Personal endpoint and is not
+explicitly documented for this one.
 
 ## Errors
 
@@ -1531,6 +1597,9 @@ object containing the target `account` identifier and validated
 | `CorporateSigner`                        | Injectable Corporate signing function returning `X-Sign`       |
 | `CorporateSignatureInput`                | Payload and components handed to a Corporate signer            |
 | `GetCorporateSettingsInput`              | Request identifier for a corporate settings read               |
+| `RegisterCorporateCompanyInput`          | Company authorization application fields                       |
+| `GetCorporateRegistrationStatusInput`    | Public key identifying an application to poll                  |
+| `SetCorporateWebhookInput`               | Request identifier and Corporate webhook address               |
 | `ResponseValidationIssue`                | Safe schema issue retained by validation errors                |
 | `MonobankApiErrorOptions`                | Public API-error constructor data                              |
 | `MonobankNetworkErrorOptions`            | Public network-error constructor data                          |
@@ -1547,4 +1616,5 @@ package root, including the Personal models plus `MerchantDetails`,
 `AcquiringWebhookPublicKey`, `AcquiringStatement`, `AcquiringStatementItem`,
 `AcquiringStatementCancellation`, `NewInvoice`, `Invoice`,
 `InvoiceCancellation`, `InvoiceFinalization`, `InvoiceReceipt`,
-`InvoiceFiscalChecks`, and `CorporateSettings`.
+`InvoiceFiscalChecks`, `CorporateSettings`, `CorporateRegistration`, and
+`CorporateRegistrationStatusResult`.

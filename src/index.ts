@@ -139,10 +139,24 @@ export { verifyAcquiringWebhookSignature } from "./acquiring/webhooks/verify-sig
 export { MonobankCorporateClient } from "./corporate/client/monobank-corporate-client.js";
 export type { MonobankCorporateClientOptions } from "./corporate/client/monobank-corporate-client-options.js";
 export type {
+  CorporateRegistrationStatusResult,
+  GetCorporateRegistrationStatusInput,
+} from "./corporate/company/get-registration-status/get-registration-status.js";
+export {
+  CorporateRegistrationStatus,
+  corporateRegistrationStatusSchema,
+} from "./corporate/company/get-registration-status/get-registration-status.js";
+export type {
   CorporateSettings,
   GetCorporateSettingsInput,
 } from "./corporate/company/get-settings/get-settings.js";
 export { corporateSettingsSchema } from "./corporate/company/get-settings/get-settings.js";
+export type {
+  CorporateRegistration,
+  RegisterCorporateCompanyInput,
+} from "./corporate/company/register/register.js";
+export { corporateRegistrationSchema } from "./corporate/company/register/register.js";
+export type { SetCorporateWebhookInput } from "./corporate/company/set-webhook/set-webhook.js";
 export type { MonobankApiErrorOptions } from "./errors/monobank-api-error.js";
 export { MonobankApiError } from "./errors/monobank-api-error.js";
 export type {

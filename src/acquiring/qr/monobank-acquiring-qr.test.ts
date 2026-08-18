@@ -4,7 +4,7 @@ import {
   acquiringQrCashierListFixture,
   acquiringQrDetailsFixture,
 } from "../../../tests/fixtures/acquiring/qr.js";
-import { expectCallerCancellation } from "../../../tests/support/acquiring-cancellation.js";
+import { expectCallerCancellation } from "../../../tests/support/caller-cancellation.js";
 import { createAbortableFetch } from "../../../tests/support/create-abortable-fetch.js";
 import {
   createFetchSequence,

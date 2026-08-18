@@ -15,6 +15,17 @@ All notable changes to this package are documented here.
   `GET /personal/corp/settings` endpoint, plus `corporateSettingsSchema`,
   `CorporateSettings`, `GetCorporateSettingsInput`, `CorporateSigner`, and
   `CorporateSignatureInput`.
+- `corporate.company.register(input)` and
+  `corporate.company.getRegistrationStatus(input)` for the company
+  authorization flow. Both run before Monobank has issued a key, so they sign
+  with `X-Time` and the URL alone and send no `X-Key-Id`;
+  `MonobankCorporateClientOptions.keyId` is therefore optional, and every
+  non-registration operation rejects a keyless client before Fetch. Exports
+  `CorporateRegistrationStatus`, `corporateRegistrationSchema`,
+  `corporateRegistrationStatusSchema`, and the matching input and result types.
+- `corporate.company.setWebhook(input)` configuring the payment-update webhook
+  over the signed `POST /personal/corp/webhook` endpoint, reusing the Personal
+  webhook URL validation. Monobank test-POSTs the URL during the call.
 
 ### Changed
 

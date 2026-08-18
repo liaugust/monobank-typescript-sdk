@@ -17,7 +17,8 @@ claim endorsement by Monobank.
 - Construct `MonobankPersonalClient` with a validated Personal token.
 - Construct `MonobankAcquiringClient` with a separate validated Acquiring token.
 - Construct `MonobankCorporateClient` with a service `keyId` and a `sign`
-  function. It takes no token. Never place a private key inside the SDK or in
+  function. It takes no token. Omit `keyId` only for the registration flow,
+  which is what issues it. Never place a private key inside the SDK or in
   application logs; the signer is the only thing that touches it.
 - Never hardcode, log, serialize, or commit real tokens or API payloads.
 - Treat all monetary integers as minor currency units.
@@ -161,6 +162,9 @@ tests/consumers/                ESM, CJS, browser, declaration, and tarball chec
 - Send only printable ASCII without spaces in `X-Key-Id`, `X-Request-Id`, and
   `X-Sign`. `Headers.set` throws a bare `TypeError` on a control character, which
   the transport would misread as a retryable network failure.
+- Sign the two registration endpoints without `X-Key-Id`; they run before a
+  key exists. Every other Corporate operation requires the configured key and
+  fails validation ahead of Fetch without one.
 - State each Corporate operation's signed-payload variant explicitly. Monobank
   documents two, and they do not follow from which headers a request sends:
   `/personal/corp/settings` and `/personal/corp/webhook` send `X-Request-Id`

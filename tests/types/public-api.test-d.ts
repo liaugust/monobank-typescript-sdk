@@ -15,6 +15,8 @@ import type {
   BankSync,
   CancelInvoiceInput,
   ClientInfo,
+  CorporateRegistration,
+  CorporateRegistrationStatusResult,
   CorporateSettings,
   CorporateSignatureInput,
   CorporateSigner,
@@ -23,6 +25,7 @@ import type {
   CurrencyRate,
   GetAcquiringQrDetailsInput,
   GetAcquiringStatementsInput,
+  GetCorporateRegistrationStatusInput,
   GetCorporateSettingsInput,
   GetStatementsInput,
   Invoice,
@@ -35,7 +38,9 @@ import type {
   PayInvoiceDirectInput,
   PayWithCardTokenInput,
   PersonalWebhookEvent,
+  RegisterCorporateCompanyInput,
   ResetAcquiringQrAmountInput,
+  SetCorporateWebhookInput,
   SyncInvoicePaymentInput,
   VerifyAcquiringWebhookSignatureInput,
 } from "@liaugust/monobank-sdk";
@@ -48,6 +53,7 @@ import {
   AcquiringStatementStatus,
   acquiringSubmerchantListSchema,
   CashbackType,
+  CorporateRegistrationStatus,
   corporateSettingsSchema,
   InvoicePaymentType,
   InvoiceStatus,
@@ -79,6 +85,34 @@ const parsedCorporateSettings: CorporateSettings =
     pubkey: "pubkey",
   });
 const corporateSigner: CorporateSigner = () => Promise.resolve("c2ln");
+const preRegistrationClient = new MonobankCorporateClient({
+  sign: corporateSigner,
+});
+const registrationInput: RegisterCorporateCompanyInput = {
+  contactPerson: "Contact Person",
+  description: "Service description",
+  email: "etc@example.com",
+  logo: "bG9nbw==",
+  name: "Company",
+  phone: "380671234567",
+  pubkey: "cHVia2V5",
+};
+const registration: Promise<CorporateRegistration> =
+  preRegistrationClient.company.register(registrationInput);
+const registrationStatusInput: GetCorporateRegistrationStatusInput = {
+  pubkey: "cHVia2V5",
+};
+const registrationStatus: Promise<CorporateRegistrationStatusResult> =
+  preRegistrationClient.company.getRegistrationStatus(registrationStatusInput);
+const approvedStatus: CorporateRegistrationStatusResult["status"] =
+  CorporateRegistrationStatus.Approved;
+const corporateWebhookInput: SetCorporateWebhookInput = {
+  requestId: "corp-request-id",
+  webHookUrl: "https://example.com/webhook",
+};
+const corporateWebhook: Promise<void> = corporateClient.company.setWebhook(
+  corporateWebhookInput,
+);
 const input: GetStatementsInput = { from: new Date(0) };
 const bankSync: Promise<BankSync> = publicClient.bank.getSync();
 const statements = client.statements.get(input);
@@ -340,7 +374,7 @@ void corporateSettings;
 void parsedCorporateSettings;
 void corporateSigner;
 
-// @ts-expect-error -- A Corporate key identifier and signer are both required.
+// @ts-expect-error -- A Corporate signer is always required.
 new MonobankCorporateClient({
   keyId: "28a75537175a018645e6f8b14be7681791e701e0",
 });
@@ -350,3 +384,16 @@ new MonobankCorporateClient({ token: "token" });
 
 // @ts-expect-error -- Corporate settings require a request identifier.
 void corporateClient.company.getSettings({});
+
+void registration;
+void registrationStatus;
+void approvedStatus;
+void corporateWebhook;
+
+// @ts-expect-error -- Registration status values are limited to documented wire values.
+const invalidRegistrationStatus: CorporateRegistrationStatusResult["status"] =
+  "Pending";
+void invalidRegistrationStatus;
+
+// @ts-expect-error -- The Corporate webhook mutation requires a request identifier.
+void corporateClient.company.setWebhook({ webHookUrl: "https://example.com" });

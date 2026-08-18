@@ -104,34 +104,37 @@ example focused; production code should validate the environment value first.
 
 ## API at a glance
 
-| Call                                        | Authentication  | Result                      | Notes                                          |
-| ------------------------------------------- | --------------- | --------------------------- | ---------------------------------------------- |
-| `publicApi.bank.getSync()`                  | None            | `BankSync`                  | Server time and public verification key        |
-| `publicApi.currency.getRates()`             | None            | `readonly CurrencyRate[]`   | Monobank may cache rates for five minutes      |
-| `personal.client.getInfo()`                 | Personal token  | `ClientInfo`                | Limited upstream to one request per 60 seconds |
-| `personal.statements.get(input)`            | Personal token  | `readonly StatementItem[]`  | Maximum window: 2,682,000 seconds              |
-| `personal.webhooks.set(input)`              | Personal token  | `void`                      | Mutating request; never retried automatically  |
-| `acquiring.merchant.getDetails()`           | Acquiring token | `MerchantDetails`           | Merchant identity for the supplied token       |
-| `acquiring.statements.get(input)`           | Acquiring token | `AcquiringStatement`        | Transaction statement ordered newest first     |
-| `acquiring.submerchants.list()`             | Acquiring token | `AcquiringSubmerchantList`  | Terminals available to supported merchants     |
-| `acquiring.qr.list()`                       | Acquiring token | `AcquiringQrCashierList`    | QR cashiers registered for the merchant        |
-| `acquiring.qr.getDetails(input)`            | Acquiring token | `AcquiringQrDetails`        | State of one activated QR cashier              |
-| `acquiring.qr.resetAmount(input)`           | Acquiring token | `void`                      | Clears a QR amount; never retried              |
-| `acquiring.employees.list()`                | Acquiring token | `AcquiringEmployeeList`     | Employees eligible to receive tips             |
-| `acquiring.wallet.list(input)`              | Acquiring token | `AcquiringWallet`           | Cards tokenized for one payer                  |
-| `acquiring.wallet.pay(input)`               | Acquiring token | `AcquiringCardPayment`      | Charges a stored token; never retried          |
-| `acquiring.wallet.deleteCard(input)`        | Acquiring token | `void`                      | Removes a token; never retried                 |
-| `acquiring.invoices.payDirect(input)`       | Acquiring token | `AcquiringCardPayment`      | Raw card details; puts callers in PCI scope    |
-| `acquiring.invoices.syncPayment(input)`     | Acquiring token | `Invoice`                   | Synchronous payment; never retried             |
-| `acquiring.webhooks.getPublicKey()`         | Acquiring token | `AcquiringWebhookPublicKey` | Key used to authenticate webhook signatures    |
-| `acquiring.invoices.create(input)`          | Acquiring token | `NewInvoice`                | Creates a hosted payment page                  |
-| `acquiring.invoices.getStatus(input)`       | Acquiring token | `Invoice`                   | Safe GET; eligible for configured retries      |
-| `acquiring.invoices.cancel(input)`          | Acquiring token | `InvoiceCancellation`       | Full or partial cancellation                   |
-| `acquiring.invoices.remove(input)`          | Acquiring token | `void`                      | Invalidates an unpaid invoice                  |
-| `acquiring.invoices.finalize(input)`        | Acquiring token | `InvoiceFinalization`       | Captures a held payment                        |
-| `acquiring.invoices.getReceipt(input)`      | Acquiring token | `InvoiceReceipt`            | Gets and optionally emails a receipt           |
-| `acquiring.invoices.getFiscalChecks(input)` | Acquiring token | `InvoiceFiscalChecks`       | Loads fiscalization results                    |
-| `corporate.company.getSettings(input)`      | Corporate key   | `CorporateSettings`         | Signed request; company registration data      |
+| Call                                             | Authentication  | Result                              | Notes                                           |
+| ------------------------------------------------ | --------------- | ----------------------------------- | ----------------------------------------------- |
+| `publicApi.bank.getSync()`                       | None            | `BankSync`                          | Server time and public verification key         |
+| `publicApi.currency.getRates()`                  | None            | `readonly CurrencyRate[]`           | Monobank may cache rates for five minutes       |
+| `personal.client.getInfo()`                      | Personal token  | `ClientInfo`                        | Limited upstream to one request per 60 seconds  |
+| `personal.statements.get(input)`                 | Personal token  | `readonly StatementItem[]`          | Maximum window: 2,682,000 seconds               |
+| `personal.webhooks.set(input)`                   | Personal token  | `void`                              | Mutating request; never retried automatically   |
+| `acquiring.merchant.getDetails()`                | Acquiring token | `MerchantDetails`                   | Merchant identity for the supplied token        |
+| `acquiring.statements.get(input)`                | Acquiring token | `AcquiringStatement`                | Transaction statement ordered newest first      |
+| `acquiring.submerchants.list()`                  | Acquiring token | `AcquiringSubmerchantList`          | Terminals available to supported merchants      |
+| `acquiring.qr.list()`                            | Acquiring token | `AcquiringQrCashierList`            | QR cashiers registered for the merchant         |
+| `acquiring.qr.getDetails(input)`                 | Acquiring token | `AcquiringQrDetails`                | State of one activated QR cashier               |
+| `acquiring.qr.resetAmount(input)`                | Acquiring token | `void`                              | Clears a QR amount; never retried               |
+| `acquiring.employees.list()`                     | Acquiring token | `AcquiringEmployeeList`             | Employees eligible to receive tips              |
+| `acquiring.wallet.list(input)`                   | Acquiring token | `AcquiringWallet`                   | Cards tokenized for one payer                   |
+| `acquiring.wallet.pay(input)`                    | Acquiring token | `AcquiringCardPayment`              | Charges a stored token; never retried           |
+| `acquiring.wallet.deleteCard(input)`             | Acquiring token | `void`                              | Removes a token; never retried                  |
+| `acquiring.invoices.payDirect(input)`            | Acquiring token | `AcquiringCardPayment`              | Raw card details; puts callers in PCI scope     |
+| `acquiring.invoices.syncPayment(input)`          | Acquiring token | `Invoice`                           | Synchronous payment; never retried              |
+| `acquiring.webhooks.getPublicKey()`              | Acquiring token | `AcquiringWebhookPublicKey`         | Key used to authenticate webhook signatures     |
+| `acquiring.invoices.create(input)`               | Acquiring token | `NewInvoice`                        | Creates a hosted payment page                   |
+| `acquiring.invoices.getStatus(input)`            | Acquiring token | `Invoice`                           | Safe GET; eligible for configured retries       |
+| `acquiring.invoices.cancel(input)`               | Acquiring token | `InvoiceCancellation`               | Full or partial cancellation                    |
+| `acquiring.invoices.remove(input)`               | Acquiring token | `void`                              | Invalidates an unpaid invoice                   |
+| `acquiring.invoices.finalize(input)`             | Acquiring token | `InvoiceFinalization`               | Captures a held payment                         |
+| `acquiring.invoices.getReceipt(input)`           | Acquiring token | `InvoiceReceipt`                    | Gets and optionally emails a receipt            |
+| `acquiring.invoices.getFiscalChecks(input)`      | Acquiring token | `InvoiceFiscalChecks`               | Loads fiscalization results                     |
+| `corporate.company.register(input)`              | Corporate sign  | `CorporateRegistration`             | Pre-key application; never retried              |
+| `corporate.company.getRegistrationStatus(input)` | Corporate sign  | `CorporateRegistrationStatusResult` | Pre-key status poll; returns the issued `keyId` |
+| `corporate.company.getSettings(input)`           | Corporate key   | `CorporateSettings`                 | Signed request; company registration data       |
+| `corporate.company.setWebhook(input)`            | Corporate key   | `void`                              | Bank test-POSTs the URL; never retried          |
 
 See the [complete API reference](docs/API.md) for signatures, parameters,
 returns, errors, retry behavior, data models, and focused examples.
@@ -509,6 +512,12 @@ into `sign` — so give a remote signer its own timeout.
 A signer that throws or returns an empty string produces a
 `MonobankValidationError` before Fetch runs, with no cause attached, because a
 crypto library's error text can echo key material.
+
+`keyId` is optional only for the registration flow, which is what issues it:
+`register()` and `getRegistrationStatus()` sign with `X-Time` and the URL alone
+and send no `X-Key-Id`. Every other operation fails validation before Fetch when
+the client has no key. `setWebhook()` triggers a test POST from Monobank to the
+URL during the call, so it can fail for reasons outside the request itself.
 
 This surface is verified against synthetic fixtures only. Exercising it live
 requires Monobank to approve the company as a provider, which is why the

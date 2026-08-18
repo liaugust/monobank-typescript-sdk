@@ -31,8 +31,14 @@ export type CorporateSigner = (
 
 /** Corporate service key identifier paired with the signer holding its private key. */
 export interface CorporateCredential {
-  /** Service key identifier Monobank issues when it approves the company. */
-  readonly keyId: string;
+  /**
+   * Service key identifier Monobank issues when it approves the company.
+   *
+   * Absent only before registration: the registration endpoints are what issue
+   * it, so they sign without `X-Key-Id`. Every other operation requires it and
+   * fails validation ahead of Fetch when it is missing.
+   */
+  readonly keyId?: string;
   /** Signing function invoked once per request attempt. */
   readonly sign: CorporateSigner;
 }

@@ -33,7 +33,8 @@ const personal = new MonobankPersonalClient({
 Use `MonobankAcquiringClient` with a separate Acquiring token.
 
 Use `MonobankCorporateClient` for the Corporate provider API. It takes no
-token: pass the service `keyId` and a `sign` function. Keys are secp256k1,
+token: pass the service `keyId` and a `sign` function. `keyId` is optional
+only for the registration flow, which is what issues it. Keys are secp256k1,
 which Web Crypto cannot sign with, so the private key stays in the application
 and the SDK only calls the signer.
 
@@ -71,9 +72,18 @@ timeout.
   automatically.
 - `parsePersonalWebhookEvent(input)`: validates webhook JSON shape; does not
   authenticate the sender.
+- `corporate.company.register(input, options?)`: signed pre-key
+  `/personal/auth/registration` application; no `X-Key-Id`; returns
+  `Promise<CorporateRegistration>`; never retried.
+- `corporate.company.getRegistrationStatus(input, options?)`: signed pre-key
+  status poll; returns `Promise<CorporateRegistrationStatusResult>` with the
+  issued `keyId` once `Approved`; never retried.
 - `corporate.company.getSettings(input, options?)`: signed
   `/personal/corp/settings`; requires `input.requestId`; returns
   `Promise<CorporateSettings>`; safe GET and re-signed on each retry.
+- `corporate.company.setWebhook(input, options?)`: signed
+  `/personal/corp/webhook` mutation; Monobank test-POSTs the URL during the
+  call; empty string removes it; never retried.
 - `acquiring.merchant.getDetails(options?)`: authenticated
   `/api/merchant/details`; returns `Promise<MerchantDetails>`.
 - `acquiring.statements.get(input, options?)`: authenticated

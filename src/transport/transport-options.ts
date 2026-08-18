@@ -66,7 +66,9 @@ export function validateTransportOptions(
 }
 
 const corporateCredentialSchema = z.object({
-  keyId: z.string().check(z.refine((value) => /^[!-~]+$/u.test(value))),
+  keyId: z.optional(
+    z.string().check(z.refine((value) => /^[!-~]+$/u.test(value))),
+  ),
   sign: z.custom<CorporateSigner>((value) => typeof value === "function"),
 });
 
@@ -94,7 +96,10 @@ function validateCorporateCredential(
     });
   }
 
-  return { keyId: credential.keyId, sign: credential.sign };
+  return {
+    ...(credential.keyId === undefined ? {} : { keyId: credential.keyId }),
+    sign: credential.sign,
+  };
 }
 
 function validateToken(token: string): string {

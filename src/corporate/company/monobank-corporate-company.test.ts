@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { corporateSettingsFixture } from "../../../tests/fixtures/corporate/company.js";
-import { createAbortableFetch } from "../../../tests/support/create-abortable-fetch.js";
+import { corporateRegistrationInputFixture } from "../../../tests/fixtures/corporate/company.js";
+import { expectCorporateCancellation } from "../../../tests/support/caller-cancellation.js";
 import {
   createFetchSequence,
   jsonResponse,
@@ -75,25 +76,38 @@ describe("MonobankCorporateCompany", () => {
     expect(input?.payload).not.toContain("corp-request-id");
   });
 
-  it("cancels an in-flight settings request when the caller aborts", async () => {
-    const { entered, fetch, requestSignal } = createAbortableFetch();
-    const client = new MonobankCorporateClient({
-      fetch,
-      keyId: "28a75537175a018645e6f8b14be7681791e701e0",
-      sign: () => "c2lnbmF0dXJl",
-    });
-    const controller = new AbortController();
-
-    const request = client.company.getSettings(
-      { requestId: "corp-request-id" },
-      { signal: controller.signal },
-    );
-    request.catch(() => undefined);
-    await entered;
-    controller.abort();
-
-    expect(requestSignal()?.aborted).toBe(true);
-    await expect(request).rejects.toMatchObject({ reason: "aborted" });
+  it.each([
+    {
+      name: "'registration'",
+      start: (client: MonobankCorporateClient, signal: AbortSignal) =>
+        client.company.register(corporateRegistrationInputFixture, { signal }),
+    },
+    {
+      name: "'registration status'",
+      start: (client: MonobankCorporateClient, signal: AbortSignal) =>
+        client.company.getRegistrationStatus(
+          { pubkey: "cHVia2V5" },
+          { signal },
+        ),
+    },
+    {
+      name: "'settings'",
+      start: (client: MonobankCorporateClient, signal: AbortSignal) =>
+        client.company.getSettings(
+          { requestId: "corp-request-id" },
+          { signal },
+        ),
+    },
+    {
+      name: "'webhook'",
+      start: (client: MonobankCorporateClient, signal: AbortSignal) =>
+        client.company.setWebhook(
+          { requestId: "corp-request-id", webHookUrl: "" },
+          { signal },
+        ),
+    },
+  ])("passes caller cancellation to the $name request", async ({ start }) => {
+    await expectCorporateCancellation(start);
   });
 
   it("rejects a blank request id before reaching Fetch", async () => {
