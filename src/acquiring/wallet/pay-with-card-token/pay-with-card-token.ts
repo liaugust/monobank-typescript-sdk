@@ -1,6 +1,6 @@
 import * as z from "zod/mini";
 
-import { parseAcquiringRequest } from "../../shared/request-validation.js";
+import { parseMonobankRequest } from "../../../shared/request-validation.js";
 
 /** Root-relative endpoint used to charge a stored card token. */
 export const payWithCardTokenEndpoint = "/api/merchant/wallet/payment";
@@ -51,7 +51,7 @@ type PayWithCardTokenBody = z.output<typeof payWithCardTokenSchema>;
 export function createPayWithCardTokenBody(
   input: PayWithCardTokenInput,
 ): PayWithCardTokenBody {
-  return parseAcquiringRequest(
+  return parseMonobankRequest(
     payWithCardTokenSchema,
     input,
     payWithCardTokenEndpoint,

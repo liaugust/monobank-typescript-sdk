@@ -1,8 +1,8 @@
-import { MonobankValidationError } from "../../errors/monobank-validation-error.js";
-import type { ResponseSchema } from "../../transport/response-schema.js";
+import { MonobankValidationError } from "../errors/monobank-validation-error.js";
+import type { ResponseSchema } from "../transport/response-schema.js";
 
 /**
- * Parses Acquiring request data and converts schema issues into the SDK validation error.
+ * Parses request data ahead of Fetch and converts schema issues into the SDK validation error.
  * @param schema Runtime request schema.
  * @param input Untrusted method input.
  * @param endpoint Endpoint receiving the validated data.
@@ -10,7 +10,7 @@ import type { ResponseSchema } from "../../transport/response-schema.js";
  * @returns Parsed request data.
  * @throws {MonobankValidationError} When the input does not match the request schema.
  */
-export function parseAcquiringRequest<T>(
+export function parseMonobankRequest<T>(
   schema: ResponseSchema<T>,
   input: unknown,
   endpoint: string,
