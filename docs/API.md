@@ -44,6 +44,9 @@ supported contract.
 - [corporate.access.check](#corporateaccesscheck)
 - [corporate.clients.getInfo](#corporateclientsgetinfo)
 - [corporate.clients.getStatements](#corporateclientsgetstatements)
+- [corporate.documents.requestSigning](#corporatedocumentsrequestsigning)
+- [corporate.documents.getSigningStatus](#corporatedocumentsgetsigningstatus)
+- [corporate.documents.cancelSigning](#corporatedocumentscancelsigning)
 - [corporate.company.register](#corporatecompanyregister)
 - [corporate.company.getRegistrationStatus](#corporatecompanygetregistrationstatus)
 - [corporate.company.getSettings](#corporatecompanygetsettings)
@@ -241,6 +244,7 @@ The client groups operations into resource objects:
 
 - `corporate.access`: delegated client-access grant operations
 - `corporate.clients`: reads of a granted client's data
+- `corporate.documents`: monoКЕП document signing operations
 - `corporate.company`: company registration and settings operations
 
 ### Signing contract
@@ -1169,6 +1173,78 @@ Personal endpoint enforces, and the signed payload covers the encoded account an
 both timestamps. Returns the same `StatementItem` values as the Personal client,
 newest first. Safe GET; eligible for configured retries.
 
+## corporate.documents.requestSigning
+
+```ts
+corporate.documents.requestSigning(
+  input: RequestDocumentSigningInput,
+  options?: RequestOptions,
+): Promise<DocumentSigningRequest>
+```
+
+Creates a monoКЕП request to sign one to ten documents, over the signed
+`POST /personal/signature/create` endpoint. A request is valid for **three days**.
+
+| Input         | Type                              | Contract                                                 |
+| ------------- | --------------------------------- | -------------------------------------------------------- |
+| `documents`   | `readonly SigningDocumentInput[]` | One to ten documents; each requires `name` and `hash`    |
+| `oneSigner`   | `boolean`                         | Optional; Monobank defaults it to `true`                 |
+| `callbackUrl` | `string`                          | Optional address monoКЕП notifies about signing progress |
+
+Each document takes `name` and `hash`, plus optional `type`
+(`SigningDocumentType`) and `link`.
+
+> [!IMPORTANT]
+> `hash` is the document digest as HEX under **ГОСТ 34.311-95**. Neither Web
+> Crypto nor `node:crypto` implements that algorithm, so the SDK never computes
+> or verifies it — you supply the value. A SHA-256 hex string is the same length
+> and yields a well-formed request that is silently wrong.
+
+Returns `requestId`, used by the two calls below, and `deeplink`, which the
+signatory opens in the Monobank app. Both are marked required upstream. Mutating
+request; never retried.
+
+## corporate.documents.getSigningStatus
+
+```ts
+corporate.documents.getSigningStatus(
+  input: GetDocumentSigningStatusInput,
+  options?: RequestOptions,
+): Promise<DocumentSigningStatus>
+```
+
+Loads signing progress over the signed `GET /personal/signature/status` endpoint,
+with `requestId` carried as a query parameter and therefore covered by the signed
+payload.
+
+Each document reports an optional `status` — one of `DocumentSigningState.Pending`,
+`.Signed`, `.Canceled`, `.Expired` — and an optional `signers` array of up to 20
+signatories, each with `name`, `tin`, `certSerial`, a Base64 `signature`, `date`,
+and optional `edrpou`, `company`, and `post`.
+
+Monobank's top-level `required` array lists `status`, `name`, and `hash`, but those
+properties are defined on the document items rather than the response, so nothing
+is treated as required at the top level. Safe GET; eligible for configured retries.
+
+## corporate.documents.cancelSigning
+
+```ts
+corporate.documents.cancelSigning(
+  input: CancelDocumentSigningInput,
+  options?: RequestOptions,
+): Promise<void>
+```
+
+Cancels a signing request before its three-day validity expires, over the signed
+`DELETE /personal/signature/cancel` endpoint. Resolves with no value. Never
+retried, structurally as well as by its flag, because the retry policy admits only
+GET.
+
+Monobank's specification declares no parameters for the status and cancellation
+operations — the identifier appears only inside the literal path string — so this
+SDK sends them with the same signed headers as the create call and states that as
+an assumption.
+
 ## corporate.company.register
 
 ```ts
@@ -1383,6 +1459,10 @@ preserved.
 | `corporateRegistrationStatusSchema`    | Corporate application status and key  |
 | `corporateSettingsSchema`              | `/personal/corp/settings` response    |
 | `corporateTokenRequestSchema`          | Delegated access-request response     |
+| `documentSignatorySchema`              | One monoКЕП signatory                 |
+| `documentSigningRequestSchema`         | Created monoКЕП signing request       |
+| `documentSigningStatusSchema`          | monoКЕП signing progress              |
+| `signingDocumentSchema`                | One monoКЕП document with its state   |
 | `currencyRateSchema`                   | One exchange-rate item                |
 | `currencyRatesSchema`                  | `/bank/currency` response array       |
 | `jarSchema`                            | One Personal jar                      |
@@ -1470,9 +1550,11 @@ const cashbackType: CashbackTypeValue = CashbackType.UAH;
 
 ### Corporate values
 
-| Export                        | Wire values                   |
-| ----------------------------- | ----------------------------- |
-| `CorporateRegistrationStatus` | `New`, `Declined`, `Approved` |
+| Export                        | Wire values                                                                       |
+| ----------------------------- | --------------------------------------------------------------------------------- |
+| `CorporateRegistrationStatus` | `New`, `Declined`, `Approved`                                                     |
+| `DocumentSigningState`        | `pending`, `signed`, `canceled`, `expired`                                        |
+| `SigningDocumentType`         | `pdf`, `doc`, `docx`, `odt`, `json`, `xml`, `html`, `png`, `jpg`, `jpeg`, `other` |
 
 Monobank declares no `enum` for the registration `status` field and lists these
 three values only in its prose description, so
@@ -1732,6 +1814,10 @@ object containing the target `account` identifier and validated
 | `GetCorporateClientInfoInput`            | Grant identifier for a delegated identity read                 |
 | `GetCorporateClientStatementsInput`      | Grant identifier, account, and window for delegated statements |
 | `StatementWindowInput`                   | Account and time window shared by both statement families      |
+| `RequestDocumentSigningInput`            | Documents, signer policy, and callback for monoКЕП signing     |
+| `SigningDocumentInput`                   | One document submitted for monoКЕП signing                     |
+| `GetDocumentSigningStatusInput`          | Signing request identifier for a status read                   |
+| `CancelDocumentSigningInput`             | Signing request identifier for a cancellation                  |
 | `ResponseValidationIssue`                | Safe schema issue retained by validation errors                |
 | `MonobankApiErrorOptions`                | Public API-error constructor data                              |
 | `MonobankNetworkErrorOptions`            | Public network-error constructor data                          |
@@ -1749,4 +1835,6 @@ package root, including the Personal models plus `MerchantDetails`,
 `AcquiringStatementCancellation`, `NewInvoice`, `Invoice`,
 `InvoiceCancellation`, `InvoiceFinalization`, `InvoiceReceipt`,
 `InvoiceFiscalChecks`, `CorporateSettings`, `CorporateRegistration`, and
-`CorporateRegistrationStatusResult`, and `CorporateTokenRequest`.
+`CorporateRegistrationStatusResult`, `CorporateTokenRequest`,
+`DocumentSigningRequest`, `DocumentSigningStatus`, `SigningDocument`, and
+`DocumentSignatory`.

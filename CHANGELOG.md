@@ -41,6 +41,14 @@ All notable changes to this package are documented here.
   contracts match the Personal endpoints and only the credential and the data's
   owner differ. Exports `GetCorporateClientInfoInput`,
   `GetCorporateClientStatementsInput`, and `StatementWindowInput`.
+- monoКЕП document signing through `corporate.documents.requestSigning(input)`,
+  `corporate.documents.getSigningStatus(input)`, and
+  `corporate.documents.cancelSigning(input)`. Document hashes use ГОСТ 34.311-95,
+  which no JavaScript runtime implements, so the caller computes the hex value and
+  the SDK never verifies it. Exports `DocumentSigningState`,
+  `SigningDocumentType`, `documentSignatorySchema`, `signingDocumentSchema`,
+  `documentSigningRequestSchema`, `documentSigningStatusSchema`, and the matching
+  input and result types.
 - `corporate.company.setWebhook(input)` configuring the payment-update webhook
   over the signed `POST /personal/corp/webhook` endpoint, reusing the Personal
   webhook URL validation. Monobank test-POSTs the URL during the call.
