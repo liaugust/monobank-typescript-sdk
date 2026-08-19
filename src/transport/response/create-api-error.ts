@@ -5,12 +5,12 @@ import { parseRetryAfter } from "../retry/parse-retry-after.js";
 export async function createApiError(
   response: Response,
   endpoint: string,
-  token: string | undefined,
+  credentials: readonly (string | undefined)[],
   reason: () => MonobankNetworkErrorReason,
 ): Promise<MonobankApiError> {
   const upstreamMessage = sanitizeUpstreamMessage(
     await readResponseText(response, reason),
-    token,
+    credentials,
   );
 
   const retryAfterMs = parseRetryAfter(
@@ -49,7 +49,7 @@ function isAbortError(error: unknown): boolean {
 
 function sanitizeUpstreamMessage(
   responseText: string,
-  token: string | undefined,
+  secrets: readonly (string | undefined)[],
 ): string | undefined {
   if (responseText.length === 0) {
     return undefined;
@@ -57,8 +57,11 @@ function sanitizeUpstreamMessage(
 
   const jsonMessage = parseErrorDescription(responseText);
   const message = jsonMessage ?? responseText;
-  const redacted =
-    token === undefined ? message : message.split(token).join("[redacted]");
+  const redacted = secrets.reduce<string>(
+    (text, secret) =>
+      secret === undefined ? text : text.split(secret).join("[redacted]"),
+    message,
+  );
 
   return redacted.slice(0, 1_024);
 }

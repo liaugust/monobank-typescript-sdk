@@ -9,17 +9,23 @@ import type { CorporateSignatureInput } from "../corporate-signer.js";
  */
 export type CorporateSignatureSpec =
   | {
-      readonly preRegistration?: false;
+      /**
+       * Marks the two registration endpoints, which sign before Monobank has
+       * issued a key: `X-Key-Id` is not sent and no configured `keyId` is
+       * required. No request identifier may accompany it, because neither
+       * registration endpoint sends one.
+       */
+      readonly preRegistration: true;
+      readonly requestId?: never;
+      readonly variant: "time-and-url";
+    }
+  | {
+      readonly preRegistration?: never;
       readonly requestId: string;
       readonly variant: "time-request-id-and-url";
     }
   | {
-      /**
-       * Marks the two registration endpoints, which sign before Monobank has
-       * issued a key: `X-Key-Id` is not sent and no configured `keyId` is
-       * required. Every other operation omits this and must have a key.
-       */
-      readonly preRegistration?: boolean;
+      readonly preRegistration?: never;
       readonly requestId?: string;
       readonly variant: "time-and-url";
     };

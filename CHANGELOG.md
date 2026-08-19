@@ -53,6 +53,19 @@ All notable changes to this package are documented here.
   over the signed `POST /personal/corp/webhook` endpoint, reusing the Personal
   webhook URL validation. Monobank test-POSTs the URL during the call.
 
+### Security
+
+- Drop echoed `X-Sign` and `X-Key-Id` response headers from `MonobankApiError`,
+  and redact a configured Corporate `keyId` from an upstream error message the
+  same way the token already was. A proxy or gateway that echoes a submitted
+  credential header could otherwise place it on a public, serializable error.
+- Reject a `webHookUrl` that does not survive URL parsing unchanged. `new URL()`
+  silently strips tabs and line breaks, so a value could be validated as one
+  address and sent as another.
+- Reject a token containing a control character at construction. It previously
+  passed the surrounding-whitespace check, reached `Headers.set`, and threw a bare
+  `TypeError` the transport misread as a retryable network failure.
+
 ### Changed
 
 - Raise the supported runtime floor from Node.js 20.19.5 to 22.12.0. Node 20

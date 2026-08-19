@@ -54,6 +54,16 @@ export class MonobankApiError extends Error {
   }
 }
 
+const credentialHeaderNames = new Set(["authorization", "x-key-id", "x-sign"]);
+
+/**
+ * Drops response headers that could carry a credential back to the caller.
+ *
+ * A proxy or gateway can echo a submitted header, so the Corporate signature and
+ * key identifier are dropped alongside any name containing `token`.
+ * @param headers Response headers observed for the failed request.
+ * @returns Headers safe to expose on a public error.
+ */
 function copySafeHeaders(
   headers: Readonly<Record<string, string>>,
 ): Readonly<Record<string, string>> {
@@ -61,7 +71,7 @@ function copySafeHeaders(
     Object.entries(headers).filter(
       ([name]) =>
         !name.toLowerCase().includes("token") &&
-        name.toLowerCase() !== "authorization",
+        !credentialHeaderNames.has(name.toLowerCase()),
     ),
   );
 }

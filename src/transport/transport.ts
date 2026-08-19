@@ -114,7 +114,7 @@ export class MonobankTransport {
         const error = await createApiError(
           response,
           request.endpoint,
-          this.options.token,
+          [this.options.token, this.options.corporate?.keyId],
           attemptSignal.reason,
         );
         const delayMs = retryDelayForApiError(

@@ -106,6 +106,19 @@ describe("company.setWebhook", () => {
     });
   });
 
+  it("rejects a URL that parses to something other than what was given", async () => {
+    const fetch = createFetchSequence([jsonResponse({})]);
+    const client = createClient(fetch);
+
+    await expect(
+      client.company.setWebhook({
+        requestId: "corp-request-id",
+        webHookUrl: "https://hooks.exam\nple.com/hook",
+      }),
+    ).rejects.toBeInstanceOf(MonobankValidationError);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("rejects the mutation when the client has no key identifier", async () => {
     const fetch = createFetchSequence([jsonResponse({})]);
     const client = new MonobankCorporateClient({ fetch, sign: () => "c2ln" });

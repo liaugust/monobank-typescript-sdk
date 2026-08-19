@@ -102,12 +102,21 @@ function validateCorporateCredential(
   };
 }
 
+/**
+ * Validates the configured token before any request.
+ *
+ * Restricted to printable ASCII without spaces because it is sent verbatim as
+ * `X-Token`; a control character would otherwise make `Headers.set` throw a bare
+ * `TypeError` per request, which the transport catch would misread as a retryable
+ * network failure.
+ * @param token Configured Personal or Acquiring token.
+ * @returns The unchanged token.
+ * @throws {MonobankValidationError} When the token is unusable as a header value.
+ */
 function validateToken(token: string): string {
-  if (token.length === 0 || token !== token.trim()) {
+  if (!/^[!-~]+$/u.test(token)) {
     throw new MonobankValidationError({
-      issues: [
-        "token must be a non-empty string without surrounding whitespace",
-      ],
+      issues: ["token must be printable ASCII without spaces"],
       message: "Invalid Monobank transport configuration.",
     });
   }
