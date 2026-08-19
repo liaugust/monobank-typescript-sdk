@@ -14,12 +14,14 @@ import type {
   AcquiringWebhookPublicKey,
   BankSync,
   CancelInvoiceInput,
+  CheckCorporateAccessInput,
   ClientInfo,
   CorporateRegistration,
   CorporateRegistrationStatusResult,
   CorporateSettings,
   CorporateSignatureInput,
   CorporateSigner,
+  CorporateTokenRequest,
   CreateInvoiceInput,
   CreateInvoiceOptions,
   CurrencyRate,
@@ -39,6 +41,7 @@ import type {
   PayWithCardTokenInput,
   PersonalWebhookEvent,
   RegisterCorporateCompanyInput,
+  RequestCorporateAccessInput,
   ResetAcquiringQrAmountInput,
   SetCorporateWebhookInput,
   SyncInvoicePaymentInput,
@@ -55,6 +58,7 @@ import {
   CashbackType,
   CorporateRegistrationStatus,
   corporateSettingsSchema,
+  corporateTokenRequestSchema,
   InvoicePaymentType,
   InvoiceStatus,
   MonobankAcquiringClient,
@@ -113,6 +117,18 @@ const corporateWebhookInput: SetCorporateWebhookInput = {
 const corporateWebhook: Promise<void> = corporateClient.company.setWebhook(
   corporateWebhookInput,
 );
+const accessRequestInput: RequestCorporateAccessInput = {
+  callbackUrl: "https://example.com/granted",
+};
+const accessRequest: Promise<CorporateTokenRequest> =
+  corporateClient.access.request(accessRequestInput);
+const accessRequestWithoutInput: Promise<CorporateTokenRequest> =
+  corporateClient.access.request();
+const accessCheckInput: CheckCorporateAccessInput = { requestId: "req-1" };
+const accessCheck: Promise<void> =
+  corporateClient.access.check(accessCheckInput);
+const parsedTokenRequest: CorporateTokenRequest =
+  corporateTokenRequestSchema.parse({});
 const input: GetStatementsInput = { from: new Date(0) };
 const bankSync: Promise<BankSync> = publicClient.bank.getSync();
 const statements = client.statements.get(input);
@@ -399,3 +415,11 @@ void pendingRegistrationKey;
 
 // @ts-expect-error -- The Corporate webhook mutation requires a request identifier.
 void corporateClient.company.setWebhook({ webHookUrl: "https://example.com" });
+
+void accessRequest;
+void accessRequestWithoutInput;
+void accessCheck;
+void parsedTokenRequest;
+
+// @ts-expect-error -- A delegated access check requires the request identifier.
+void corporateClient.access.check({});

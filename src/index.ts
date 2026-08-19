@@ -136,6 +136,12 @@ export type { AcquiringWebhookPublicKey } from "./acquiring/webhooks/get-public-
 export { acquiringWebhookPublicKeySchema } from "./acquiring/webhooks/get-public-key/get-public-key.js";
 export type { VerifyAcquiringWebhookSignatureInput } from "./acquiring/webhooks/verify-signature/verify-acquiring-webhook-signature.js";
 export { verifyAcquiringWebhookSignature } from "./acquiring/webhooks/verify-signature/verify-acquiring-webhook-signature.js";
+export type { CheckCorporateAccessInput } from "./corporate/access/check-access/check-access.js";
+export type {
+  CorporateTokenRequest,
+  RequestCorporateAccessInput,
+} from "./corporate/access/request-access/request-access.js";
+export { corporateTokenRequestSchema } from "./corporate/access/request-access/request-access.js";
 export { MonobankCorporateClient } from "./corporate/client/monobank-corporate-client.js";
 export type { MonobankCorporateClientOptions } from "./corporate/client/monobank-corporate-client-options.js";
 export type {

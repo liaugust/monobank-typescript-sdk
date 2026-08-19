@@ -28,6 +28,13 @@ All notable changes to this package are documented here.
   while an application is `New`, and Monobank declares no `enum` for `status`,
   so requiring either would let a pending response break the only flow that
   issues a key. Compare against `CorporateRegistrationStatus`.
+- `corporate.access.request(input?)` and `corporate.access.check(input)` for the
+  delegated client-access grant flow. `check()` is the first operation to sign
+  the `X-Time | X-Request-Id | URL` payload variant, resolves `void` because
+  Monobank answers with an empty body, and reports a pending grant as
+  `MonobankApiError` status 401. Exports `corporateTokenRequestSchema`,
+  `CorporateTokenRequest`, `RequestCorporateAccessInput`, and
+  `CheckCorporateAccessInput`.
 - `corporate.company.setWebhook(input)` configuring the payment-update webhook
   over the signed `POST /personal/corp/webhook` endpoint, reusing the Personal
   webhook URL validation. Monobank test-POSTs the URL during the call.

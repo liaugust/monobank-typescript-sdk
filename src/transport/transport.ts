@@ -37,6 +37,10 @@ export class MonobankTransport {
     return this.executeJson("POST", request);
   }
 
+  public async getEmpty(request: EmptyRequest): Promise<void> {
+    await this.executeEmpty("GET", request);
+  }
+
   public async postEmpty(request: EmptyRequest): Promise<void> {
     await this.executeEmpty("POST", request);
   }
@@ -46,7 +50,7 @@ export class MonobankTransport {
   }
 
   private async executeEmpty(
-    method: "DELETE" | "POST",
+    method: "DELETE" | "GET" | "POST",
     request: EmptyRequest,
   ): Promise<void> {
     await this.execute(method, request, async (response) => {

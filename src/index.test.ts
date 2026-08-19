@@ -54,6 +54,7 @@ describe("public package surface", () => {
       "corporateRegistrationSchema",
       "corporateRegistrationStatusSchema",
       "corporateSettingsSchema",
+      "corporateTokenRequestSchema",
       "currencyRateSchema",
       "currencyRatesSchema",
       "finalizeInvoiceResponseSchema",

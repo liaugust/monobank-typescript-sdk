@@ -131,6 +131,8 @@ example focused; production code should validate the environment value first.
 | `acquiring.invoices.finalize(input)`             | Acquiring token | `InvoiceFinalization`               | Captures a held payment                         |
 | `acquiring.invoices.getReceipt(input)`           | Acquiring token | `InvoiceReceipt`                    | Gets and optionally emails a receipt            |
 | `acquiring.invoices.getFiscalChecks(input)`      | Acquiring token | `InvoiceFiscalChecks`               | Loads fiscalization results                     |
+| `corporate.access.request(input?)`               | Corporate key   | `CorporateTokenRequest`             | Starts a client grant; never retried            |
+| `corporate.access.check(input)`                  | Corporate key   | `void`                              | 401 means still pending; safe GET               |
 | `corporate.company.register(input)`              | Corporate sign  | `CorporateRegistration`             | Pre-key application; never retried              |
 | `corporate.company.getRegistrationStatus(input)` | Corporate sign  | `CorporateRegistrationStatusResult` | Pre-key status poll; returns the issued `keyId` |
 | `corporate.company.getSettings(input)`           | Corporate key   | `CorporateSettings`                 | Signed request; company registration data       |
@@ -512,6 +514,22 @@ into `sign` — so give a remote signer its own timeout.
 A signer that throws or returns an empty string produces a
 `MonobankValidationError` before Fetch runs, with no cause attached, because a
 crypto library's error text can echo key material.
+
+### Reading a client's data
+
+`corporate.access.request()` starts a grant. Show the returned `acceptUrl` to the
+client as a QR code, or redirect a mobile client to it, and keep
+`tokenRequestId` — it identifies the grant in `check()` and in every later
+delegated read. Pass `callbackUrl` to have Monobank notify you on approval.
+
+`corporate.access.check({ requestId })` resolves once access is granted.
+Monobank answers with an empty body, so there is no value to return: a pending
+grant surfaces as `MonobankApiError` with status **401**, and an unknown request
+as **404**.
+
+These calls read another person's banking data. The client grants access, it
+covers only the permissions the company registered, and the client can revoke it
+at any time.
 
 `keyId` is optional only for the registration flow, which is what issues it:
 `register()` and `getRegistrationStatus()` sign with `X-Time` and the URL alone

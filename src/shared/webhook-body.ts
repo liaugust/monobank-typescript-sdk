@@ -1,4 +1,4 @@
-import { MonobankValidationError } from "../errors/monobank-validation-error.js";
+import { requireAbsoluteHttpUrl } from "./http-url.js";
 
 /** JSON body shared by the Personal and Corporate webhook mutations. */
 export interface WebhookBody {
@@ -26,27 +26,7 @@ export function createWebhookBody(
     return { webHookUrl: "" };
   }
 
-  let url: URL;
-  try {
-    url = new URL(webHookUrl);
-  } catch {
-    throw createInvalidWebhookUrlError(endpoint, message);
-  }
-
-  if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw createInvalidWebhookUrlError(endpoint, message);
-  }
+  requireAbsoluteHttpUrl(webHookUrl, "webHookUrl", endpoint, message);
 
   return { webHookUrl };
-}
-
-function createInvalidWebhookUrlError(
-  endpoint: string,
-  message: string,
-): MonobankValidationError {
-  return new MonobankValidationError({
-    endpoint,
-    issues: ["webHookUrl must be an empty string or an absolute HTTP(S) URL"],
-    message,
-  });
 }
