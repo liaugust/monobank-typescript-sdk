@@ -223,6 +223,15 @@ function validateTimeout(value: number): number {
   return value;
 }
 
+function isUsableStatusList(statuses: readonly number[]): boolean {
+  return (
+    statuses.length > 0 &&
+    statuses.every(
+      (status) => Number.isInteger(status) && status >= 400 && status <= 599,
+    )
+  );
+}
+
 function validateRetry(retry: RetryOptions): RetryOptions {
   const issues: string[] = [];
 
@@ -244,6 +253,15 @@ function validateRetry(retry: RetryOptions): RetryOptions {
     );
   }
 
+  if (
+    retry.retryableStatusCodes !== undefined &&
+    !isUsableStatusList(retry.retryableStatusCodes)
+  ) {
+    issues.push(
+      "retry.retryableStatusCodes must be a non-empty list of integer HTTP status codes between 400 and 599",
+    );
+  }
+
   if (issues.length > 0) {
     throw new MonobankValidationError({
       issues,
@@ -251,5 +269,10 @@ function validateRetry(retry: RetryOptions): RetryOptions {
     });
   }
 
-  return { ...retry };
+  return {
+    ...retry,
+    ...(retry.retryableStatusCodes === undefined
+      ? {}
+      : { retryableStatusCodes: [...retry.retryableStatusCodes] }),
+  };
 }

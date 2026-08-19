@@ -2,8 +2,7 @@ import type { MonobankApiError } from "../../errors/monobank-api-error.js";
 import type { MonobankNetworkError } from "../../errors/monobank-network-error.js";
 import type { EmptyRequest } from "../request/request.js";
 import type { RetryOptions } from "../retry-options.js";
-
-const retryableStatusCodes = new Set([429, 500, 502, 503, 504]);
+import { defaultRetryableStatusCodes } from "../retry-options.js";
 
 export function retryDelayForApiError(
   error: MonobankApiError,
@@ -14,7 +13,7 @@ export function retryDelayForApiError(
 ): number | undefined {
   if (
     !canRetryRequest(method, request, policy, attempt) ||
-    !retryableStatusCodes.has(error.status)
+    !isRetryableStatus(error.status, policy)
   ) {
     return undefined;
   }
@@ -37,6 +36,12 @@ export function retryDelayForNetworkError(
   }
 
   return retryDelayMs(attempt, undefined, policy);
+}
+
+function isRetryableStatus(status: number, policy: RetryOptions): boolean {
+  return (policy.retryableStatusCodes ?? defaultRetryableStatusCodes).includes(
+    status,
+  );
 }
 
 function canRetryRequest(

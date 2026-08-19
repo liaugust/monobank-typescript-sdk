@@ -83,6 +83,48 @@ describe("MonobankTransport", () => {
     });
   });
 
+  it("skips a status the configured policy excludes", async () => {
+    const fetch = createFetchSequence([
+      jsonResponse({ message: "rate limited" }, { status: 429 }),
+    ]);
+    const transport = new MonobankTransport({
+      fetch,
+      retry: { ...shortRetry, retryableStatusCodes: [500, 502, 503, 504] },
+      token: "secret-token",
+    });
+
+    await expect(requestSafeGet(transport)).rejects.toMatchObject({
+      status: 429,
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries a status the configured policy includes", async () => {
+    const fetch = createFetchSequence([
+      jsonResponse({ message: "conflict" }, { status: 409 }),
+      jsonResponse({ ok: true }),
+    ]);
+    const transport = new MonobankTransport({
+      fetch,
+      retry: { ...shortRetry, retryableStatusCodes: [409] },
+      token: "secret-token",
+    });
+
+    await expect(requestSafeGet(transport)).resolves.toEqual({ ok: true });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries the documented default statuses when none are configured", async () => {
+    const fetch = createFetchSequence([
+      jsonResponse({ message: "rate limited" }, { status: 429 }),
+      jsonResponse({ ok: true }),
+    ]);
+    const transport = createRetryingTransport(fetch);
+
+    await expect(requestSafeGet(transport)).resolves.toEqual({ ok: true });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
   it("classifies caller abort during Fetch as aborted", async () => {
     const controller = new AbortController();
     const fetch = createAbortRejectingFetch();

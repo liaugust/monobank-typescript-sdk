@@ -251,3 +251,4 @@ export type {
 export type { FetchLike } from "./transport/fetch-like.js";
 export type { ResponseValidationIssue } from "./transport/response-schema.js";
 export type { RetryOptions } from "./transport/retry-options.js";
+export { defaultRetryableStatusCodes } from "./transport/retry-options.js";

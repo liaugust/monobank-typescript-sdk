@@ -51,6 +51,7 @@ supported contract.
 - [corporate.company.getRegistrationStatus](#corporatecompanygetregistrationstatus)
 - [corporate.company.getSettings](#corporatecompanygetsettings)
 - [corporate.company.setWebhook](#corporatecompanysetwebhook)
+- [Retry policy](#retry-policy)
 - [Errors](#errors)
 - [Runtime schemas](#runtime-schemas)
 - [Enum-like values](#enum-like-values)
@@ -121,7 +122,7 @@ used for Public or Acquiring requests.
 | `baseUrl`   | `string`       | `https://api.monobank.ua` | Absolute HTTP(S) origin, primarily for controlled proxies and tests; must use `https` unless it targets a loopback host |
 | `fetch`     | `FetchLike`    | `globalThis.fetch`        | Required when the runtime does not provide global Fetch; must honor `RequestInit.redirect`                              |
 | `timeoutMs` | `number`       | `10_000`                  | Positive finite per-attempt timeout in milliseconds                                                                     |
-| `retry`     | `RetryOptions` | Disabled                  | Bounded policy for retry-eligible safe GET requests                                                                     |
+| `retry`     | `RetryOptions` | Disabled                  | Bounded policy for retry-eligible safe GET requests; narrow `retryableStatusCodes` when a retry cannot help             |
 
 Invalid constructor configuration throws `MonobankValidationError` before a
 request is made.
@@ -180,7 +181,7 @@ cannot cross API families. Its token is attached only to authenticated
 | `baseUrl`   | `string`       | `https://api.monobank.ua` | Absolute HTTP(S) origin, primarily for controlled proxies and tests; must use `https` unless it targets a loopback host |
 | `fetch`     | `FetchLike`    | `globalThis.fetch`        | Required when the runtime does not provide global Fetch; must honor `RequestInit.redirect`                              |
 | `timeoutMs` | `number`       | `10_000`                  | Positive finite per-attempt timeout in milliseconds                                                                     |
-| `retry`     | `RetryOptions` | Disabled                  | Bounded policy for retry-eligible safe GET requests                                                                     |
+| `retry`     | `RetryOptions` | Disabled                  | Bounded policy for retry-eligible safe GET requests; narrow `retryableStatusCodes` when a retry cannot help             |
 
 Invalid constructor configuration throws `MonobankValidationError` before a
 request is made.
@@ -234,7 +235,7 @@ holds the private key.
 | `baseUrl`   | `string`          | `https://api.monobank.ua` | Absolute HTTP(S) origin, primarily for controlled proxies and tests; must use `https` unless it targets a loopback host |
 | `fetch`     | `FetchLike`       | `globalThis.fetch`        | Required when the runtime does not provide global Fetch; must honor `RequestInit.redirect`                              |
 | `timeoutMs` | `number`          | `10_000`                  | Positive finite per-attempt timeout in milliseconds, covering both the signer and the request                           |
-| `retry`     | `RetryOptions`    | Disabled                  | Bounded policy for retry-eligible safe GET requests                                                                     |
+| `retry`     | `RetryOptions`    | Disabled                  | Bounded policy for retry-eligible safe GET requests; narrow `retryableStatusCodes` when a retry cannot help             |
 
 A transport cannot hold both a `token` and a Corporate credential; attempting it
 throws `MonobankValidationError`. Invalid constructor configuration throws before
@@ -1352,6 +1353,53 @@ request itself. Signed with the `X-Time` and URL payload; `X-Request-Id` is
 sent but deliberately not signed. Requires a configured `keyId`. Never
 retried. Removal via an empty string mirrors the Personal endpoint and is not
 explicitly documented for this one.
+
+## Retry policy
+
+`RetryOptions` gates retries; omitting it disables them entirely.
+
+| Field                  | Type                | Default                       | Meaning                                  |
+| ---------------------- | ------------------- | ----------------------------- | ---------------------------------------- |
+| `maxAttempts`          | `number`            | Required                      | Total attempts including the first       |
+| `baseDelayMs`          | `number`            | Required                      | Initial delay before exponential backoff |
+| `maxDelayMs`           | `number`            | Required                      | Ceiling for any computed delay           |
+| `retryableStatusCodes` | `readonly number[]` | `defaultRetryableStatusCodes` | Statuses eligible for retry              |
+
+`defaultRetryableStatusCodes` is `[429, 500, 502, 503, 504]` and is exported for
+comparison and extension.
+
+Two limits are structural rather than configurable:
+
+- **Only safe GET requests are retried.** Every mutating method is excluded by the
+  policy's method check as well as by its own `retryable` flag.
+- **Timeouts are never retried.** A configured `timeoutMs` is the caller's ceiling
+  for one attempt, so exceeding it fails the request rather than spending the
+  budget again. This applies to Corporate signing too, which runs inside the same
+  attempt window.
+
+`Retry-After` is honored when present and suppresses the retry when the requested
+delay exceeds `maxDelayMs`.
+
+### Narrowing the set
+
+Monobank documents `/personal/client-info` and `/personal/statement` at **one
+request per 60 seconds**. A `429` there means the minute's quota is already spent,
+so a short backoff cannot succeed and each attempt spends more of it:
+
+```ts
+const personal = new MonobankPersonalClient({
+  retry: {
+    baseDelayMs: 1_000,
+    maxAttempts: 3,
+    maxDelayMs: 8_000,
+    retryableStatusCodes: [500, 502, 503, 504],
+  },
+  token: "validated-personal-token",
+});
+```
+
+An empty list, a non-integer, or a status outside 400–599 is rejected at
+construction with `MonobankValidationError`.
 
 ## Errors
 
