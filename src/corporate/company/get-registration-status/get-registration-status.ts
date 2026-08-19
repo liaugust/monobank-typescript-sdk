@@ -8,6 +8,7 @@ export interface GetCorporateRegistrationStatusInput {
   readonly pubkey: string;
 }
 
+/** Root-relative endpoint for polling a company authorization application. */
 export const corporateRegistrationStatusEndpoint =
   "/personal/auth/registration/status";
 

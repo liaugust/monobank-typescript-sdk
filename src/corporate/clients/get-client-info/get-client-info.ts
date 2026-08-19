@@ -8,6 +8,7 @@ export interface GetCorporateClientInfoInput {
   readonly requestId: string;
 }
 
+/** Root-relative endpoint for a granted client's identity, read under Corporate signing. */
 export const corporateClientInfoEndpoint = "/personal/client-info";
 
 const getCorporateClientInfoSchema = z.object({

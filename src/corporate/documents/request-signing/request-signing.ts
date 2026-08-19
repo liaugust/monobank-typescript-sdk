@@ -32,6 +32,7 @@ export interface RequestDocumentSigningInput {
   readonly oneSigner?: boolean;
 }
 
+/** Root-relative endpoint for creating a monoКЕП signing request. */
 export const requestDocumentSigningEndpoint = "/personal/signature/create";
 
 const nonempty = () =>

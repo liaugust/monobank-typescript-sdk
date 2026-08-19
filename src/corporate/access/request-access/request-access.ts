@@ -12,6 +12,7 @@ export interface RequestCorporateAccessInput {
   readonly callbackUrl?: string;
 }
 
+/** Root-relative endpoint for initializing delegated client access. */
 export const requestCorporateAccessEndpoint = "/personal/auth/request";
 
 /**

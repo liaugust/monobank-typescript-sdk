@@ -20,6 +20,7 @@ export interface RegisterCorporateCompanyInput {
   readonly pubkey: string;
 }
 
+/** Root-relative endpoint for submitting a company authorization application. */
 export const registerCorporateCompanyEndpoint = "/personal/auth/registration";
 
 const nonemptyString = () =>

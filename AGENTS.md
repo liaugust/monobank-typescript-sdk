@@ -274,6 +274,9 @@ The repository requires:
 - agreement between the declared `engines.node` floor, the lowest Node major in
   the CI matrix, and the `@types/node` major, so a supported runtime is always a
   tested runtime
+- every client family inside `publicApiFiles` in `eslint.config.mjs` and asserted
+  by `tests/consumers/declarations.mjs`, so JSDoc is both required at lint time
+  and proven to survive into the packed declarations
 
 Run everything with:
 

@@ -8,6 +8,7 @@ export interface GetCorporateSettingsInput {
   readonly requestId: string;
 }
 
+/** Root-relative endpoint for the authenticated company settings read. */
 export const corporateSettingsEndpoint = "/personal/corp/settings";
 
 const getCorporateSettingsSchema = z.object({
