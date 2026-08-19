@@ -56,12 +56,10 @@ claim endorsement by Monobank.
 - Cache the result of `acquiring.webhooks.getPublicKey()` in application
   infrastructure and refresh it only after verification with the cached key
   fails; the SDK intentionally does not own cache policy.
-- Use only documented Acquiring methods. The current surface contains merchant
-  every documented Acquiring endpoint: merchant details, submerchant listing,
-  employee listing, QR listing, details, and amount reset, statements, the
-  wallet listing, token payment, and card removal, and invoice creation,
-  status, cancellation, removal, finalization, receipt, fiscal checks, direct
-  payment, and synchronous payment. Do not invent calls beyond that set.
+- Use only documented methods. The surface covers every operation Monobank
+  documents across the Public, Personal, Acquiring, and Corporate families, so a
+  call you cannot find in `docs/API.md` does not exist upstream either. Do not
+  invent calls beyond that set.
 - Treat a Corporate `sign` result as credential material; the SDK sends it as
   `X-Sign` and never logs it. Return base64 of the raw 64-byte `r || s` pair, not
   DER. Monobank documents neither the digest nor whether the signed `URL` includes
@@ -111,20 +109,25 @@ The root entry point exports:
 - `MonobankPublicClient`
 - `MonobankAcquiringClient`
 - `MonobankCorporateClient`
-- fourteen resource properties exposed through the four parent clients: `bank`,
+- seventeen resource properties exposed through the four parent clients: `bank`,
   `currency`, `client`, Personal `statements`, Personal `webhooks`, `merchant`,
   `employees`, `invoices`, Acquiring `statements`, `submerchants`, `qr`,
-  `wallet`, Acquiring `webhooks`, and Corporate `company`
-- Personal and Acquiring enum-like const values, including `AccountType`,
-  `CashbackType`, `AcquiringPaymentScheme`, `AcquiringQrAmountType`,
-  `AcquiringStatementStatus`, `InvoicePaymentType`, and `InvoiceStatus`
+  `wallet`, Acquiring `webhooks`, and Corporate `access`, `clients`, `company`,
+  and `documents`
+- enum-like const values, including `AccountType`, `CashbackType`,
+  `AcquiringPaymentScheme`, `AcquiringQrAmountType`, `AcquiringStatementStatus`,
+  `InvoicePaymentType`, `InvoiceStatus`, `CorporateRegistrationStatus`,
+  `DocumentSigningState`, and `SigningDocumentType`
 - response schemas for accounts, bank sync, client info, currency rates, jars,
   managed clients, merchant details, submerchants, QR cashiers, QR cashier
-  details, invoices, receipts, fiscal checks, statements, and Personal webhook
-  events
+  details, invoices, receipts, fiscal checks, statements, Personal webhook
+  events, corporate settings, corporate registration and its status, delegated
+  access requests, and monoКЕП documents, signatories, and signing status
+- `defaultRetryableStatusCodes`
 - `parsePersonalWebhookEvent`
 - `verifyAcquiringWebhookSignature`
-- Personal and Acquiring request, response, transport, retry, and error types
+- Personal, Acquiring, and Corporate request, response, transport, retry, and
+  error types, including `CorporateSigner` and `CorporateSignatureInput`
 - `MonobankApiError`, `MonobankNetworkError`,
   `MonobankResponseValidationError`, and `MonobankValidationError`
 

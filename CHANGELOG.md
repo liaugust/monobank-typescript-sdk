@@ -2,7 +2,16 @@
 
 All notable changes to this package are documented here.
 
-## Unreleased
+## 0.4.0 - 2026-08-19
+
+The Corporate provider API is now covered, completing every operation Monobank
+documents: 37 of 37 across the Public, Personal, Acquiring, and Corporate
+families.
+
+Corporate requests are authenticated by ECDSA request signing rather than a
+token. Service keys are secp256k1, which Web Crypto cannot sign with, so
+`MonobankCorporateClient` takes an injected signing function and the private key
+never enters the SDK.
 
 ### Added
 
@@ -52,9 +61,6 @@ All notable changes to this package are documented here.
 - `corporate.company.setWebhook(input)` configuring the payment-update webhook
   over the signed `POST /personal/corp/webhook` endpoint, reusing the Personal
   webhook URL validation. Monobank test-POSTs the URL during the call.
-
-### Added
-
 - `retry.retryableStatusCodes` selecting which response statuses are eligible for
   retry, with the previous set exported as `defaultRetryableStatusCodes`
   (`429, 500, 502, 503, 504`). `429` was previously unavoidable, so a consumer who
