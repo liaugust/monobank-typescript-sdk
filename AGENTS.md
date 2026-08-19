@@ -17,7 +17,8 @@ claim endorsement by Monobank.
 - Construct `MonobankPersonalClient` with a validated Personal token.
 - Construct `MonobankAcquiringClient` with a separate validated Acquiring token.
 - Construct `MonobankCorporateClient` with a service `keyId` and a `sign`
-  function. It takes no token. Never place a private key inside the SDK or in
+  function. It takes no token. Omit `keyId` only for the registration flow,
+  which is what issues it. Never place a private key inside the SDK or in
   application logs; the signer is the only thing that touches it.
 - Never hardcode, log, serialize, or commit real tokens or API payloads.
 - Treat all monetary integers as minor currency units.
@@ -141,7 +142,7 @@ src/personal/webhooks/          webhook resource, input, and event parser
 src/transport/request/          request security and attempt-signal ownership
 src/transport/retry/            retry policy, delay, and Retry-After parsing
 src/transport/response/         successful and failed response normalization
-src/shared/                     request options, request validation, and unix time
+src/shared/                     request options, validation, webhook body, unix time
 src/errors/                     public credential-safe error classes
 tests/fixtures/{public,personal,acquiring}/ synthetic contract fixtures
 tests/types/                    compile-time public API assertions
@@ -161,6 +162,9 @@ tests/consumers/                ESM, CJS, browser, declaration, and tarball chec
 - Send only printable ASCII without spaces in `X-Key-Id`, `X-Request-Id`, and
   `X-Sign`. `Headers.set` throws a bare `TypeError` on a control character, which
   the transport would misread as a retryable network failure.
+- Sign the two registration endpoints without `X-Key-Id`; they run before a
+  key exists. Every other Corporate operation requires the configured key and
+  fails validation ahead of Fetch without one.
 - State each Corporate operation's signed-payload variant explicitly. Monobank
   documents two, and they do not follow from which headers a request sends:
   `/personal/corp/settings` and `/personal/corp/webhook` send `X-Request-Id`
@@ -184,6 +188,12 @@ tests/consumers/                ESM, CJS, browser, declaration, and tarball chec
   where Monobank's OpenAPI `required` array omits it, matching the statement,
   submerchant, and QR schemas. Revisit all three together if an account with no
   records is observed to return a bare `{}`.
+- Model the Corporate registration status response looser than its `required`
+  array: `keyId` is optional because no key exists while an application is
+  `New`, and `status` is a plain string because the specification declares no
+  `enum` and lists the three values only in prose. Requiring either would let a
+  pending response break the one flow that issues the key. Revisit if a live
+  pending response is observed.
 - Keep Zod as the only runtime dependency unless a design change is explicitly
   approved.
 - Keep transport failures credential-safe: never retain tokens, authorization

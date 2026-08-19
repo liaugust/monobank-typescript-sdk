@@ -8,8 +8,12 @@ export interface MonobankCorporateClientOptions {
   readonly baseUrl?: string;
   /** Fetch-compatible implementation used for every Corporate request. */
   readonly fetch?: FetchLike;
-  /** Service key identifier sent as `X-Key-Id`, issued when Monobank approves the company. */
-  readonly keyId: string;
+  /**
+   * Service key identifier sent as `X-Key-Id`, issued when Monobank approves
+   * the company. Omit it only for the registration flow, which is what issues
+   * the key; every other operation fails validation without one.
+   */
+  readonly keyId?: string;
   /** Optional bounded retry policy; when omitted, endpoint methods make one attempt. */
   readonly retry?: RetryOptions;
   /** Signing function producing `X-Sign`; the SDK never holds the secp256k1 private key. */

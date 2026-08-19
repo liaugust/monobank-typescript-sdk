@@ -32,7 +32,7 @@ export class MonobankCorporateClient {
     const transport = new MonobankTransport({
       ...transportOptions,
       authenticatedPathPrefix: "/personal/",
-      corporate: { keyId, sign },
+      corporate: { ...(keyId === undefined ? {} : { keyId }), sign },
     });
 
     this.company = new MonobankCorporateCompany(transport);

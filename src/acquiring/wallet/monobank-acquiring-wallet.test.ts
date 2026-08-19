@@ -4,7 +4,7 @@ import {
   acquiringCardPaymentFixture,
   acquiringWalletFixture,
 } from "../../../tests/fixtures/acquiring/wallet.js";
-import { expectCallerCancellation } from "../../../tests/support/acquiring-cancellation.js";
+import { expectCallerCancellation } from "../../../tests/support/caller-cancellation.js";
 import {
   createFetchSequence,
   jsonResponse,

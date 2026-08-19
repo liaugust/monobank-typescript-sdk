@@ -125,7 +125,10 @@ async function applyCredentialHeaders(
     );
   }
 
-  headers.set("X-Key-Id", corporate.keyId);
+  if (spec.preRegistration !== true) {
+    headers.set("X-Key-Id", requireKeyId(corporate.keyId, request.endpoint));
+  }
+
   headers.set("X-Time", time);
   headers.set(
     "X-Sign",
@@ -203,6 +206,30 @@ function createSignerError(endpoint: string): MonobankValidationError {
     issues: ["corporate signer failed to produce a signature"],
     message: "Invalid Monobank transport request.",
   });
+}
+
+/**
+ * Requires the configured Corporate key for operations that send `X-Key-Id`.
+ *
+ * Only the registration endpoints run before a key exists; everything else
+ * fails here, ahead of Fetch, when the client was built without one.
+ * @param keyId Configured Corporate key identifier, if any.
+ * @param endpoint Endpoint the request targets.
+ * @returns The configured key identifier.
+ * @throws {MonobankValidationError} When no key identifier was configured.
+ */
+function requireKeyId(keyId: string | undefined, endpoint: string): string {
+  if (keyId === undefined) {
+    throw new MonobankValidationError({
+      endpoint,
+      issues: [
+        "corporate.keyId is required for endpoints other than registration",
+      ],
+      message: "Invalid Monobank transport request.",
+    });
+  }
+
+  return keyId;
 }
 
 function requireAuthenticatedToken(
