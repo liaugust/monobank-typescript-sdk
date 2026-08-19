@@ -233,7 +233,7 @@ holds the private key.
 | `sign`      | `CorporateSigner` | Required                  | Function returning the `X-Sign` value; may be synchronous or asynchronous                                               |
 | `baseUrl`   | `string`          | `https://api.monobank.ua` | Absolute HTTP(S) origin, primarily for controlled proxies and tests; must use `https` unless it targets a loopback host |
 | `fetch`     | `FetchLike`       | `globalThis.fetch`        | Required when the runtime does not provide global Fetch; must honor `RequestInit.redirect`                              |
-| `timeoutMs` | `number`          | `10_000`                  | Positive finite per-attempt timeout in milliseconds; bounds the request, not the signer                                 |
+| `timeoutMs` | `number`          | `10_000`                  | Positive finite per-attempt timeout in milliseconds, covering both the signer and the request                           |
 | `retry`     | `RetryOptions`    | Disabled                  | Bounded policy for retry-eligible safe GET requests                                                                     |
 
 A transport cannot hold both a `token` and a Corporate credential; attempting it
@@ -280,9 +280,10 @@ excludes it, so each operation states its own.
 part of the payload and a retry after a backoff delay must not replay a stale
 timestamp.
 
-`timeoutMs` does **not** bound the signer. No signal is passed into `sign`, so a
-signing call that never settles blocks the request instead of timing out. Give a
-remote signer its own timeout.
+`timeoutMs` bounds the signer as well as the request. A signing call that never
+settles fails with `MonobankNetworkError` and `reason: "timeout"` when the attempt
+elapses, and a caller abort during signing reports `reason: "aborted"`. Neither is
+retried, matching how this SDK treats every other timeout.
 
 A signer that throws, or returns an empty string, produces
 `MonobankValidationError` before Fetch runs. The signer's own failure is never

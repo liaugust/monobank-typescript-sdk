@@ -173,7 +173,8 @@ tests/consumers/                ESM, CJS, browser, declaration, and tarball chec
   credential; configuring both is rejected.
 - Sign Corporate requests once per attempt, never once per request. `X-Time` is
   signed, so a retry after a backoff delay would replay a stale timestamp.
-  `timeoutMs` does not bound the signer, since no signal is passed into `sign`.
+  The attempt signal is passed into signing, so `timeoutMs` bounds a signer that
+  never settles and it fails as a timeout like any other.
 - Send only printable ASCII without spaces in `X-Key-Id`, `X-Request-Id`, and
   `X-Sign`. `Headers.set` throws a bare `TypeError` on a control character, which
   the transport would misread as a retryable network failure.

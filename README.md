@@ -513,8 +513,10 @@ Two things Monobank does not document:
   rebuild the payload if the bank expects something else.
 
 The signer runs once per attempt, because `X-Time` is signed and a retry must not
-replay a stale timestamp. `timeoutMs` does **not** bound it — no signal is passed
-into `sign` — so give a remote signer its own timeout.
+replay a stale timestamp. It runs **inside** the per-attempt `timeoutMs` budget:
+a signing call that never settles fails with `MonobankNetworkError` and
+`reason: "timeout"`, exactly as a hanging request does, and like any timeout it is
+not retried.
 
 A signer that throws or returns an empty string produces a
 `MonobankValidationError` before Fetch runs, with no cause attached, because a
