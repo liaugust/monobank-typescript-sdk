@@ -6,6 +6,26 @@ All notable changes to this package are documented here.
 
 ### Added
 
+- `MonobankInstallmentsClient` for Покупка Частинами, the fifth credential family.
+  It authenticates with a `store-id` header and a `signature` header holding
+  `Base64(HMAC-SHA256(request_body, store_secret))`, which the SDK computes with
+  built-in Web Crypto rather than an injected signer: unlike the Corporate
+  secp256k1 keys, this scheme is one Web Crypto supports. The client defaults to
+  `https://u2.monobank.com.ua`, not `api.monobank.ua`, and Monobank's sandbox and
+  stage origins can be passed as `baseUrl`.
+- `installments.clients.validate(input)` and
+  `installments.clients.validateV2(input)` for client eligibility. `validateV2`
+  answers with `found` alone; `validate` also returns the person's name and tax
+  identifier, so the docs recommend the former. Exports
+  `InstallmentsClientValidation`, `InstallmentsClientPresence`,
+  `ValidateInstallmentsClientInput`, and the matching schemas.
+- `verifyInstallmentsCallbackSignature(input)` authenticating a callback over its
+  exact raw bytes with a constant-time comparison, and
+  `parseInstallmentsCallbackEvent(payload)` for shape validation. Monobank sends
+  callbacks only for terminal outcomes, which is stated where both are documented.
+- The transport gained a third credential mode. `token`, `corporate`, and
+  `installments` remain mutually exclusive, and an authenticated request now signs
+  the exact serialized body it sends rather than a re-serialization of the input.
 - `acquiring.monopay` for the monopay button's signing keys: `listKeys()`,
   `importKey(input)`, and `deleteKey(input)`. Entries arrive under `result`
   rather than `list`, as Monobank documents. `importKey` takes the Base64 public
