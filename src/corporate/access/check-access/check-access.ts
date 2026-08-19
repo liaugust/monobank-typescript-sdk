@@ -8,6 +8,7 @@ export interface CheckCorporateAccessInput {
   readonly requestId: string;
 }
 
+/** Root-relative endpoint for checking a delegated access grant. */
 export const checkCorporateAccessEndpoint = "/personal/auth/request";
 
 const checkCorporateAccessSchema = z.object({

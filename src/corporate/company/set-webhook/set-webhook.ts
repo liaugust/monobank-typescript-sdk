@@ -12,6 +12,7 @@ export interface SetCorporateWebhookInput {
   readonly webHookUrl: string;
 }
 
+/** Root-relative endpoint for Corporate payment-update webhook configuration. */
 export const setCorporateWebhookEndpoint = "/personal/corp/webhook";
 
 const setCorporateWebhookSchema = z.object({
