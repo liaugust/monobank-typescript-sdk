@@ -1,6 +1,8 @@
 import { MonobankTransport } from "../../transport/transport.js";
 import { MonobankInstallmentsClients } from "../clients/monobank-installments-clients.js";
+import { MonobankInstallmentsLetters } from "../letters/monobank-installments-letters.js";
 import { MonobankInstallmentsOrders } from "../orders/monobank-installments-orders.js";
+import { MonobankInstallmentsReports } from "../reports/monobank-installments-reports.js";
 import type { MonobankInstallmentsClientOptions } from "./monobank-installments-client-options.js";
 
 const installmentsBaseUrl = "https://u2.monobank.com.ua";
@@ -30,8 +32,14 @@ export class MonobankInstallmentsClient {
   /** Client-eligibility lookups sharing this client's credentials and transport settings. */
   public readonly clients: MonobankInstallmentsClients;
 
+  /** Guarantee-letter operations sharing this client's credentials and transport settings. */
+  public readonly letters: MonobankInstallmentsLetters;
+
   /** Order lifecycle operations sharing this client's credentials and transport settings. */
   public readonly orders: MonobankInstallmentsOrders;
+
+  /** Store reporting sharing this client's credentials and transport settings. */
+  public readonly reports: MonobankInstallmentsReports;
 
   /**
    * Creates an installments client and its resources over one validated transport.
@@ -54,6 +62,8 @@ export class MonobankInstallmentsClient {
     });
 
     this.clients = new MonobankInstallmentsClients(transport);
+    this.letters = new MonobankInstallmentsLetters(transport);
     this.orders = new MonobankInstallmentsOrders(transport);
+    this.reports = new MonobankInstallmentsReports(transport);
   }
 }

@@ -3,7 +3,8 @@
 > Unofficial, strict, runtime-validated TypeScript SDK for the Monobank API,
 > spanning the Public, Personal, Acquiring, Corporate, and Покупка Частинами
 > credential families.
-> It implements 49 of the 63 documented operations, not the whole API. Supports
+> It implements all 63 documented operations across both of Monobank's
+> documentation sites. Supports
 > Node.js 22.12.0+, ESM, CommonJS, and modern browser bundlers. Zod Mini
 > validates every successful JSON response.
 
@@ -75,6 +76,20 @@ and defaults to `https://u2.monobank.com.ua` rather than `api.monobank.ua`.
   requires `order_id`, `sum` in hryvnia with a minimum of 1, `store_return_id`,
   and `return_money_to_card`; returns `Promise<InstallmentsOrderReturn>`; moves
   money, never retried.
+- `installments.letters.getData(input, options?)` and
+  `installments.letters.getDataV2(input, options?)`: signed
+  `/api/order/data/for/guarantee/letter` and its v2 path; return
+  `Promise<InstallmentsGuaranteeLetterData>` carrying a name, tax identifier, and
+  up to four identity documents. Highest-sensitivity payload in the package: read
+  only what is needed, never log it.
+- `installments.letters.download(input, options?)`: signed
+  `/api/order/guarantee/letter`; the only non-JSON success in the package; returns
+  `Promise<MonobankBinaryPayload>` with raw `bytes` and the declared
+  `contentType`; an empty body is rejected as broken.
+- `installments.reports.getStoreReport(input, options?)`: signed
+  `/api/store/report`; takes `date` as `YYYY-MM-DD`; returns
+  `Promise<InstallmentsStoreReport>` whose sums are hryvnia and whose
+  `operation_timestamp` is `null` until the transfer is made.
 - `verifyInstallmentsCallbackSignature(input)`: recomputes
   `Base64(HMAC-SHA256(body, storeSecret))` over the exact raw callback bytes and
   compares in constant time; returns `Promise<boolean>`.

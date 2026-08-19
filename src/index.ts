@@ -299,6 +299,17 @@ export {
   installmentsClientPresenceSchema,
   installmentsClientValidationSchema,
 } from "./installments/clients/validate-client/validate-client.js";
+export type { InstallmentsLetterInput } from "./installments/letters/get-letter-data/get-letter-data.js";
+export type {
+  InstallmentsGuaranteeLetterData,
+  InstallmentsIdentityDocument,
+  InstallmentsLetterCustomer,
+} from "./installments/letters/models/installments-guarantee-letter-data.js";
+export {
+  installmentsGuaranteeLetterDataSchema,
+  installmentsIdentityDocumentSchema,
+  installmentsLetterCustomerSchema,
+} from "./installments/letters/models/installments-guarantee-letter-data.js";
 export type { InstallmentsOrderPayment } from "./installments/orders/check-order-paid/check-order-paid.js";
 export { installmentsOrderPaymentSchema } from "./installments/orders/check-order-paid/check-order-paid.js";
 export type {
@@ -325,6 +336,15 @@ export type {
 } from "./installments/orders/return-order/return-order.js";
 export { installmentsOrderReturnSchema } from "./installments/orders/return-order/return-order.js";
 export type { InstallmentsOrderIdentifierInput } from "./installments/orders/shared/order-identifier.js";
+export type {
+  GetInstallmentsStoreReportInput,
+  InstallmentsStoreReport,
+  InstallmentsStoreReportOrder,
+} from "./installments/reports/get-store-report/get-store-report.js";
+export {
+  installmentsStoreReportOrderSchema,
+  installmentsStoreReportSchema,
+} from "./installments/reports/get-store-report/get-store-report.js";
 export { MonobankPersonalClient } from "./personal/client/monobank-personal-client.js";
 export type { MonobankPersonalClientOptions } from "./personal/client/monobank-personal-client-options.js";
 export type { ClientInfo } from "./personal/client-info/get-info/get-info.js";
@@ -377,6 +397,7 @@ export type {
   CorporateSigner,
 } from "./transport/corporate-signer.js";
 export type { FetchLike } from "./transport/fetch-like.js";
+export type { MonobankBinaryPayload } from "./transport/response/read-binary-payload.js";
 export type { ResponseValidationIssue } from "./transport/response-schema.js";
 export type { RetryOptions } from "./transport/retry-options.js";
 export { defaultRetryableStatusCodes } from "./transport/retry-options.js";

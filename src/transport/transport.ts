@@ -11,6 +11,8 @@ import type { EmptyRequest, JsonRequest } from "./request/request.js";
 import { createRequestInit, resolveRequestUrl } from "./request/request.js";
 import { createApiError } from "./response/create-api-error.js";
 import { parseSuccessJson } from "./response/parse-success-json.js";
+import type { MonobankBinaryPayload } from "./response/read-binary-payload.js";
+import { readBinaryPayload } from "./response/read-binary-payload.js";
 import { delayBeforeRetry } from "./retry/delay-before-retry.js";
 import {
   retryDelayForApiError,
@@ -39,6 +41,14 @@ export class MonobankTransport {
 
   public async getEmpty(request: EmptyRequest): Promise<void> {
     await this.executeEmpty("GET", request);
+  }
+
+  public async postBinary(
+    request: EmptyRequest,
+  ): Promise<MonobankBinaryPayload> {
+    return this.execute("POST", request, async (response) =>
+      readBinaryPayload(response, request.endpoint),
+    );
   }
 
   public async postEmpty(request: EmptyRequest): Promise<void> {

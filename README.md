@@ -64,15 +64,17 @@ code. Coverage of the Monobank API is partial; see [Coverage](#coverage).
 
 ## Coverage
 
-49 of the 63 operations Monobank documents are implemented. Monobank publishes
-two documentation sites and neither is a superset of the other:
+All 63 operations Monobank documents are implemented, across two documentation
+sites neither of which is a superset of the other:
 
-- <https://monobank.ua/api-docs> — current; 46 operations, 32 of them implemented
+- <https://monobank.ua/api-docs> — current; 46 operations
 - <https://api.monobank.ua/docs/> — older Redoc specs; 17 further operations
-  appear only here, all implemented, and cover all of Personal and Corporate
+  appear only here, covering all of Personal and Corporate
 
-The remaining 14 are all of Покупка Частинами, tracked under
-[issue #59](https://github.com/liaugust/monobank-typescript-sdk/issues/59).
+Coverage is measured against both sites and enumerated in
+[issue #59](https://github.com/liaugust/monobank-typescript-sdk/issues/59). If
+Monobank documents something this package lacks, that is a bug worth reporting
+rather than an intentional omission.
 
 ## Requirements
 
@@ -849,6 +851,46 @@ Nested request objects — `invoice`, `additional_params`,
 `financial_company_merchant_info`, and each product — are **forwarded whole**.
 Monobank documents their fields only through samples, so an undocumented key you
 send reaches the API rather than being silently dropped.
+
+#### Guarantee letters and reporting
+
+`letters.getData()` and `letters.getDataV2()` return the source data behind a
+guarantee letter, and `letters.download()` returns the letter itself:
+
+```ts
+const data = await installments.letters.getData({ order_id: orderId });
+
+const letter = await installments.letters.download({ order_id: orderId });
+await writeFile("guarantee-letter.pdf", letter.bytes);
+```
+
+> [!IMPORTANT]
+> The letter payload is the most sensitive data this SDK carries: a full name, a
+> tax identifier, and up to four government identity documents — passport, ID
+> card, residence permit, and international passport. Read only what the letter
+> requires, keep it out of logs, and hold it under your own retention rules.
+
+`download()` is the one method whose success is **not** JSON. It returns raw
+`bytes` and the `contentType` Monobank declared, rather than a validated object —
+nothing decodes the body. An empty success is rejected as a broken response
+instead of being handed over as an empty file. The request asks for
+`application/pdf`, but check `contentType` before assuming that is what arrived.
+
+Daily settlement comes from `reports.getStoreReport()`:
+
+```ts
+const report = await installments.reports.getStoreReport({
+  date: "2024-01-15",
+});
+
+for (const order of report.orders) {
+  console.log(order.total_sum, order.transferred_sum, order.commission);
+}
+```
+
+`date` is a plain `YYYY-MM-DD` day. Sums are hryvnia, and `operation_timestamp`
+is `null` until the transfer is made, so an order can appear in the report before
+its money moves.
 
 #### Verifying callbacks
 
