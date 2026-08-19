@@ -27,6 +27,8 @@ import type {
   CurrencyRate,
   GetAcquiringQrDetailsInput,
   GetAcquiringStatementsInput,
+  GetCorporateClientInfoInput,
+  GetCorporateClientStatementsInput,
   GetCorporateRegistrationStatusInput,
   GetCorporateSettingsInput,
   GetStatementsInput,
@@ -44,6 +46,8 @@ import type {
   RequestCorporateAccessInput,
   ResetAcquiringQrAmountInput,
   SetCorporateWebhookInput,
+  StatementItem,
+  StatementWindowInput,
   SyncInvoicePaymentInput,
   VerifyAcquiringWebhookSignatureInput,
 } from "@liaugust/monobank-sdk";
@@ -129,6 +133,19 @@ const accessCheck: Promise<void> =
   corporateClient.access.check(accessCheckInput);
 const parsedTokenRequest: CorporateTokenRequest =
   corporateTokenRequestSchema.parse({});
+const delegatedInfoInput: GetCorporateClientInfoInput = {
+  requestId: "grant-1",
+};
+const delegatedInfo: Promise<ClientInfo> =
+  corporateClient.clients.getInfo(delegatedInfoInput);
+const delegatedStatementsInput: GetCorporateClientStatementsInput = {
+  account: "acc-1",
+  from: new Date(0),
+  requestId: "grant-1",
+};
+const delegatedStatements: Promise<readonly StatementItem[]> =
+  corporateClient.clients.getStatements(delegatedStatementsInput);
+const statementWindow: StatementWindowInput = { from: 0 };
 const input: GetStatementsInput = { from: new Date(0) };
 const bankSync: Promise<BankSync> = publicClient.bank.getSync();
 const statements = client.statements.get(input);
@@ -423,3 +440,16 @@ void parsedTokenRequest;
 
 // @ts-expect-error -- A delegated access check requires the request identifier.
 void corporateClient.access.check({});
+
+void delegatedInfo;
+void delegatedStatements;
+void statementWindow;
+
+// @ts-expect-error -- A delegated statement read requires the grant identifier.
+void corporateClient.clients.getStatements({ from: 0 });
+
+void corporateClient.clients.getStatements({
+  // @ts-expect-error -- A delegated statement start time must be a Date or Unix number.
+  from: "2026-08-01",
+  requestId: "grant-1",
+});

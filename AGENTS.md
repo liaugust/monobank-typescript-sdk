@@ -16,6 +16,9 @@ claim endorsement by Monobank.
 - Construct `MonobankPublicClient` without a token for `/bank/*` calls.
 - Construct `MonobankPersonalClient` with a validated Personal token.
 - Construct `MonobankAcquiringClient` with a separate validated Acquiring token.
+- Reuse `clientInfoSchema` and `statementItemsSchema` for the delegated
+  Corporate reads. They are the same wire contracts as the Personal endpoints;
+  only the credential and the data's owner differ, so never fork the schemas.
 - Treat `corporate.access.*` and the delegated reads as third-party data access.
   A client grants it, it covers only the registered permissions, and the client
   can revoke it. Never widen what a grant is used for beyond the caller's stated
@@ -136,6 +139,7 @@ src/acquiring/wallet/           tokenized card resource, endpoints, and models
 src/acquiring/webhooks/         trust-key endpoint and signature verification
 src/corporate/access/           delegated client-access resource and endpoints
 src/corporate/client/           Corporate parent client and options
+src/corporate/clients/          delegated reads of a granted client's data
 src/corporate/company/          company resource, endpoint, and response model
 src/public/client/              token-free Public parent client and options
 src/public/bank/                bank resource and sync endpoint
@@ -147,7 +151,7 @@ src/personal/webhooks/          webhook resource, input, and event parser
 src/transport/request/          request security and attempt-signal ownership
 src/transport/retry/            retry policy, delay, and Retry-After parsing
 src/transport/response/         successful and failed response normalization
-src/shared/                     request options, validation, URL and webhook body, unix time
+src/shared/                     request options, validation, URL, webhook body, statement path, unix time
 src/errors/                     public credential-safe error classes
 tests/fixtures/{public,personal,acquiring}/ synthetic contract fixtures
 tests/types/                    compile-time public API assertions

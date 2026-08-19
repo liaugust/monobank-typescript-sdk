@@ -133,6 +133,8 @@ example focused; production code should validate the environment value first.
 | `acquiring.invoices.getFiscalChecks(input)`      | Acquiring token | `InvoiceFiscalChecks`               | Loads fiscalization results                     |
 | `corporate.access.request(input?)`               | Corporate key   | `CorporateTokenRequest`             | Starts a client grant; never retried            |
 | `corporate.access.check(input)`                  | Corporate key   | `void`                              | 401 means still pending; safe GET               |
+| `corporate.clients.getInfo(input)`               | Corporate key   | `ClientInfo`                        | Granted client's identity; safe GET             |
+| `corporate.clients.getStatements(input)`         | Corporate key   | `readonly StatementItem[]`          | Granted client's statements; safe GET           |
 | `corporate.company.register(input)`              | Corporate sign  | `CorporateRegistration`             | Pre-key application; never retried              |
 | `corporate.company.getRegistrationStatus(input)` | Corporate sign  | `CorporateRegistrationStatusResult` | Pre-key status poll; returns the issued `keyId` |
 | `corporate.company.getSettings(input)`           | Corporate key   | `CorporateSettings`                 | Signed request; company registration data       |
@@ -530,6 +532,13 @@ as **404**.
 These calls read another person's banking data. The client grants access, it
 covers only the permissions the company registered, and the client can revoke it
 at any time.
+
+Once granted, `corporate.clients.getInfo({ requestId })` and
+`corporate.clients.getStatements({ requestId, from })` read that client's data.
+They address the same URLs as the Personal client but are different operations:
+the data belongs to another person, and authentication is a Corporate signature
+rather than a Personal token. Response shapes are shared, so `ClientInfo` and
+`StatementItem` are the same types the Personal client returns.
 
 `keyId` is optional only for the registration flow, which is what issues it:
 `register()` and `getRegistrationStatus()` sign with `X-Time` and the URL alone

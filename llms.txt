@@ -80,6 +80,14 @@ timeout.
   `GET /personal/auth/request` with `X-Request-Id` in the signed payload;
   resolves `Promise<void>` when granted; 401 means still pending and 404 means
   unknown request; safe GET and re-signed on each retry.
+- `corporate.clients.getInfo(input, options?)`: signed
+  `GET /personal/client-info` for a granted client; requires
+  `input.requestId`; returns `Promise<ClientInfo>`; safe GET; upstream limit is
+  one call per 60 seconds.
+- `corporate.clients.getStatements(input, options?)`: signed delegated
+  statements; requires `input.requestId` and `input.from`; `input.account`
+  defaults to `0`; maximum window 2,682,000 seconds; returns
+  `Promise<readonly StatementItem[]>`; safe GET.
 - `corporate.company.register(input, options?)`: signed pre-key
   `/personal/auth/registration` application; no `X-Key-Id`; returns
   `Promise<CorporateRegistration>`; never retried.

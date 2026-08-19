@@ -144,6 +144,8 @@ export type {
 export { corporateTokenRequestSchema } from "./corporate/access/request-access/request-access.js";
 export { MonobankCorporateClient } from "./corporate/client/monobank-corporate-client.js";
 export type { MonobankCorporateClientOptions } from "./corporate/client/monobank-corporate-client-options.js";
+export type { GetCorporateClientInfoInput } from "./corporate/clients/get-client-info/get-client-info.js";
+export type { GetCorporateClientStatementsInput } from "./corporate/clients/get-client-statements/get-client-statements.js";
 export type {
   CorporateRegistrationStatusResult,
   GetCorporateRegistrationStatusInput,
@@ -219,6 +221,7 @@ export {
   currencyRatesSchema,
 } from "./public/currency/get-rates/get-rates.js";
 export type { RequestOptions } from "./shared/request-options.js";
+export type { StatementWindowInput } from "./shared/statement-endpoint.js";
 export type {
   CorporateSignatureInput,
   CorporateSigner,

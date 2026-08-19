@@ -42,6 +42,8 @@ supported contract.
 - [parsePersonalWebhookEvent](#parsepersonalwebhookevent)
 - [corporate.access.request](#corporateaccessrequest)
 - [corporate.access.check](#corporateaccesscheck)
+- [corporate.clients.getInfo](#corporateclientsgetinfo)
+- [corporate.clients.getStatements](#corporateclientsgetstatements)
 - [corporate.company.register](#corporatecompanyregister)
 - [corporate.company.getRegistrationStatus](#corporatecompanygetregistrationstatus)
 - [corporate.company.getSettings](#corporatecompanygetsettings)
@@ -238,6 +240,7 @@ a request is made.
 The client groups operations into resource objects:
 
 - `corporate.access`: delegated client-access grant operations
+- `corporate.clients`: reads of a granted client's data
 - `corporate.company`: company registration and settings operations
 
 ### Signing contract
@@ -1119,6 +1122,53 @@ These operations read another person's banking data. The client grants access, i
 covers only the permissions the company registered, and the client can revoke it
 at any time.
 
+## corporate.clients.getInfo
+
+```ts
+corporate.clients.getInfo(
+  input: GetCorporateClientInfoInput,
+  options?: RequestOptions,
+): Promise<ClientInfo>
+```
+
+Reads the granted client's identity and accounts over the signed
+`GET /personal/client-info` endpoint.
+
+| Input       | Type     | Contract                                 |
+| ----------- | -------- | ---------------------------------------- |
+| `requestId` | `string` | Grant identifier from `access.request()` |
+
+Returns the same `ClientInfo` the Personal client returns — the wire contract is
+identical, so `clientInfoSchema` is reused rather than forked. Signed with the
+`X-Time`, `X-Request-Id`, and URL payload. Safe GET; eligible for configured
+retries. Monobank limits this endpoint to one request per 60 seconds.
+
+An unapproved or revoked grant surfaces as `MonobankApiError`.
+
+## corporate.clients.getStatements
+
+```ts
+corporate.clients.getStatements(
+  input: GetCorporateClientStatementsInput,
+  options?: RequestOptions,
+): Promise<readonly StatementItem[]>
+```
+
+Reads the granted client's statements over the signed
+`GET /personal/statement/{account}/{from}/{to}` endpoint.
+
+| Input       | Type            | Contract                                                       |
+| ----------- | --------------- | -------------------------------------------------------------- |
+| `requestId` | `string`        | Grant identifier from `access.request()`                       |
+| `from`      | `UnixTimeInput` | Inclusive window start as Unix seconds or a `Date`             |
+| `account`   | `string`        | Optional account or jar identifier; omission defaults to `0`   |
+| `to`        | `UnixTimeInput` | Optional inclusive window end; omission means the current time |
+
+The inclusive window must not exceed **2,682,000** seconds, the same limit the
+Personal endpoint enforces, and the signed payload covers the encoded account and
+both timestamps. Returns the same `StatementItem` values as the Personal client,
+newest first. Safe GET; eligible for configured retries.
+
 ## corporate.company.register
 
 ```ts
@@ -1679,6 +1729,9 @@ object containing the target `account` identifier and validated
 | `SetCorporateWebhookInput`               | Request identifier and Corporate webhook address               |
 | `RequestCorporateAccessInput`            | Optional callback address for a delegated access request       |
 | `CheckCorporateAccessInput`              | Request identifier for a delegated access check                |
+| `GetCorporateClientInfoInput`            | Grant identifier for a delegated identity read                 |
+| `GetCorporateClientStatementsInput`      | Grant identifier, account, and window for delegated statements |
+| `StatementWindowInput`                   | Account and time window shared by both statement families      |
 | `ResponseValidationIssue`                | Safe schema issue retained by validation errors                |
 | `MonobankApiErrorOptions`                | Public API-error constructor data                              |
 | `MonobankNetworkErrorOptions`            | Public network-error constructor data                          |
