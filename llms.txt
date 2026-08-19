@@ -88,6 +88,16 @@ timeout.
   statements; requires `input.requestId` and `input.from`; `input.account`
   defaults to `0`; maximum window 2,682,000 seconds; returns
   `Promise<readonly StatementItem[]>`; safe GET.
+- `corporate.documents.requestSigning(input, options?)`: signed monoКЕП
+  request for 1-10 documents; each needs `name` and a ГОСТ 34.311-95 hex `hash`
+  the caller computes, since no JS runtime implements that algorithm; returns
+  `Promise<DocumentSigningRequest>` with `requestId` and `deeplink`; valid three
+  days; never retried.
+- `corporate.documents.getSigningStatus(input, options?)`: signed status read;
+  returns `Promise<DocumentSigningStatus>` with per-document state and
+  signatories; safe GET.
+- `corporate.documents.cancelSigning(input, options?)`: signed HTTP DELETE
+  cancelling a signing request; resolves `Promise<void>`; never retried.
 - `corporate.company.register(input, options?)`: signed pre-key
   `/personal/auth/registration` application; no `X-Key-Id`; returns
   `Promise<CorporateRegistration>`; never retried.
@@ -205,10 +215,12 @@ objects, or raw API payloads.
   `InvoiceStatus`, `InvoiceCancellationStatus`, `InvoicePaymentSystem`,
   `InvoicePaymentMethod`, `InvoiceWalletStatus`, `DiscountType`, `DiscountMode`,
   `FiscalCheckType`, `FiscalCheckStatus`, `FiscalizationSource`,
-  `CorporateRegistrationStatus`.
+  `CorporateRegistrationStatus`, `DocumentSigningState`, `SigningDocumentType`.
 - Schemas: `accountSchema`, `bankSyncSchema`, `clientInfoSchema`,
   `corporateRegistrationSchema`, `corporateRegistrationStatusSchema`,
   `corporateSettingsSchema`, `corporateTokenRequestSchema`,
+  `documentSignatorySchema`, `documentSigningRequestSchema`,
+  `documentSigningStatusSchema`, `signingDocumentSchema`,
   `currencyRateSchema`, `currencyRatesSchema`, `jarSchema`,
   `managedAccountSchema`, `managedClientSchema`, `statementItemSchema`,
   `statementItemsSchema`, `personalWebhookEventSchema`,

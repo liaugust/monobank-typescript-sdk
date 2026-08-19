@@ -135,6 +135,9 @@ example focused; production code should validate the environment value first.
 | `corporate.access.check(input)`                  | Corporate key   | `void`                              | 401 means still pending; safe GET               |
 | `corporate.clients.getInfo(input)`               | Corporate key   | `ClientInfo`                        | Granted client's identity; safe GET             |
 | `corporate.clients.getStatements(input)`         | Corporate key   | `readonly StatementItem[]`          | Granted client's statements; safe GET           |
+| `corporate.documents.requestSigning(input)`      | Corporate key   | `DocumentSigningRequest`            | monoКЕП request; never retried                  |
+| `corporate.documents.getSigningStatus(input)`    | Corporate key   | `DocumentSigningStatus`             | Per-document state and signatories              |
+| `corporate.documents.cancelSigning(input)`       | Corporate key   | `void`                              | DELETE; never retried                           |
 | `corporate.company.register(input)`              | Corporate sign  | `CorporateRegistration`             | Pre-key application; never retried              |
 | `corporate.company.getRegistrationStatus(input)` | Corporate sign  | `CorporateRegistrationStatusResult` | Pre-key status poll; returns the issued `keyId` |
 | `corporate.company.getSettings(input)`           | Corporate key   | `CorporateSettings`                 | Signed request; company registration data       |
@@ -539,6 +542,17 @@ They address the same URLs as the Personal client but are different operations:
 the data belongs to another person, and authentication is a Corporate signature
 rather than a Personal token. Response shapes are shared, so `ClientInfo` and
 `StatementItem` are the same types the Personal client returns.
+
+### monoКЕП document signing
+
+`corporate.documents.requestSigning()` submits one to ten documents and returns a
+`deeplink` the signatory opens in the Monobank app, plus a `requestId` for
+`getSigningStatus()` and `cancelSigning()`. A request is valid for three days.
+
+Document hashes use **ГОСТ 34.311-95**, which neither Web Crypto nor
+`node:crypto` implements. The SDK never computes or verifies the hash — you
+supply the hex string. A SHA-256 hash is the same length and will produce a
+well-formed request that is silently wrong.
 
 `keyId` is optional only for the registration flow, which is what issues it:
 `register()` and `getRegistrationStatus()` sign with `X-Time` and the URL alone

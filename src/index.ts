@@ -165,6 +165,28 @@ export type {
 } from "./corporate/company/register/register.js";
 export { corporateRegistrationSchema } from "./corporate/company/register/register.js";
 export type { SetCorporateWebhookInput } from "./corporate/company/set-webhook/set-webhook.js";
+export type { CancelDocumentSigningInput } from "./corporate/documents/cancel-signing/cancel-signing.js";
+export type {
+  DocumentSigningStatus,
+  GetDocumentSigningStatusInput,
+} from "./corporate/documents/get-signing-status/get-signing-status.js";
+export { documentSigningStatusSchema } from "./corporate/documents/get-signing-status/get-signing-status.js";
+export type {
+  DocumentSignatory,
+  SigningDocument,
+} from "./corporate/documents/models/signing-document.js";
+export {
+  documentSignatorySchema,
+  DocumentSigningState,
+  signingDocumentSchema,
+  SigningDocumentType,
+} from "./corporate/documents/models/signing-document.js";
+export type {
+  DocumentSigningRequest,
+  RequestDocumentSigningInput,
+  SigningDocumentInput,
+} from "./corporate/documents/request-signing/request-signing.js";
+export { documentSigningRequestSchema } from "./corporate/documents/request-signing/request-signing.js";
 export type { MonobankApiErrorOptions } from "./errors/monobank-api-error.js";
 export { MonobankApiError } from "./errors/monobank-api-error.js";
 export type {

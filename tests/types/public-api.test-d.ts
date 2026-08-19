@@ -25,6 +25,9 @@ import type {
   CreateInvoiceInput,
   CreateInvoiceOptions,
   CurrencyRate,
+  DocumentSignatory,
+  DocumentSigningRequest,
+  DocumentSigningStatus,
   GetAcquiringQrDetailsInput,
   GetAcquiringStatementsInput,
   GetCorporateClientInfoInput,
@@ -44,8 +47,11 @@ import type {
   PersonalWebhookEvent,
   RegisterCorporateCompanyInput,
   RequestCorporateAccessInput,
+  RequestDocumentSigningInput,
   ResetAcquiringQrAmountInput,
   SetCorporateWebhookInput,
+  SigningDocument,
+  SigningDocumentInput,
   StatementItem,
   StatementWindowInput,
   SyncInvoicePaymentInput,
@@ -63,6 +69,7 @@ import {
   CorporateRegistrationStatus,
   corporateSettingsSchema,
   corporateTokenRequestSchema,
+  DocumentSigningState,
   InvoicePaymentType,
   InvoiceStatus,
   MonobankAcquiringClient,
@@ -70,6 +77,7 @@ import {
   MonobankPersonalClient,
   MonobankPublicClient,
   parsePersonalWebhookEvent,
+  SigningDocumentType,
   verifyAcquiringWebhookSignature,
 } from "@liaugust/monobank-sdk";
 
@@ -146,6 +154,23 @@ const delegatedStatementsInput: GetCorporateClientStatementsInput = {
 const delegatedStatements: Promise<readonly StatementItem[]> =
   corporateClient.clients.getStatements(delegatedStatementsInput);
 const statementWindow: StatementWindowInput = { from: 0 };
+const signingDocumentInput: SigningDocumentInput = {
+  hash: "A421FD",
+  name: "Agreement",
+  type: SigningDocumentType.Pdf,
+};
+const signingInput: RequestDocumentSigningInput = {
+  documents: [signingDocumentInput],
+  oneSigner: true,
+};
+const signingRequest: Promise<DocumentSigningRequest> =
+  corporateClient.documents.requestSigning(signingInput);
+const signingStatus: Promise<DocumentSigningStatus> =
+  corporateClient.documents.getSigningStatus({ requestId: "req-1" });
+const signingCancellation: Promise<void> =
+  corporateClient.documents.cancelSigning({ requestId: "req-1" });
+const signedState: SigningDocument["status"] = DocumentSigningState.Signed;
+const signatoryName: DocumentSignatory["name"] = "Signatory";
 const input: GetStatementsInput = { from: new Date(0) };
 const bankSync: Promise<BankSync> = publicClient.bank.getSync();
 const statements = client.statements.get(input);
@@ -453,3 +478,16 @@ void corporateClient.clients.getStatements({
   from: "2026-08-01",
   requestId: "grant-1",
 });
+
+void signingRequest;
+void signingStatus;
+void signingCancellation;
+void signedState;
+void signatoryName;
+
+// @ts-expect-error -- monoKEP document types are limited to documented wire values.
+const invalidSigningType: SigningDocumentType = "rtf";
+void invalidSigningType;
+
+// @ts-expect-error -- A monoKEP signing request requires the document list.
+void corporateClient.documents.requestSigning({ oneSigner: true });

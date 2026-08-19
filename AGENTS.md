@@ -19,6 +19,11 @@ claim endorsement by Monobank.
 - Reuse `clientInfoSchema` and `statementItemsSchema` for the delegated
   Corporate reads. They are the same wire contracts as the Personal endpoints;
   only the credential and the data's owner differ, so never fork the schemas.
+- Never compute or verify a monoКЕП document hash. It uses ГОСТ 34.311-95, which
+  no JavaScript runtime implements and which cannot be added without breaking the
+  single-runtime-dependency rule, so the caller supplies the hex value and the
+  SDK only carries it. Say so wherever the field is documented: a SHA-256 hash is
+  the same length and fails silently.
 - Treat `corporate.access.*` and the delegated reads as third-party data access.
   A client grants it, it covers only the registered permissions, and the client
   can revoke it. Never widen what a grant is used for beyond the caller's stated
@@ -140,6 +145,7 @@ src/acquiring/webhooks/         trust-key endpoint and signature verification
 src/corporate/access/           delegated client-access resource and endpoints
 src/corporate/client/           Corporate parent client and options
 src/corporate/clients/          delegated reads of a granted client's data
+src/corporate/documents/        monoKEP document signing resource and endpoints
 src/corporate/company/          company resource, endpoint, and response model
 src/public/client/              token-free Public parent client and options
 src/public/bank/                bank resource and sync endpoint
