@@ -29,6 +29,7 @@ code. Coverage of the Monobank API is partial; see [Coverage](#coverage).
   - [Acquiring QR cashiers](#acquiring-qr-cashiers)
   - [Acquiring wallet and stored cards](#acquiring-wallet-and-stored-cards)
   - [Card-present payments and PCI DSS](#card-present-payments-and-pci-dss)
+  - [Acquiring recurring payments](#acquiring-recurring-payments)
   - [Acquiring statements](#acquiring-statements)
   - [Public data](#public-data)
   - [Client information](#client-information)
@@ -57,16 +58,16 @@ code. Coverage of the Monobank API is partial; see [Coverage](#coverage).
 
 ## Coverage
 
-36 of the 63 operations Monobank documents are implemented. Monobank publishes
+42 of the 63 operations Monobank documents are implemented. Monobank publishes
 two documentation sites and neither is a superset of the other:
 
-- <https://monobank.ua/api-docs> — current; 46 operations, 19 of them implemented
+- <https://monobank.ua/api-docs> — current; 46 operations, 25 of them implemented
 - <https://api.monobank.ua/docs/> — older Redoc specs; 17 further operations
   appear only here, all implemented, and cover all of Personal and Corporate
 
-Not covered yet: Acquiring recurring payments, monopay keys, T2P terminals,
-split receivers, POS cancellation, and all of Покупка Частинами. Every gap is
-tracked under [issue #59](https://github.com/liaugust/monobank-typescript-sdk/issues/59).
+Not covered yet: monopay keys, T2P terminals, split receivers, POS cancellation,
+and all of Покупка Частинами. Every gap is tracked under
+[issue #59](https://github.com/liaugust/monobank-typescript-sdk/issues/59).
 
 ## Requirements
 
@@ -310,6 +311,76 @@ const payment = await acquiring.invoices.payDirect({
 The SDK validates these inputs before any request and names only the offending
 field in `MonobankValidationError`, never its value, so card details never
 reach public error state. Both calls mutate state and are never retried.
+
+### Acquiring recurring payments
+
+Create a subscription, then let Monobank charge the saved card on a cadence. The
+payer authorizes it on the returned `pageUrl`, which is where the first payment
+happens:
+
+```ts
+import {
+  AcquiringSubscriptionAction,
+  AcquiringSubscriptionStatus,
+} from "@liaugust/monobank-sdk";
+
+const subscription = await acquiring.subscriptions.create({
+  amount: 4_200,
+  interval: "1m",
+  webHookUrls: {
+    chargeUrl: "https://example.test/mono/subscription/charge",
+    statusUrl: "https://example.test/mono/subscription/status",
+  },
+});
+
+console.log(subscription.subscriptionId, subscription.pageUrl);
+```
+
+`interval` is a count plus a unit — `"1d"`, `"2w"`, `"1m"`, `"1y"` — and any
+other form is rejected before Fetch. `validity` bounds the payment page's life in
+seconds; Monobank defaults to 24 hours and silently truncates anything above 30
+days.
+
+Read one subscription's state and its charge history. Windows here are RFC-3339,
+not the Unix seconds `acquiring.statements.get()` takes, and `dateFrom` is
+required:
+
+```ts
+const state = await acquiring.subscriptions.getStatus({
+  subscriptionId: subscription.subscriptionId,
+});
+
+const history = await acquiring.subscriptions.getPayments({
+  dateFrom: new Date("2026-08-01T00:00:00.000Z"),
+  subscriptionId: subscription.subscriptionId,
+});
+
+const active = await acquiring.subscriptions.list({
+  dateFrom: new Date("2026-08-01T00:00:00.000Z"),
+  status: AcquiringSubscriptionStatus.Active,
+});
+```
+
+Monobank documents these responses with samples rather than schemas, so only
+`subscriptionId` and `status` are guaranteed on a subscription: `endDate` and
+`cancellationDesc` appear once it ends, `walletData` once a card is attached, and
+`pagination` may be absent from a page. `walletData.cardToken` authorizes further
+charges — treat it as credential material and keep it out of logs.
+
+Stopping a subscription has two forms. `edit()` cancels and can refund in the
+same request; `remove()` only deactivates:
+
+```ts
+await acquiring.subscriptions.edit({
+  action: AcquiringSubscriptionAction.Cancel,
+  refundAmount: 4_200,
+  subscriptionId: subscription.subscriptionId,
+});
+
+await acquiring.subscriptions.remove({
+  subscriptionId: subscription.subscriptionId,
+});
+```
 
 ### Acquiring statements
 

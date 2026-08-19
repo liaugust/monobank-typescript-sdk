@@ -25,7 +25,7 @@ both before concluding that an endpoint exists or does not:
   Corporate, plus `/bank/sync`, `/api/merchant/employee/list`, and
   `/api/merchant/invoice/sync-payment`.
 
-36 of the 63 documented operations are implemented. Gaps are tracked under
+42 of the 63 documented operations are implemented. Gaps are tracked under
 issue #59.
 
 ## Rules for Consumer Code
@@ -75,13 +75,27 @@ issue #59.
   infrastructure and refresh it only after verification with the cached key
   fails; the SDK intentionally does not own cache policy.
 - Call only methods listed in `docs/API.md`, and never invent one. Absence from
-  that file says nothing about upstream: 27 documented operations are still
+  that file says nothing about upstream: 21 documented operations are still
   unimplemented, so check `Documentation Sources` before telling a caller that
   Monobank has no such endpoint.
 - Treat a Corporate `sign` result as credential material; the SDK sends it as
   `X-Sign` and never logs it. Return base64 of the raw 64-byte `r || s` pair, not
   DER. Monobank documents neither the digest nor whether the signed `URL` includes
   the query, so both are unverified assumptions.
+- Pass an Acquiring subscription `interval` as `{count}{d|w|m|y}`; anything else
+  is rejected before Fetch. A `validity` above 30 days is not an error and is not
+  honored either, because Monobank truncates it silently.
+- Treat `AcquiringSubscription.walletData.cardToken` as credential material. It
+  authorizes further charges, so never log, serialize, or persist it outside
+  secured merchant storage.
+- Read only `subscriptionId` and `status` from a subscription without narrowing.
+  Monobank documents the subscription responses with samples rather than
+  schemas, so every other field is optional by decision, including `pagination`
+  on a page. Do not tighten one because a sample happens to show it.
+- Use RFC-3339 for subscription `dateFrom` and `dateTo`, not the Unix seconds
+  `acquiring.statements.get()` takes. `dateFrom` is required upstream, and a
+  reversed window is rejected before Fetch because Monobank would answer it with
+  an empty result rather than an error.
 - Treat `acquiring.invoices.payDirect()` and `acquiring.invoices.syncPayment()`
   as PCI DSS surfaces. Never log, serialize, persist, or echo raw card details
   or crypto-container values, and prefer a hosted invoice or a stored card

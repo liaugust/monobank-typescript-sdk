@@ -2,7 +2,7 @@
 
 > Unofficial, strict, runtime-validated TypeScript SDK for the Monobank API,
 > spanning the Public, Personal, Acquiring, and Corporate credential families.
-> It implements 36 of the 63 documented operations, not the whole API. Supports
+> It implements 42 of the 63 documented operations, not the whole API. Supports
 > Node.js 22.12.0+, ESM, CommonJS, and modern browser bundlers. Zod Mini
 > validates every successful JSON response.
 
@@ -160,6 +160,36 @@ fails with reason `timeout`.
   `/api/merchant/qr/reset-amount`; POSTs `{ qrId }` to clear the amount set on
   a QR cashier; returns `Promise<void>` because Monobank acknowledges with an
   empty payload; mutating, so it is never retried automatically.
+- `acquiring.subscriptions.create(input, options?)`: authenticated
+  `/api/merchant/subscription/create`; takes `amount`, `interval` as
+  `{count}{d|w|m|y}`, and optional `ccy`, `redirectUrl`, `validity`, and
+  `webHookUrls.{chargeUrl,statusUrl}`; returns
+  `Promise<NewAcquiringSubscription>` carrying `subscriptionId` and the
+  `pageUrl` where the payer authorizes the first payment; mutating, never
+  retried. `validity` above 30 days is silently truncated upstream.
+- `acquiring.subscriptions.getStatus(input, options?)`: authenticated
+  `/api/merchant/subscription/status`; returns `Promise<AcquiringSubscription>`;
+  Monobank documents a sample rather than a schema, so only `subscriptionId` and
+  `status` are guaranteed, and `walletData.cardToken` is credential material;
+  safe GET eligible for configured retries.
+- `acquiring.subscriptions.list(input, options?)`: authenticated
+  `/api/merchant/subscription/list`; requires `dateFrom` and takes optional
+  `dateTo`, `limit`, `page`, and a `status` filter of `active` or `cancelled`;
+  windows are RFC-3339 rather than the Unix seconds statements use; returns
+  `Promise<AcquiringSubscriptionList>`; safe GET eligible for configured
+  retries.
+- `acquiring.subscriptions.getPayments(input, options?)`: authenticated
+  `/api/merchant/subscription/payments`; requires `subscriptionId` and
+  `dateFrom`; returns `Promise<AcquiringSubscriptionPaymentList>`; safe GET
+  eligible for configured retries.
+- `acquiring.subscriptions.edit(input, options?)`: authenticated
+  `/api/merchant/subscription/edit`; POSTs `{ action, subscriptionId }` with
+  `action` limited to `AcquiringSubscriptionAction.Cancel`, plus an optional
+  `refundAmount` that refunds as part of the same cancellation; returns
+  `Promise<void>`; mutating, never retried.
+- `acquiring.subscriptions.remove(input, options?)`: authenticated
+  `/api/merchant/subscription/remove`; POSTs `{ subscriptionId }` to deactivate
+  without refunding; returns `Promise<void>`; mutating, never retried.
 - `acquiring.webhooks.getPublicKey(options?)`: authenticated
   `/api/merchant/pubkey`; returns `Promise<AcquiringWebhookPublicKey>`; caller
   owns caching and refresh after signature verification fails.
@@ -249,9 +279,12 @@ See `src/index.ts` for the complete authoritative export list, including types.
 - Currency codes are numeric ISO 4217 codes.
 - Rate and Personal statement timestamps are Unix seconds; Acquiring statement
   request inputs use Unix seconds while response `date` fields use RFC-3339.
+- Acquiring subscription windows are RFC-3339 in both directions; a `Date` is
+  accepted and serialized with `toISOString()`.
 - `BankSync.serverTimeMsec` is Unix milliseconds.
 - Response schemas preserve unknown additive fields.
-- Upstream field spelling is preserved, including `webHookUrl`.
+- Upstream field spelling is preserved, including `webHookUrl` on invoices and
+  the unrelated plural `webHookUrls` on subscriptions.
 
 ## Safety rules for generated code
 
@@ -269,13 +302,15 @@ See `src/index.ts` for the complete authoritative export list, including types.
   `acquiring.invoices.cancel()`, `acquiring.invoices.remove()`,
   `acquiring.invoices.finalize()`, `acquiring.invoices.payDirect()`,
   `acquiring.invoices.syncPayment()`, `acquiring.wallet.pay()`,
-  `acquiring.wallet.deleteCard()`, or `acquiring.qr.resetAmount()`
-  automatically.
+  `acquiring.wallet.deleteCard()`, `acquiring.qr.resetAmount()`,
+  `acquiring.subscriptions.create()`, `acquiring.subscriptions.edit()`, or
+  `acquiring.subscriptions.remove()` automatically.
 - Never log, persist, or echo raw card details or Apple Pay and Google Pay
   crypto-container values. Prefer `acquiring.invoices.create()` or
   `acquiring.wallet.pay()` over `acquiring.invoices.payDirect()`.
 - Do not invent Acquiring APIs beyond the implemented merchant-details,
-  submerchant-list, QR, statement, webhook-trust, and invoice-lifecycle
+  submerchant-list, QR, subscription, statement, webhook-trust, and
+  invoice-lifecycle
   methods.
 - Prefer exported SDK types, schemas, value objects, and error classes over
   duplicate local definitions.
