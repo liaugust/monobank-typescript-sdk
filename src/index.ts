@@ -120,6 +120,50 @@ export {
   acquiringSubmerchantListSchema,
   acquiringSubmerchantSchema,
 } from "./acquiring/submerchants/models/acquiring-submerchant.js";
+export type {
+  CreateAcquiringSubscriptionInput,
+  NewAcquiringSubscription,
+} from "./acquiring/subscriptions/create-subscription/create-subscription.js";
+export { newAcquiringSubscriptionSchema } from "./acquiring/subscriptions/create-subscription/create-subscription.js";
+export type { EditAcquiringSubscriptionInput } from "./acquiring/subscriptions/edit-subscription/edit-subscription.js";
+export { AcquiringSubscriptionAction } from "./acquiring/subscriptions/edit-subscription/edit-subscription.js";
+export type { GetAcquiringSubscriptionPaymentsInput } from "./acquiring/subscriptions/get-subscription-payments/get-subscription-payments.js";
+export type { GetAcquiringSubscriptionStatusInput } from "./acquiring/subscriptions/get-subscription-status/get-subscription-status.js";
+export type { ListAcquiringSubscriptionsInput } from "./acquiring/subscriptions/list-subscriptions/list-subscriptions.js";
+export type {
+  AcquiringSubscription,
+  AcquiringSubscriptionSummary,
+  AcquiringSubscriptionWalletData,
+} from "./acquiring/subscriptions/models/acquiring-subscription.js";
+export {
+  acquiringSubscriptionSchema,
+  AcquiringSubscriptionStatus,
+  acquiringSubscriptionSummarySchema,
+  acquiringSubscriptionWalletDataSchema,
+} from "./acquiring/subscriptions/models/acquiring-subscription.js";
+export type {
+  AcquiringSubscriptionList,
+  AcquiringSubscriptionListItem,
+} from "./acquiring/subscriptions/models/acquiring-subscription-list.js";
+export {
+  acquiringSubscriptionListItemSchema,
+  acquiringSubscriptionListSchema,
+} from "./acquiring/subscriptions/models/acquiring-subscription-list.js";
+export type { AcquiringSubscriptionPagination } from "./acquiring/subscriptions/models/acquiring-subscription-pagination.js";
+export { acquiringSubscriptionPaginationSchema } from "./acquiring/subscriptions/models/acquiring-subscription-pagination.js";
+export type {
+  AcquiringSubscriptionPayment,
+  AcquiringSubscriptionPaymentList,
+} from "./acquiring/subscriptions/models/acquiring-subscription-payment.js";
+export {
+  acquiringSubscriptionPaymentListSchema,
+  acquiringSubscriptionPaymentSchema,
+} from "./acquiring/subscriptions/models/acquiring-subscription-payment.js";
+export type { RemoveAcquiringSubscriptionInput } from "./acquiring/subscriptions/remove-subscription/remove-subscription.js";
+export type {
+  AcquiringSubscriptionDateInput,
+  AcquiringSubscriptionPageInput,
+} from "./acquiring/subscriptions/shared/subscription-page-query.js";
 export type { DeleteAcquiringWalletCardInput } from "./acquiring/wallet/delete-wallet-card/delete-wallet-card.js";
 export type { ListAcquiringWalletCardsInput } from "./acquiring/wallet/list-wallet-cards/list-wallet-cards.js";
 export type {

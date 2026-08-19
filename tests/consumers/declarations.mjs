@@ -113,6 +113,7 @@ for (const memberName of [
   "qr",
   "statements",
   "submerchants",
+  "subscriptions",
   "wallet",
   "webhooks",
 ]) {
@@ -152,6 +153,18 @@ const resourceContracts = [
   ["MonobankAcquiringWallet", ["constructor", "deleteCard", "list", "pay"]],
   ["MonobankAcquiringStatements", ["constructor", "get"]],
   ["MonobankAcquiringSubmerchants", ["constructor", "list"]],
+  [
+    "MonobankAcquiringSubscriptions",
+    [
+      "constructor",
+      "create",
+      "edit",
+      "getPayments",
+      "getStatus",
+      "list",
+      "remove",
+    ],
+  ],
   ["MonobankAcquiringWebhooks", ["constructor", "getPublicKey"]],
   ["MonobankCorporateAccess", ["constructor", "check", "request"]],
   ["MonobankCorporateClients", ["constructor", "getInfo", "getStatements"]],

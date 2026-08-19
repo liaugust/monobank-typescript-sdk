@@ -4,6 +4,27 @@ All notable changes to this package are documented here.
 
 ## Unreleased
 
+### Added
+
+- `acquiring.subscriptions` covering the six documented recurring-payment
+  endpoints: `create(input)`, `getStatus(input)`, `list(input)`,
+  `getPayments(input)`, `edit(input)`, and `remove(input)`. `create` returns the
+  `subscriptionId` and the `pageUrl` where the payer authorizes the first
+  payment; Monobank then charges the saved card on the `interval` cadence.
+  `edit` cancels and can refund in the same request, while `remove` only
+  deactivates. Exports `AcquiringSubscription`, `AcquiringSubscriptionList`,
+  `AcquiringSubscriptionListItem`, `AcquiringSubscriptionPayment`,
+  `AcquiringSubscriptionPaymentList`, `AcquiringSubscriptionPagination`,
+  `AcquiringSubscriptionSummary`, `AcquiringSubscriptionWalletData`,
+  `NewAcquiringSubscription`, `AcquiringSubscriptionAction`,
+  `AcquiringSubscriptionStatus`, the matching schemas, and the input types.
+- Subscription windows accept a `Date` or an RFC-3339 string, unlike
+  `acquiring.statements.get()`, which takes Unix seconds. `dateFrom` is required
+  by Monobank, and a reversed window is rejected before Fetch because Monobank
+  answers one with an empty result rather than an error.
+- `interval` is validated as `{count}{d|w|m|y}` before Fetch, so a plausible
+  value such as `"1h"` fails locally instead of upstream.
+
 ### Fixed
 
 - Corrected the coverage claim. `0.4.0` announced "every operation Monobank

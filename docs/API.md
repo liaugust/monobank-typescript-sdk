@@ -34,6 +34,12 @@ supported contract.
 - [invoices.getFiscalChecks](#invoicesgetfiscalchecks)
 - [invoices.payDirect](#invoicespaydirect)
 - [invoices.syncPayment](#invoicessyncpayment)
+- [acquiring.subscriptions.create](#acquiringsubscriptionscreate)
+- [acquiring.subscriptions.getStatus](#acquiringsubscriptionsgetstatus)
+- [acquiring.subscriptions.list](#acquiringsubscriptionslist)
+- [acquiring.subscriptions.getPayments](#acquiringsubscriptionsgetpayments)
+- [acquiring.subscriptions.edit](#acquiringsubscriptionsedit)
+- [acquiring.subscriptions.remove](#acquiringsubscriptionsremove)
 - [bank.getSync](#bankgetsync)
 - [currency.getRates](#currencygetrates)
 - [client.getInfo](#clientgetinfo)
@@ -869,6 +875,240 @@ Fetch.
 | Returns        | `Invoice`                                                |
 
 Rejects with the four standard SDK error classes.
+
+## acquiring.subscriptions.create
+
+```ts
+acquiring.subscriptions.create(
+  input: CreateAcquiringSubscriptionInput,
+  options?: RequestOptions,
+): Promise<NewAcquiringSubscription>
+```
+
+Calls `POST /api/merchant/subscription/create`. The payer authorizes the
+subscription on the returned `pageUrl`, which is where the first payment
+happens; Monobank takes later charges itself on the `interval` cadence.
+
+`amount` is an integer minor currency unit and `ccy` an ISO 4217 numeric code
+defaulting to 980. `interval` is a count followed by `d`, `w`, `m`, or `y` —
+`"1d"`, `"2w"`, `"1m"`, `"1y"` — and is rejected before Fetch when it does not
+match that form. `validity` bounds the payment page's life in seconds; Monobank
+defaults to 24 hours and **silently truncates anything above 30 days**, so a
+longer value is neither an error nor honored. `webHookUrls.chargeUrl` receives
+each recurring charge and `webHookUrls.statusUrl` each subscription state
+change.
+
+| Property       | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Authentication | Acquiring token in `X-Token`                             |
+| Rate limit     | No endpoint-specific limit is encoded or enforced        |
+| Retries        | Never retried; the request creates merchant state        |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds |
+| Cancellation   | `options.signal` cancels the active request              |
+| Returns        | `NewAcquiringSubscription`                               |
+
+Rejects with `MonobankApiError`, `MonobankNetworkError`,
+`MonobankResponseValidationError`, or `MonobankValidationError`. Input
+validation runs before Fetch and rejects the returned promise rather than
+throwing synchronously.
+
+```ts
+const subscription = await acquiring.subscriptions.create({
+  amount: 4_200,
+  interval: "1m",
+  webHookUrls: { chargeUrl: "https://example.test/mono/charge" },
+});
+
+console.log(subscription.subscriptionId, subscription.pageUrl);
+```
+
+## acquiring.subscriptions.getStatus
+
+```ts
+acquiring.subscriptions.getStatus(
+  input: GetAcquiringSubscriptionStatusInput,
+  options?: RequestOptions,
+): Promise<AcquiringSubscription>
+```
+
+Loads `GET /api/merchant/subscription/status`.
+
+**Monobank documents this response with a sample rather than a schema**, so only
+`subscriptionId` and `status` are guaranteed: `endDate` and `cancellationDesc`
+appear once a subscription ends, `walletData` once a card is attached, and
+`summary` carries the settled and failed charge counts when present. `status` is
+typed as `string` because the documentation states no closed set of values for
+it. `walletData.cardToken` authorizes further charges, so treat it as
+credential material: never log, serialize, or persist it outside secured
+merchant storage.
+
+| Property       | Value                                                      |
+| -------------- | ---------------------------------------------------------- |
+| Authentication | Acquiring token in `X-Token`                               |
+| Rate limit     | No endpoint-specific limit is encoded or enforced          |
+| Retries        | Eligible when a retry policy is configured                 |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds   |
+| Cancellation   | `options.signal` cancels the active request or retry delay |
+| Returns        | `AcquiringSubscription`                                    |
+
+Rejects with `MonobankApiError` (including `404` for an unknown subscription),
+`MonobankNetworkError`, `MonobankResponseValidationError`, or
+`MonobankValidationError`.
+
+```ts
+const subscription = await acquiring.subscriptions.getStatus({
+  subscriptionId: "s2_AbrCdXyZ13",
+});
+
+console.log(subscription.status, subscription.summary?.totalPaid);
+```
+
+## acquiring.subscriptions.list
+
+```ts
+acquiring.subscriptions.list(
+  input: ListAcquiringSubscriptionsInput,
+  options?: RequestOptions,
+): Promise<AcquiringSubscriptionList>
+```
+
+Loads `GET /api/merchant/subscription/list`.
+
+`dateFrom` is **required by Monobank** and bounds the window; `dateTo` defaults
+to the current time. Both accept a `Date`, serialized with `toISOString()`, or
+an RFC-3339 string forwarded unchanged so an offset such as
+`2024-06-26T18:12:44+03:00` survives. Unlike `acquiring.statements.get`, these
+parameters are RFC-3339 rather than Unix seconds. A reversed window is rejected
+before Fetch, because Monobank answers one with an empty result instead of an
+error. `limit` defaults to 20 and `page` is the 1-based index. `status` narrows
+the page to `AcquiringSubscriptionStatus.Active` or
+`AcquiringSubscriptionStatus.Cancelled`. `pagination` may be absent.
+
+| Property       | Value                                                      |
+| -------------- | ---------------------------------------------------------- |
+| Authentication | Acquiring token in `X-Token`                               |
+| Rate limit     | No endpoint-specific limit is encoded or enforced          |
+| Retries        | Eligible when a retry policy is configured                 |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds   |
+| Cancellation   | `options.signal` cancels the active request or retry delay |
+| Returns        | `AcquiringSubscriptionList`                                |
+
+Rejects with `MonobankApiError`, `MonobankNetworkError`,
+`MonobankResponseValidationError`, or `MonobankValidationError`.
+
+```ts
+const page = await acquiring.subscriptions.list({
+  dateFrom: new Date("2024-06-01T00:00:00Z"),
+  status: AcquiringSubscriptionStatus.Active,
+});
+
+for (const subscription of page.list) {
+  console.log(subscription.subscriptionId, subscription.nextChargeDate);
+}
+```
+
+## acquiring.subscriptions.getPayments
+
+```ts
+acquiring.subscriptions.getPayments(
+  input: GetAcquiringSubscriptionPaymentsInput,
+  options?: RequestOptions,
+): Promise<AcquiringSubscriptionPaymentList>
+```
+
+Loads `GET /api/merchant/subscription/payments`, the charge history of one
+subscription. `dateFrom` is required and the window rules match
+`acquiring.subscriptions.list`. `amount` is an integer minor currency unit,
+`status` is typed as `string` because Monobank documents no closed set of
+charge outcomes, and `pagination` may be absent.
+
+| Property       | Value                                                      |
+| -------------- | ---------------------------------------------------------- |
+| Authentication | Acquiring token in `X-Token`                               |
+| Rate limit     | No endpoint-specific limit is encoded or enforced          |
+| Retries        | Eligible when a retry policy is configured                 |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds   |
+| Cancellation   | `options.signal` cancels the active request or retry delay |
+| Returns        | `AcquiringSubscriptionPaymentList`                         |
+
+Rejects with `MonobankApiError` (including `404` for an unknown subscription),
+`MonobankNetworkError`, `MonobankResponseValidationError`, or
+`MonobankValidationError`.
+
+```ts
+const history = await acquiring.subscriptions.getPayments({
+  dateFrom: new Date("2024-06-01T00:00:00Z"),
+  subscriptionId: "s2_AbrCdXyZ13",
+});
+
+console.log(history.payments.length, history.pagination?.totalItems);
+```
+
+## acquiring.subscriptions.edit
+
+```ts
+acquiring.subscriptions.edit(
+  input: EditAcquiringSubscriptionInput,
+  options?: RequestOptions,
+): Promise<void>
+```
+
+Calls `POST /api/merchant/subscription/edit`. Monobank documents `cancel` as the
+only action, exposed as `AcquiringSubscriptionAction.Cancel`. Supplying
+`refundAmount` refunds that many minor currency units as part of the
+cancellation, so cancelling and refunding are one request; omitting it refunds
+nothing. Monobank answers with an empty payload, so this resolves to
+`undefined`.
+
+| Property       | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Authentication | Acquiring token in `X-Token`                             |
+| Rate limit     | No endpoint-specific limit is encoded or enforced        |
+| Retries        | Never retried; the request mutates merchant state        |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds |
+| Cancellation   | `options.signal` cancels the active request              |
+| Returns        | `void`                                                   |
+
+Rejects with `MonobankApiError` (including `404` for an unknown subscription),
+`MonobankNetworkError`, or `MonobankValidationError`.
+
+```ts
+await acquiring.subscriptions.edit({
+  action: AcquiringSubscriptionAction.Cancel,
+  refundAmount: 4_200,
+  subscriptionId: "s2_AbrCdXyZ13",
+});
+```
+
+## acquiring.subscriptions.remove
+
+```ts
+acquiring.subscriptions.remove(
+  input: RemoveAcquiringSubscriptionInput,
+  options?: RequestOptions,
+): Promise<void>
+```
+
+Calls `POST /api/merchant/subscription/remove`, deactivating a subscription so
+Monobank takes no further charges. Use `acquiring.subscriptions.edit()` instead
+when the cancellation should also refund. Monobank answers with an empty
+payload, so this resolves to `undefined`.
+
+| Property       | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Authentication | Acquiring token in `X-Token`                             |
+| Rate limit     | No endpoint-specific limit is encoded or enforced        |
+| Retries        | Never retried; the request mutates merchant state        |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds |
+| Cancellation   | `options.signal` cancels the active request              |
+| Returns        | `void`                                                   |
+
+Rejects with `MonobankApiError` (including `404` for an unknown subscription),
+`MonobankNetworkError`, or `MonobankValidationError`.
+
+```ts
+await acquiring.subscriptions.remove({ subscriptionId: "s2_AbrCdXyZ13" });
+```
 
 ## bank.getSync
 
