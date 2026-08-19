@@ -30,6 +30,10 @@ code. Coverage of the Monobank API is partial; see [Coverage](#coverage).
   - [Acquiring wallet and stored cards](#acquiring-wallet-and-stored-cards)
   - [Card-present payments and PCI DSS](#card-present-payments-and-pci-dss)
   - [Acquiring recurring payments](#acquiring-recurring-payments)
+  - [monopay button signing keys](#monopay-button-signing-keys)
+  - [Tap-to-phone terminals](#tap-to-phone-terminals)
+  - [Split-payment receivers](#split-payment-receivers)
+  - [POS refunds](#pos-refunds)
   - [Acquiring statements](#acquiring-statements)
   - [Public data](#public-data)
   - [Client information](#client-information)
@@ -58,15 +62,14 @@ code. Coverage of the Monobank API is partial; see [Coverage](#coverage).
 
 ## Coverage
 
-42 of the 63 operations Monobank documents are implemented. Monobank publishes
+49 of the 63 operations Monobank documents are implemented. Monobank publishes
 two documentation sites and neither is a superset of the other:
 
-- <https://monobank.ua/api-docs> — current; 46 operations, 25 of them implemented
+- <https://monobank.ua/api-docs> — current; 46 operations, 32 of them implemented
 - <https://api.monobank.ua/docs/> — older Redoc specs; 17 further operations
   appear only here, all implemented, and cover all of Personal and Corporate
 
-Not covered yet: monopay keys, T2P terminals, split receivers, POS cancellation,
-and all of Покупка Частинами. Every gap is tracked under
+The remaining 14 are all of Покупка Частинами, tracked under
 [issue #59](https://github.com/liaugust/monobank-typescript-sdk/issues/59).
 
 ## Requirements
@@ -381,6 +384,74 @@ await acquiring.subscriptions.remove({
   subscriptionId: subscription.subscriptionId,
 });
 ```
+
+### monopay button signing keys
+
+The monopay JavaScript widget signs order data with a merchant key pair. Manage
+the public halves Monobank verifies against:
+
+```ts
+const keys = await acquiring.monopay.listKeys();
+
+const imported = await acquiring.monopay.importKey({
+  keyName: "widget-2026",
+  keyValue: base64PublicKey,
+});
+
+await acquiring.monopay.deleteKey({ keyId: imported.result.keyId });
+```
+
+Entries arrive under `result`, not `list`, as Monobank documents. `keyValue` is
+the **public** half only — the private key signs orders in your own
+infrastructure and must never enter this SDK or its logs. Deleting a key
+invalidates every widget signature made with it.
+
+### Tap-to-phone terminals
+
+List the merchant's tap-to-phone terminals and look up one payment by the
+identifier your integrator assigned:
+
+```ts
+const terminals = await acquiring.t2p.listTerminals();
+
+const payment = await acquiring.t2p.getPaymentStatus({
+  externalPaymentId: "18247112-4eac-4465-aa3c-c42c18f601eb",
+});
+```
+
+Monobank keeps these payments for 90 days and answers 404 afterwards. Three
+fields break the conventions the rest of the API follows and are preserved as
+documented: `ccy` is alphabetic (`"UAH"`) rather than a numeric ISO 4217 code,
+`dataTime` is space-separated rather than RFC-3339, and `errorMessage` is
+explicitly `null` on success. `maskedPan` holds the masked card number while
+`cardMask` holds the scheme name.
+
+### Split-payment receivers
+
+```ts
+const receivers = await acquiring.split.listReceivers();
+```
+
+A returned `splitReceiverId` is what
+`merchantPaymInfo.basketOrder[].splitReceiverId` expects on
+`acquiring.invoices.create()`. Each entry carries the receiver's `edrpou` state
+registry code, which identifies a real business — treat the list as counterparty
+data, not public reference data.
+
+### POS refunds
+
+```ts
+const refund = await acquiring.pos.cancelTransaction({
+  amount: 4_200,
+  rrn: "060189181768",
+});
+```
+
+`amount` may not exceed what the original transaction has left after earlier
+refunds; only Monobank can evaluate that, so the SDK checks the shape and lets
+Monobank reject an over-refund. A successful response means the refund was
+_initiated_, not settled. This request moves money and is never retried —
+retrying could refund twice.
 
 ### Acquiring statements
 

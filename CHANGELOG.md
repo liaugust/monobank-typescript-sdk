@@ -6,6 +6,29 @@ All notable changes to this package are documented here.
 
 ### Added
 
+- `acquiring.monopay` for the monopay button's signing keys: `listKeys()`,
+  `importKey(input)`, and `deleteKey(input)`. Entries arrive under `result`
+  rather than `list`, as Monobank documents. `importKey` takes the Base64 public
+  half only; deleting a key invalidates every widget signature made with it.
+  Exports `MonopaySigningKey`, `MonopaySigningKeyList`,
+  `ImportedMonopaySigningKey`, their schemas, and the input types.
+- `acquiring.t2p` for tap-to-phone: `listTerminals()` and
+  `getPaymentStatus(input)`. Monobank keeps these payments for 90 days and
+  answers 404 afterwards. Three response fields diverge from the rest of the API
+  and are preserved as documented rather than normalized: `ccy` is alphabetic
+  such as `UAH`, `dataTime` is space-separated rather than RFC-3339, and
+  `errorMessage` is explicitly `null` on success. Exports `AcquiringT2pPayment`,
+  `AcquiringT2pTerminal`, `AcquiringT2pTerminalList`, and their schemas.
+- `acquiring.split.listReceivers()` for split-payment receivers. A returned
+  `splitReceiverId` is what `merchantPaymInfo.basketOrder[].splitReceiverId`
+  expects on `acquiring.invoices.create()`. Exports `AcquiringSplitReceiver`,
+  `AcquiringSplitReceiverList`, and their schemas.
+- `acquiring.pos.cancelTransaction(input)` refunding a POS transaction by `rrn`.
+  A successful response acknowledges that the refund was initiated rather than
+  settled, and the request is never retried because retrying could refund twice.
+  Exports `AcquiringPosCancellation` and its schema.
+- `Rfc3339TimeInput` for the timestamp inputs Monobank documents as RFC-3339,
+  now shared by the subscription windows and the monopay key expiry.
 - `acquiring.subscriptions` covering the six documented recurring-payment
   endpoints: `create(input)`, `getStatus(input)`, `list(input)`,
   `getPayments(input)`, `edit(input)`, and `remove(input)`. `create` returns the

@@ -1,14 +1,14 @@
 import { MonobankValidationError } from "../../../errors/monobank-validation-error.js";
+import type { Rfc3339TimeInput } from "../../../shared/rfc3339-time.js";
+import { normalizeRfc3339Time } from "../../../shared/rfc3339-time.js";
 
 /**
  * Accepted timestamp input for Acquiring subscription windows.
  *
- * Monobank documents these parameters as RFC-3339 strings, unlike the Unix
- * seconds the Acquiring statement endpoint takes. A `Date` is serialized with
- * `toISOString()`; a string is forwarded unchanged so a caller can send an
- * offset such as `2024-06-26T18:12:44+03:00`.
+ * Monobank documents these parameters as RFC-3339, unlike the Unix seconds the
+ * Acquiring statement endpoint takes.
  */
-export type AcquiringSubscriptionDateInput = Date | string;
+export type AcquiringSubscriptionDateInput = Rfc3339TimeInput;
 
 /** Window and paging parameters shared by the paged subscription reads. */
 export interface AcquiringSubscriptionPageInput {
@@ -37,15 +37,11 @@ export function createAcquiringSubscriptionPageQuery(
   endpoint: string,
 ): URLSearchParams {
   const issues: string[] = [];
-  const dateFrom = normalizeSubscriptionDate(
-    input.dateFrom,
-    "dateFrom",
-    issues,
-  );
+  const dateFrom = normalizeRfc3339Time(input.dateFrom, "dateFrom", issues);
   const dateTo =
     input.dateTo === undefined
       ? undefined
-      : normalizeSubscriptionDate(input.dateTo, "dateTo", issues);
+      : normalizeRfc3339Time(input.dateTo, "dateTo", issues);
 
   if (
     dateFrom !== undefined &&
@@ -81,34 +77,6 @@ export function createAcquiringSubscriptionPageQuery(
   }
 
   return search;
-}
-
-function normalizeSubscriptionDate(
-  value: AcquiringSubscriptionDateInput,
-  name: "dateFrom" | "dateTo",
-  issues: string[],
-): string | undefined {
-  if (value instanceof Date) {
-    if (Number.isNaN(value.getTime())) {
-      issues.push(`${name} must be a valid Date`);
-
-      return undefined;
-    }
-
-    return value.toISOString();
-  }
-
-  if (
-    typeof value !== "string" ||
-    value.trim() !== value ||
-    Number.isNaN(Date.parse(value))
-  ) {
-    issues.push(`${name} must be an RFC-3339 timestamp or a valid Date`);
-
-    return undefined;
-  }
-
-  return value;
 }
 
 function normalizeSubscriptionCount(

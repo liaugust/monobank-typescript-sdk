@@ -40,6 +40,13 @@ supported contract.
 - [acquiring.subscriptions.getPayments](#acquiringsubscriptionsgetpayments)
 - [acquiring.subscriptions.edit](#acquiringsubscriptionsedit)
 - [acquiring.subscriptions.remove](#acquiringsubscriptionsremove)
+- [acquiring.monopay.listKeys](#acquiringmonopaylistkeys)
+- [acquiring.monopay.importKey](#acquiringmonopayimportkey)
+- [acquiring.monopay.deleteKey](#acquiringmonopaydeletekey)
+- [acquiring.t2p.listTerminals](#acquiringt2plistterminals)
+- [acquiring.t2p.getPaymentStatus](#acquiringt2pgetpaymentstatus)
+- [acquiring.split.listReceivers](#acquiringsplitlistreceivers)
+- [acquiring.pos.cancelTransaction](#acquiringposcanceltransaction)
 - [bank.getSync](#bankgetsync)
 - [currency.getRates](#currencygetrates)
 - [client.getInfo](#clientgetinfo)
@@ -1127,6 +1134,255 @@ Rejects with `MonobankApiError` (including `404` for an unknown subscription),
 
 ```ts
 await acquiring.subscriptions.remove({ subscriptionId: "s2_AbrCdXyZ13" });
+```
+
+## acquiring.monopay.listKeys
+
+```ts
+acquiring.monopay.listKeys(
+  options?: RequestOptions,
+): Promise<MonopaySigningKeyList>
+```
+
+Loads `GET /api/merchant/monopay/pubkey-list`, the public keys Monobank holds for
+verifying monopay button order signatures. Entries arrive under `result`, not
+`list`, as Monobank documents. Only `keyId` is required on an entry, because this
+response is documented with a sample rather than a schema.
+
+| Property       | Value                                                      |
+| -------------- | ---------------------------------------------------------- |
+| Authentication | Acquiring token in `X-Token`                               |
+| Rate limit     | No endpoint-specific limit is encoded or enforced          |
+| Retries        | Eligible when a retry policy is configured                 |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds   |
+| Cancellation   | `options.signal` cancels the active request or retry delay |
+| Returns        | `MonopaySigningKeyList`                                    |
+
+Rejects with `MonobankApiError`, `MonobankNetworkError`,
+`MonobankResponseValidationError`, or `MonobankValidationError`.
+
+```ts
+const keys = await acquiring.monopay.listKeys();
+
+for (const key of keys.result) {
+  console.log(key.keyId, key.keyName, key.expiresAt);
+}
+```
+
+## acquiring.monopay.importKey
+
+```ts
+acquiring.monopay.importKey(
+  input: ImportMonopaySigningKeyInput,
+  options?: RequestOptions,
+): Promise<ImportedMonopaySigningKey>
+```
+
+Calls `POST /api/merchant/monopay/pubkey-import`. `keyValue` is the
+**Base64-encoded public half** of a merchant-owned key pair; the private half
+signs widget order data and must never enter this SDK or its logs. `keyName` is a
+merchant-chosen label and `expiresAt` accepts a `Date`, serialized with
+`toISOString()`, or an RFC-3339 string forwarded unchanged.
+
+The validation error names the offending field without repeating its value, so an
+imported key never reaches public error state.
+
+| Property       | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Authentication | Acquiring token in `X-Token`                             |
+| Rate limit     | No endpoint-specific limit is encoded or enforced        |
+| Retries        | Never retried; the request mutates merchant state        |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds |
+| Cancellation   | `options.signal` cancels the active request              |
+| Returns        | `ImportedMonopaySigningKey`                              |
+
+Rejects with `MonobankApiError`, `MonobankNetworkError`,
+`MonobankResponseValidationError`, or `MonobankValidationError`.
+
+```ts
+const imported = await acquiring.monopay.importKey({
+  keyName: "widget-2026",
+  keyValue: base64PublicKey,
+});
+
+console.log(imported.result.keyId);
+```
+
+## acquiring.monopay.deleteKey
+
+```ts
+acquiring.monopay.deleteKey(
+  input: DeleteMonopaySigningKeyInput,
+  options?: RequestOptions,
+): Promise<void>
+```
+
+Calls `POST /api/merchant/monopay/pubkey-delete`. **Deleting a key invalidates
+every widget signature made with it**, so confirm the key is unused first.
+Monobank answers with an empty payload, so this resolves to `undefined`.
+
+| Property       | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Authentication | Acquiring token in `X-Token`                             |
+| Rate limit     | No endpoint-specific limit is encoded or enforced        |
+| Retries        | Never retried; the request mutates merchant state        |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds |
+| Cancellation   | `options.signal` cancels the active request              |
+| Returns        | `void`                                                   |
+
+Rejects with `MonobankApiError` (including `404` for an unknown key),
+`MonobankNetworkError`, or `MonobankValidationError`.
+
+```ts
+await acquiring.monopay.deleteKey({ keyId: "28F91hHGtzoSFJ" });
+```
+
+## acquiring.t2p.listTerminals
+
+```ts
+acquiring.t2p.listTerminals(
+  options?: RequestOptions,
+): Promise<AcquiringT2pTerminalList>
+```
+
+Loads `GET /api/merchant/t2p/terminal/list`, the tap-to-phone terminals
+registered to the merchant. Only `terminal` is required on an entry.
+
+| Property       | Value                                                      |
+| -------------- | ---------------------------------------------------------- |
+| Authentication | Acquiring token in `X-Token`                               |
+| Rate limit     | No endpoint-specific limit is encoded or enforced          |
+| Retries        | Eligible when a retry policy is configured                 |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds   |
+| Cancellation   | `options.signal` cancels the active request or retry delay |
+| Returns        | `AcquiringT2pTerminalList`                                 |
+
+Rejects with `MonobankApiError`, `MonobankNetworkError`,
+`MonobankResponseValidationError`, or `MonobankValidationError`.
+
+```ts
+const terminals = await acquiring.t2p.listTerminals();
+```
+
+## acquiring.t2p.getPaymentStatus
+
+```ts
+acquiring.t2p.getPaymentStatus(
+  input: GetAcquiringT2pPaymentStatusInput,
+  options?: RequestOptions,
+): Promise<AcquiringT2pPayment>
+```
+
+Loads `GET /api/merchant/t2p/terminal/payment/external/status` by the
+`externalPaymentId` the integrator assigned when creating the payment. Monobank
+keeps these payments for **90 days** and answers `404` afterwards, so treat a miss
+on an older payment as expected rather than exceptional.
+
+Three fields follow their own conventions here and are modelled as documented
+rather than normalized:
+
+| Field          | Shape                        | Elsewhere in this API        |
+| -------------- | ---------------------------- | ---------------------------- |
+| `ccy`          | alphabetic, `"UAH"`          | numeric ISO 4217 code, `980` |
+| `dataTime`     | `"2026-04-21 23:01:54"`      | RFC-3339 or Unix seconds     |
+| `errorMessage` | explicitly `null` on success | field omitted when not set   |
+
+`maskedPan` carries the masked card number while `cardMask` carries the scheme
+name, which reads as transposed but is preserved as upstream spells it. Only
+`status` is required.
+
+| Property       | Value                                                      |
+| -------------- | ---------------------------------------------------------- |
+| Authentication | Acquiring token in `X-Token`                               |
+| Rate limit     | No endpoint-specific limit is encoded or enforced          |
+| Retries        | Eligible when a retry policy is configured                 |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds   |
+| Cancellation   | `options.signal` cancels the active request or retry delay |
+| Returns        | `AcquiringT2pPayment`                                      |
+
+Rejects with `MonobankApiError` (including `404` past 90 days),
+`MonobankNetworkError`, `MonobankResponseValidationError`, or
+`MonobankValidationError`.
+
+```ts
+const payment = await acquiring.t2p.getPaymentStatus({
+  externalPaymentId: "18247112-4eac-4465-aa3c-c42c18f601eb",
+});
+
+if (payment.errorMessage !== null && payment.errorMessage !== undefined) {
+  console.error(payment.errorMessage, payment.responseCode);
+}
+```
+
+## acquiring.split.listReceivers
+
+```ts
+acquiring.split.listReceivers(
+  options?: RequestOptions,
+): Promise<AcquiringSplitReceiverList>
+```
+
+Loads `GET /api/merchant/split-receiver/list`. A returned `splitReceiverId` is
+what `merchantPaymInfo.basketOrder[].splitReceiverId` expects on
+`acquiring.invoices.create()`. Each entry carries the receiver's `edrpou` state
+registry code, which identifies a real business, so treat the list as counterparty
+data rather than public reference data. Only `splitReceiverId` is required.
+
+| Property       | Value                                                      |
+| -------------- | ---------------------------------------------------------- |
+| Authentication | Acquiring token in `X-Token`                               |
+| Rate limit     | No endpoint-specific limit is encoded or enforced          |
+| Retries        | Eligible when a retry policy is configured                 |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds   |
+| Cancellation   | `options.signal` cancels the active request or retry delay |
+| Returns        | `AcquiringSplitReceiverList`                               |
+
+Rejects with `MonobankApiError`, `MonobankNetworkError`,
+`MonobankResponseValidationError`, or `MonobankValidationError`.
+
+```ts
+const receivers = await acquiring.split.listReceivers();
+```
+
+## acquiring.pos.cancelTransaction
+
+```ts
+acquiring.pos.cancelTransaction(
+  input: CancelAcquiringPosTransactionInput,
+  options?: RequestOptions,
+): Promise<AcquiringPosCancellation>
+```
+
+Calls `POST /api/merchant/pos-transaction-cancel`, refunding part or all of a POS
+transaction identified by its `rrn`. `amount` is in minor currency units and may
+not exceed what the transaction has left after earlier refunds; only Monobank can
+evaluate that, so the SDK checks the shape and lets Monobank reject an
+over-refund.
+
+A successful response acknowledges that the refund was **initiated**, not that it
+settled. This request moves money and is never retried — retrying could refund
+twice.
+
+| Property       | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Authentication | Acquiring token in `X-Token`                             |
+| Rate limit     | No endpoint-specific limit is encoded or enforced        |
+| Retries        | Never retried; the request mutates merchant state        |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds |
+| Cancellation   | `options.signal` cancels the active request              |
+| Returns        | `AcquiringPosCancellation`                               |
+
+Rejects with `MonobankApiError` (including an over-refund or unknown RRN),
+`MonobankNetworkError`, `MonobankResponseValidationError`, or
+`MonobankValidationError`.
+
+```ts
+const refund = await acquiring.pos.cancelTransaction({
+  amount: 4_200,
+  rrn: "060189181768",
+});
+
+console.log(refund.status, refund.tranId);
 ```
 
 ## bank.getSync
