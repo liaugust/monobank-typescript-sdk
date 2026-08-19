@@ -62,6 +62,27 @@ describe("MonobankTransport options", () => {
   });
 
   it.each([
+    ["an empty status list", []],
+    ["a non-integer status", [500.5]],
+    ["an informational status", [204]],
+    ["an out-of-range status", [600]],
+  ])("rejects %s in retryableStatusCodes", (_label, retryableStatusCodes) => {
+    expect(
+      () =>
+        new MonobankTransport({
+          fetch: createFetchSequence([]),
+          retry: {
+            baseDelayMs: 100,
+            maxAttempts: 2,
+            maxDelayMs: 100,
+            retryableStatusCodes,
+          },
+          token: "secret-token",
+        }),
+    ).toThrow(MonobankValidationError);
+  });
+
+  it.each([
     ["an empty token", ""],
     ["a padded token", " secret-token "],
     ["a token that would inject a header", "secret\r\nX-Sign: forged"],

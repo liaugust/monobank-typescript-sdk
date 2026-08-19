@@ -568,6 +568,31 @@ response schema treats every undocumented field conservatively.
 
 ## Retries, timeouts, and cancellation
 
+Only safe GET requests are ever retried; mutating methods are excluded
+structurally rather than by configuration. Timeouts are never retried either — a
+configured `timeoutMs` is your ceiling for one attempt, so exceeding it fails the
+request rather than spending the budget again.
+
+By default the retryable statuses are `defaultRetryableStatusCodes`
+(`429, 500, 502, 503, 504`). Narrow them when a retry cannot help:
+
+```ts
+const personal = new MonobankPersonalClient({
+  retry: {
+    baseDelayMs: 1_000,
+    maxAttempts: 3,
+    maxDelayMs: 8_000,
+    retryableStatusCodes: [500, 502, 503, 504],
+  },
+  token,
+});
+```
+
+Monobank documents `/personal/client-info` and `/personal/statement` at **one
+request per 60 seconds**, so a `429` there means the minute's quota is already
+spent — a one-second backoff cannot succeed and only spends more of it. If your
+application already paces itself, excluding `429` is the right trade.
+
 Retries are disabled unless configured. A retry policy applies only to safe
 GET requests and respects `Retry-After`. Mutating methods are never retried,
 including `personal.webhooks.set()`, every `acquiring.invoices` mutation, and

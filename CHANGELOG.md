@@ -53,6 +53,16 @@ All notable changes to this package are documented here.
   over the signed `POST /personal/corp/webhook` endpoint, reusing the Personal
   webhook URL validation. Monobank test-POSTs the URL during the call.
 
+### Added
+
+- `retry.retryableStatusCodes` selecting which response statuses are eligible for
+  retry, with the previous set exported as `defaultRetryableStatusCodes`
+  (`429, 500, 502, 503, 504`). `429` was previously unavoidable, so a consumer who
+  wanted `5xx` retries had to accept it: on `/personal/client-info` and
+  `/personal/statement`, documented at one request per 60 seconds, a retried `429`
+  cannot succeed and spends more quota. The default set is unchanged, so existing
+  behavior is preserved.
+
 ### Fixed
 
 - Bound the Corporate signer with the per-attempt timeout. The attempt signal was

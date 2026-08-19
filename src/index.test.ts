@@ -59,6 +59,7 @@ describe("public package surface", () => {
       "corporateTokenRequestSchema",
       "currencyRateSchema",
       "currencyRatesSchema",
+      "defaultRetryableStatusCodes",
       "documentSignatorySchema",
       "documentSigningRequestSchema",
       "documentSigningStatusSchema",

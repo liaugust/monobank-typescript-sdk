@@ -49,6 +49,7 @@ import type {
   RequestCorporateAccessInput,
   RequestDocumentSigningInput,
   ResetAcquiringQrAmountInput,
+  RetryOptions,
   SetCorporateWebhookInput,
   SigningDocument,
   SigningDocumentInput,
@@ -69,6 +70,7 @@ import {
   CorporateRegistrationStatus,
   corporateSettingsSchema,
   corporateTokenRequestSchema,
+  defaultRetryableStatusCodes,
   DocumentSigningState,
   InvoicePaymentType,
   InvoiceStatus,
@@ -491,3 +493,17 @@ void invalidSigningType;
 
 // @ts-expect-error -- A monoKEP signing request requires the document list.
 void corporateClient.documents.requestSigning({ oneSigner: true });
+
+const narrowedRetry: RetryOptions = {
+  baseDelayMs: 1_000,
+  maxAttempts: 3,
+  maxDelayMs: 8_000,
+  retryableStatusCodes: [500, 502, 503, 504],
+};
+const defaultStatuses: readonly number[] = defaultRetryableStatusCodes;
+void narrowedRetry;
+void defaultStatuses;
+
+// @ts-expect-error -- The default retryable status list is not assignable to a mutable array.
+const mutableStatuses: number[] = defaultRetryableStatusCodes;
+void mutableStatuses;

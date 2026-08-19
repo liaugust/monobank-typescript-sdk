@@ -42,7 +42,11 @@ claim endorsement by Monobank.
   and fiscal enum-like values instead of repeating their wire strings.
 - Pass an `AbortSignal` when a caller needs cancellation.
 - Configure retries only when the application accepts repeated safe GET calls.
-  Mutating Personal and Acquiring methods are never retried by the SDK.
+  Mutating Personal and Acquiring methods are never retried by the SDK, and no
+  timeout is ever retried.
+- Narrow `retry.retryableStatusCodes` to `[500, 502, 503, 504]` for a Personal
+  client. Both documented Personal endpoints allow one request per 60 seconds, so
+  retrying a `429` cannot succeed and spends more of the quota.
 - Narrow caught errors with the exported SDK error classes. Do not assume every
   failure is an HTTP error.
 - Treat `parsePersonalWebhookEvent()` as shape validation only. Authenticate
