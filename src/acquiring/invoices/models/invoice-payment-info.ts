@@ -4,6 +4,7 @@ import * as z from "zod/mini";
 export const InvoicePaymentType = {
   Debit: "debit",
   Hold: "hold",
+  Verification: "verification",
 } as const;
 
 /** A documented Acquiring invoice payment type. */

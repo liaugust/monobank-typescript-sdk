@@ -22,6 +22,7 @@ describe("public package surface", () => {
       "FiscalCheckType",
       "FiscalizationSource",
       "InvoiceCancellationStatus",
+      "InvoiceDisplayType",
       "InvoicePaymentMethod",
       "InvoicePaymentSystem",
       "InvoicePaymentType",

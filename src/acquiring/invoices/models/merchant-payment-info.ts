@@ -10,6 +10,7 @@ const invoiceBasketItemSchema = z.object({
   ...fiscalizationItemShape,
   discounts: z.optional(z.array(invoiceDiscountSchema)),
   icon: z.optional(z.string()),
+  splitReceiverId: z.optional(z.string()),
   total: z.optional(z.int()),
   unit: z.optional(z.string()),
 });
@@ -30,6 +31,7 @@ export const merchantPaymentInfoSchema = z.object({
   ),
   destination: z.optional(z.string().check(z.maxLength(280))),
   discounts: z.optional(z.array(invoiceDiscountSchema)),
+  metadata: z.optional(z.record(z.string(), z.unknown())),
   reference: z.optional(z.string()),
 });
 
@@ -39,6 +41,13 @@ export interface InvoiceBasketItem extends FiscalizationItem {
   readonly discounts?: readonly InvoiceDiscount[];
   /** Optional product image URL. */
   readonly icon?: string;
+  /**
+   * Optional split-payment receiver for this item.
+   *
+   * Monobank documents it only through the request sample, so the identifier is
+   * forwarded as an opaque string.
+   */
+  readonly splitReceiverId?: string;
   /** Optional total amount for all item units in minor units. */
   readonly total?: number;
   /** Optional unit-of-measure label. */
@@ -57,6 +66,15 @@ export interface MerchantPaymentInfo {
   readonly destination?: string;
   /** Optional order-wide adjustments. */
   readonly discounts?: readonly InvoiceDiscount[];
+  /**
+   * Optional merchant key-value pairs echoed back with the invoice.
+   *
+   * Monobank documents this only through the request sample, whose values are
+   * strings. Values are typed as `unknown` and forwarded as given rather than
+   * narrowed, so a shape the sample does not show is passed upstream instead of
+   * being rejected here.
+   */
+  readonly metadata?: Readonly<Record<string, unknown>>;
   /** Optional merchant order or receipt reference. */
   readonly reference?: string;
 }

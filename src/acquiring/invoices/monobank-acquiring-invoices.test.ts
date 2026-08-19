@@ -21,6 +21,7 @@ import {
 import { MonobankResponseValidationError } from "../../errors/monobank-response-validation-error.js";
 import { MonobankValidationError } from "../../errors/monobank-validation-error.js";
 import { MonobankAcquiringClient } from "../client/monobank-acquiring-client.js";
+import { InvoiceDisplayType } from "./models/invoice-display-type.js";
 import { InvoicePaymentType } from "./models/invoice-payment-info.js";
 import { SyncPaymentPanType } from "./sync-payment/sync-payment.js";
 
@@ -244,6 +245,34 @@ describe("MonobankAcquiringInvoices", () => {
       client.invoices.create({ amount: 4.2 }),
     ).rejects.toBeInstanceOf(MonobankValidationError);
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("sends every documented redirect and display field on the wire", async () => {
+    const fetch = createFetchSequence([
+      jsonResponse({
+        appUrl: "monobank://pay/invoice-42",
+        invoiceId: "invoice-42",
+        pageUrl: "https://pay.example.test/invoice-42",
+      }),
+    ]);
+    const client = new MonobankAcquiringClient({ fetch, token: "token" });
+
+    const invoice = await client.invoices.create({
+      amount: 4_200,
+      displayType: InvoiceDisplayType.Iframe,
+      failUrl: "https://example.test/failed",
+      successUrl: "https://example.test/succeeded",
+      withAppUrl: true,
+    });
+
+    expect(firstRequestBody(fetch)).toEqual({
+      amount: 4_200,
+      displayType: "iframe",
+      failUrl: "https://example.test/failed",
+      successUrl: "https://example.test/succeeded",
+      withAppUrl: true,
+    });
+    expect(invoice.appUrl).toBe("monobank://pay/invoice-42");
   });
 
   it("rejects a malformed successful response", async () => {

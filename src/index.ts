@@ -54,6 +54,7 @@ export {
   DiscountMode,
   DiscountType,
 } from "./acquiring/invoices/models/invoice-discount.js";
+export { InvoiceDisplayType } from "./acquiring/invoices/models/invoice-display-type.js";
 export {
   InvoicePaymentMethod,
   InvoicePaymentSystem,

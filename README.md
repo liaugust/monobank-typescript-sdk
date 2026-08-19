@@ -449,6 +449,37 @@ Monetary amounts are integer minor units. Use `paymentType: "hold"` (or
 `acquiring.invoices.finalize()` or `acquiring.invoices.cancel()`. Invoice
 mutations are never retried automatically.
 
+`successUrl` and `failUrl` split the payer's return path by outcome, and
+`displayType: InvoiceDisplayType.Iframe` returns a widget link instead of a
+plain page. Monobank documents both redirects as **disabled by default** —
+until support enables them, `redirectUrl` handles success and failure alike.
+Sending `withAppUrl: true` adds `appUrl`, a `monobank://` deeplink, to the
+result; it is not supported for QR or verification payments:
+
+```ts
+const widget = await acquiring.invoices.create({
+  amount: 4_200,
+  displayType: InvoiceDisplayType.Iframe,
+  failUrl: "https://example.com/orders/42/failed",
+  successUrl: "https://example.com/orders/42/paid",
+  withAppUrl: true,
+});
+
+console.log(widget.pageUrl, widget.appUrl);
+```
+
+`paymentType: InvoicePaymentType.Verification` checks a card without moving
+money. Monobank requires `amount: 0` and `saveCardData.saveCard: true` for it,
+so the SDK rejects the call before Fetch when either is missing:
+
+```ts
+await acquiring.invoices.create({
+  amount: 0,
+  paymentType: InvoicePaymentType.Verification,
+  saveCardData: { saveCard: true },
+});
+```
+
 ### Public data
 
 ```ts

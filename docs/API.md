@@ -681,20 +681,39 @@ ISO 4217 code; Monobank defaults it to 980.
 
 Important input fields:
 
-| Field              | Type                  | Required | Meaning                                      |
-| ------------------ | --------------------- | -------- | -------------------------------------------- |
-| `amount`           | `number`              | Yes      | Integer payment amount in minor units        |
-| `ccy`              | `number`              | No       | Integer numeric ISO 4217 code                |
-| `merchantPaymInfo` | `MerchantPaymentInfo` | No       | Order reference, description, basket, emails |
-| `redirectUrl`      | `string`              | No       | Payer redirect target                        |
-| `webHookUrl`       | `string`              | No       | Invoice-status callback target               |
-| `validity`         | `number`              | No       | Integer lifetime in seconds                  |
-| `paymentType`      | `InvoicePaymentType`  | No       | `"debit"` or `"hold"`; defaults upstream     |
-| `saveCardData`     | object                | No       | Optional card-tokenization request           |
+| Field              | Type                  | Required | Meaning                                                |
+| ------------------ | --------------------- | -------- | ------------------------------------------------------ |
+| `amount`           | `number`              | Yes      | Integer payment amount in minor units                  |
+| `ccy`              | `number`              | No       | Integer numeric ISO 4217 code                          |
+| `merchantPaymInfo` | `MerchantPaymentInfo` | No       | Order reference, description, basket, emails, metadata |
+| `redirectUrl`      | `string`              | No       | Payer redirect target for success and failure alike    |
+| `successUrl`       | `string`              | No       | Payer redirect target after a successful payment       |
+| `failUrl`          | `string`              | No       | Payer redirect target after a failed payment           |
+| `webHookUrl`       | `string`              | No       | Invoice-status callback target                         |
+| `validity`         | `number`              | No       | Integer lifetime in seconds                            |
+| `paymentType`      | `InvoicePaymentType`  | No       | `"debit"`, `"hold"`, or `"verification"`               |
+| `saveCardData`     | object                | No       | Optional card-tokenization request                     |
+| `displayType`      | `InvoiceDisplayType`  | No       | `"iframe"` to receive a widget link                    |
+| `withAppUrl`       | `boolean`             | No       | Adds `appUrl`, a `monobank://` deeplink, to the result |
 
-Returns `{ invoiceId, pageUrl }`. This mutating request is never retried.
-Throws the four standard SDK error classes; input validation happens before
-Fetch.
+Monobank documents `successUrl` and `failUrl` as **disabled by default** — a
+merchant has to ask support to enable them, and until then the values have no
+effect and `redirectUrl` handles both outcomes.
+
+`paymentType: "verification"` checks a card without moving money and is rejected
+before Fetch unless `amount` is `0` and `saveCardData.saveCard` is `true`, both
+of which Monobank documents as mandatory for it. `withAppUrl` is documented as
+unsupported for QR and verification payments; that is stated rather than enforced
+here, because the documentation does not say such a request fails.
+
+`merchantPaymInfo.metadata` carries arbitrary merchant key-value pairs and
+`merchantPaymInfo.basketOrder[].splitReceiverId` names a split-payment receiver.
+Both appear only in Monobank's request sample, so `metadata` values are typed as
+`unknown` and forwarded as given rather than narrowed to the sample's strings.
+
+Returns `{ invoiceId, pageUrl }`, plus `appUrl` when `withAppUrl` was sent. This
+mutating request is never retried. Throws the four standard SDK error classes;
+input validation happens before Fetch.
 
 `CreateInvoiceOptions` extends `RequestOptions` with optional `cms` and
 `cmsVersion` strings. They are sent as the official `X-Cms` and

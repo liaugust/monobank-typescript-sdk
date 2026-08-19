@@ -198,6 +198,14 @@ fails with reason `timeout`.
   `Promise<boolean>` and requires no additional runtime dependency.
 - `acquiring.invoices.create(input, options?)`: creates a hosted Acquiring
   invoice; returns `Promise<NewInvoice>`; never retried automatically.
+  `redirectUrl` covers both outcomes, while `successUrl` and `failUrl` split
+  them and are disabled by default until Monobank support enables them.
+  `displayType: "iframe"` returns a widget link; `withAppUrl: true` adds
+  `appUrl`, a `monobank://` deeplink, to the result and is unsupported for QR
+  and verification payments. `paymentType: "verification"` requires `amount: 0`
+  and `saveCardData.saveCard: true` and is rejected locally without them.
+  `merchantPaymInfo.metadata` and `merchantPaymInfo.basketOrder[].splitReceiverId`
+  are forwarded as given.
 - `acquiring.invoices.getStatus(input, options?)`: returns `Promise<Invoice>`
   for an `invoiceId`; safe GET eligible for configured retries.
 - `acquiring.invoices.cancel(input, options?)`: full or partial payment

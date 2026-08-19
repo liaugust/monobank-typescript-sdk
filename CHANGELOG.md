@@ -27,6 +27,18 @@ All notable changes to this package are documented here.
 
 ### Fixed
 
+- `acquiring.invoices.create()` no longer discards documented request fields.
+  `successUrl`, `failUrl`, `displayType`, and `withAppUrl` were absent from the
+  request schema, and because request schemas are built with `z.object`, which
+  strips unknown keys, a caller who set one got no error and no effect. The same
+  silent drop applied to `merchantPaymInfo.metadata` and
+  `merchantPaymInfo.basketOrder[].splitReceiverId`, both found while auditing the
+  endpoint. All six are now accepted, validated, and sent, and `NewInvoice`
+  carries the documented `appUrl` deeplink returned when `withAppUrl` is sent.
+- `InvoicePaymentType` gained the documented `Verification` value, and a
+  verification invoice is rejected before Fetch unless `amount` is `0` and
+  `saveCardData.saveCard` is `true`, which Monobank documents as mandatory for
+  it. Exports `InvoiceDisplayType` for the `displayType` values.
 - Corrected the coverage claim. `0.4.0` announced "every operation Monobank
   documents: 37 of 37"; both numbers were wrong. Coverage was measured against
   the Redoc specs at `api.monobank.ua/docs/` alone, while the newer
