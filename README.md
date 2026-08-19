@@ -7,8 +7,9 @@
 
 A strict, runtime-validated TypeScript SDK for the Monobank API.
 
-It spans four credential families — Public, Personal, Acquiring, and Corporate —
-and gives applications typed responses without trusting the wire: every
+It spans five credential families — Public, Personal, Acquiring, Corporate, and
+Покупка Частинами — and gives applications typed responses without trusting the
+wire: every
 successful JSON payload crosses a Zod validation boundary before it reaches your
 code. Coverage of the Monobank API is partial; see [Coverage](#coverage).
 
@@ -40,6 +41,7 @@ code. Coverage of the Monobank API is partial; see [Coverage](#coverage).
   - [Statements](#statements)
   - [Webhooks](#webhooks)
   - [Corporate provider API](#corporate-provider-api)
+  - [Покупка Частинами](#покупка-частинами)
 - [Retries, timeouts, and cancellation](#retries-timeouts-and-cancellation)
 - [Errors](#errors)
 - [Runtime schemas](#runtime-schemas)
@@ -50,7 +52,7 @@ code. Coverage of the Monobank API is partial; see [Coverage](#coverage).
 
 ## Why this SDK?
 
-- One package for four credential families, each with its own auth model
+- One package for five credential families, each with its own auth model
 - Runtime validation for successful API responses and webhook payloads
 - Strict TypeScript types with preserved JSDoc in published declarations
 - ESM, CommonJS, and modern browser-bundler support
@@ -80,6 +82,7 @@ The remaining 14 are all of Покупка Частинами, tracked under
 - A Monobank Acquiring token for `MonobankAcquiringClient`
 - A signing function for `MonobankCorporateClient`, plus an approved Corporate
   service key for every operation except registration
+- A store identifier and shared secret for `MonobankInstallmentsClient`
 
 ## Installation
 
@@ -753,6 +756,130 @@ URL during the call, so it can fail for reasons outside the request itself.
 This surface is verified against synthetic fixtures only. Exercising it live
 requires Monobank to approve the company as a provider, which is why the
 response schema treats every undocumented field conservatively.
+
+### Покупка Частинами
+
+Buy-now-pay-later runs on its own origin with its own credential. Requests carry
+a `store-id` header and a `signature` header holding
+`Base64(HMAC-SHA256(request_body, store_secret))`, which the SDK computes with
+built-in Web Crypto — no injected signer, unlike the Corporate family:
+
+```ts
+import { MonobankInstallmentsClient } from "@liaugust/monobank-sdk";
+
+const installments = new MonobankInstallmentsClient({
+  storeId: "your_store_id",
+  storeSecret: process.env.MONOBANK_STORE_SECRET!,
+});
+
+const { found } = await installments.clients.validateV2({
+  phone: "+380501234567",
+});
+```
+
+Four things differ from every other family in this package, all of them upstream
+and all preserved rather than papered over:
+
+|             | Покупка Частинами            | Elsewhere                 |
+| ----------- | ---------------------------- | ------------------------- |
+| Origin      | `https://u2.monobank.com.ua` | `https://api.monobank.ua` |
+| Credential  | `store-id` + body HMAC       | `X-Token` or `X-Sign`     |
+| Field names | `snake_case`                 | `camelCase`               |
+| Sums        | hryvnia, e.g. `2499.99`      | integer minor units       |
+
+Monobank documents a sandbox at `https://u2-demo-ext.mono.st4g3.com` and a stage
+environment at `https://u2-ext.mono.st4g3.com`; pass either as `baseUrl`.
+
+Prefer `validateV2()` over `validate()`. Both answer whether a phone number
+belongs to a Monobank client, but `validate()` also returns the person's name and
+tax identifier, which most callers do not need and should not store.
+
+#### Orders
+
+The order lifecycle is a state machine, and one state matters more than the rest:
+
+```ts
+const order = await installments.orders.create({
+  available_programs: [
+    { available_parts_count: [3, 6, 10], type: "payment_installments" },
+  ],
+  client_phone: "+380501234567",
+  invoice: { date: "2024-01-15", number: "INV-1", source: "INTERNET" },
+  products: [{ count: 1, name: "TV", sum: 2_499.99 }],
+  result_callback: "https://shop.example.com/api/order/callback",
+  store_order_id: "ORD-1",
+  total_sum: 2_499.99,
+});
+
+const state = await installments.orders.getState({ order_id: order.order_id });
+
+if (state.order_sub_state === "WAITING_FOR_STORE_CONFIRM") {
+  // The client approved the credit. Release the goods, then activate the plan:
+  await installments.orders.confirm({ order_id: order.order_id });
+}
+```
+
+`WAITING_FOR_STORE_CONFIRM` means the client approved the credit, so the goods can
+be released. **The plan is not active until `confirm()` lands** — call `reject()`
+instead if the order cannot be fulfilled.
+
+Sums here are **hryvnia, not minor units**: `total_sum: 2_499.99` is sent as
+written. Multiplying by 100 the way the Acquiring family requires would ask the
+client for a hundred times the price.
+
+`getData()` and `getInfo()` both read settlement details, and Monobank documents
+them with identical shapes, so both are exposed rather than one being assumed an
+alias. Returns go through `returnGoods()`, and `checkPaid()` reports whether the
+bank can refund to the card at all before you ask it to:
+
+```ts
+const payment = await installments.orders.checkPaid({
+  order_id: order.order_id,
+});
+
+await installments.orders.returnGoods({
+  order_id: order.order_id,
+  return_money_to_card: payment.bank_can_return_money_to_card === true,
+  store_return_id: "RET-1",
+  sum: 1_250.5,
+});
+```
+
+Nested request objects — `invoice`, `additional_params`,
+`financial_company_merchant_info`, and each product — are **forwarded whole**.
+Monobank documents their fields only through samples, so an undocumented key you
+send reaches the API rather than being silently dropped.
+
+#### Verifying callbacks
+
+Monobank signs callbacks with the same scheme it requires on requests, so verify
+before acting — and verify the **raw bytes**, because `JSON.parse` followed by
+`JSON.stringify` can reorder keys and change what was signed:
+
+```ts
+import {
+  parseInstallmentsCallbackEvent,
+  verifyInstallmentsCallbackSignature,
+} from "@liaugust/monobank-sdk";
+
+const raw = await request.arrayBuffer();
+const authentic = await verifyInstallmentsCallbackSignature({
+  body: raw,
+  signature: request.headers.get("signature") ?? "",
+  storeSecret: process.env.MONOBANK_STORE_SECRET!,
+});
+
+if (!authentic) {
+  return new Response(null, { status: 401 });
+}
+
+const event = parseInstallmentsCallbackEvent(
+  JSON.parse(new TextDecoder().decode(raw)),
+);
+```
+
+Callbacks arrive only for terminal outcomes. Intermediate states such as
+`IN_PROCESS/WAITING_FOR_CLIENT` are never delivered, so poll for those.
 
 ## Retries, timeouts, and cancellation
 

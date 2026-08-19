@@ -8,6 +8,7 @@ const publicApiFiles = [
   "src/acquiring/**/*.ts",
   "src/corporate/**/*.ts",
   "src/errors/*.ts",
+  "src/installments/**/*.ts",
   "src/personal/**/*.ts",
   "src/public/**/*.ts",
   "src/shared/*.ts",

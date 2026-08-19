@@ -1,7 +1,8 @@
 # @liaugust/monobank-sdk
 
 > Unofficial, strict, runtime-validated TypeScript SDK for the Monobank API,
-> spanning the Public, Personal, Acquiring, and Corporate credential families.
+> spanning the Public, Personal, Acquiring, Corporate, and Покупка Частинами
+> credential families.
 > It implements 49 of the 63 documented operations, not the whole API. Supports
 > Node.js 22.12.0+, ESM, CommonJS, and modern browser bundlers. Zod Mini
 > validates every successful JSON response.
@@ -34,6 +35,52 @@ const personal = new MonobankPersonalClient({
 ```
 
 Use `MonobankAcquiringClient` with a separate Acquiring token.
+
+Use `MonobankInstallmentsClient` for Покупка Частинами. It takes a `storeId`
+and a `storeSecret`, signs each request body with HMAC-SHA256 through Web Crypto,
+and defaults to `https://u2.monobank.com.ua` rather than `api.monobank.ua`.
+
+- `installments.clients.validate(input, options?)`: signed
+  `/api/client/validate`; takes `phone` in international format; returns
+  `Promise<InstallmentsClientValidation>` whose optional `client` block carries a
+  name and tax identifier; mutating-style POST, never retried.
+- `installments.clients.validateV2(input, options?)`: signed
+  `/api/v2/client/validate`; returns `Promise<InstallmentsClientPresence>` with
+  `found` alone and no personal data; prefer it unless the identity is required;
+  never retried.
+- `installments.orders.create(input, options?)`: signed `/api/order/create`;
+  requires `store_order_id` (1-64 chars), `client_phone`, `total_sum` in hryvnia
+  with a minimum of 2, `invoice`, `available_programs`, and `products`; optional
+  `result_callback`, `additional_params`, and `financial_company_merchant_info`;
+  returns `Promise<NewInstallmentsOrder>`; never retried, since a retry would
+  raise a second order for the same `store_order_id`.
+- `installments.orders.getState(input, options?)`: signed `/api/order/state`;
+  takes `order_id` as a UUID; returns `Promise<InstallmentsOrderState>`; the only
+  way to see intermediate states, which callbacks never carry.
+- `installments.orders.confirm(input, options?)`: signed `/api/order/confirm`;
+  call after releasing goods on `WAITING_FOR_STORE_CONFIRM` to activate the plan;
+  returns `Promise<InstallmentsOrderState>`; never retried.
+- `installments.orders.reject(input, options?)`: signed `/api/order/reject`; the
+  counterpart to confirm when the order cannot be fulfilled; returns
+  `Promise<InstallmentsOrderState>`; never retried.
+- `installments.orders.getData(input, options?)` and
+  `installments.orders.getInfo(input, options?)`: signed `/api/order/data` and
+  `/api/order/info`, documented with identical shapes; return
+  `Promise<InstallmentsOrderData>` whose `total_sum` is hryvnia and whose
+  `maskedCard` is camelCase amid snake_case fields.
+- `installments.orders.checkPaid(input, options?)`: signed
+  `/api/order/check/paid`; returns `Promise<InstallmentsOrderPayment>` reporting
+  `fully_paid` and `bank_can_return_money_to_card`; read it before a card refund.
+- `installments.orders.returnGoods(input, options?)`: signed `/api/order/return`;
+  requires `order_id`, `sum` in hryvnia with a minimum of 1, `store_return_id`,
+  and `return_money_to_card`; returns `Promise<InstallmentsOrderReturn>`; moves
+  money, never retried.
+- `verifyInstallmentsCallbackSignature(input)`: recomputes
+  `Base64(HMAC-SHA256(body, storeSecret))` over the exact raw callback bytes and
+  compares in constant time; returns `Promise<boolean>`.
+- `parseInstallmentsCallbackEvent(payload)`: shape validation only for a callback
+  body of `order_id`, `state`, and `order_sub_state`; authenticate delivery
+  separately.
 
 Use `MonobankCorporateClient` for the Corporate provider API. It takes no
 token: pass the service `keyId` and a `sign` function. `keyId` is optional
@@ -313,7 +360,9 @@ See `src/index.ts` for the complete authoritative export list, including types.
 
 ## Data rules
 
-- Monetary integers use the currency's minor units.
+- Monetary integers use the currency's minor units, except in Покупка Частинами,
+  where sums are hryvnia with decimals such as `2499.99`.
+- Покупка Частинами wire fields are snake_case, unlike every other family.
 - Currency codes are numeric ISO 4217 codes.
 - Rate and Personal statement timestamps are Unix seconds; Acquiring statement
   request inputs use Unix seconds while response `date` fields use RFC-3339.

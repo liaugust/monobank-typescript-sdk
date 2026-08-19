@@ -13,6 +13,7 @@ supported contract.
 - [MonobankPersonalClient](#monobankpersonalclient)
 - [MonobankAcquiringClient](#monobankacquiringclient)
 - [MonobankCorporateClient](#monobankcorporateclient)
+- [MonobankInstallmentsClient](#monobankinstallmentsclient)
 - [acquiring.webhooks.getPublicKey](#acquiringwebhooksgetpublickey)
 - [verifyAcquiringWebhookSignature](#verifyacquiringwebhooksignature)
 - [merchant.getDetails](#merchantgetdetails)
@@ -53,6 +54,18 @@ supported contract.
 - [statements.get](#statementsget)
 - [webhooks.set](#webhooksset)
 - [parsePersonalWebhookEvent](#parsepersonalwebhookevent)
+- [installments.clients.validate](#installmentsclientsvalidate)
+- [installments.clients.validateV2](#installmentsclientsvalidatev2)
+- [verifyInstallmentsCallbackSignature](#verifyinstallmentscallbacksignature)
+- [parseInstallmentsCallbackEvent](#parseinstallmentscallbackevent)
+- [installments.orders.create](#installmentsorderscreate)
+- [installments.orders.getState](#installmentsordersgetstate)
+- [installments.orders.confirm](#installmentsordersconfirm)
+- [installments.orders.reject](#installmentsordersreject)
+- [installments.orders.getData](#installmentsordersgetdata)
+- [installments.orders.getInfo](#installmentsordersgetinfo)
+- [installments.orders.checkPaid](#installmentsorderscheckpaid)
+- [installments.orders.returnGoods](#installmentsordersreturngoods)
 - [corporate.access.request](#corporateaccessrequest)
 - [corporate.access.check](#corporateaccesscheck)
 - [corporate.clients.getInfo](#corporateclientsgetinfo)
@@ -302,6 +315,46 @@ retried, matching how this SDK treats every other timeout.
 A signer that throws, or returns an empty string, produces
 `MonobankValidationError` before Fetch runs. The signer's own failure is never
 attached as a cause, because a crypto library's error text can echo key material.
+
+## MonobankInstallmentsClient
+
+```ts
+new MonobankInstallmentsClient(options: MonobankInstallmentsClientOptions)
+```
+
+Client for Покупка Частинами, Monobank's buy-now-pay-later API. It differs from
+every other family in this package, and each difference is upstream:
+
+|             | Покупка Частинами                                 | Other families                        |
+| ----------- | ------------------------------------------------- | ------------------------------------- |
+| Origin      | `https://u2.monobank.com.ua`                      | `https://api.monobank.ua`             |
+| Credential  | `store-id` + `signature` headers                  | `X-Token`, or `X-Sign` for Corporate  |
+| Signature   | `Base64(HMAC-SHA256(request_body, store_secret))` | ECDSA over `X-Time`+URL for Corporate |
+| Field names | `snake_case`                                      | `camelCase`                           |
+| Sums        | hryvnia with decimals, `2499.99`                  | integer minor units                   |
+
+| Option        | Type           | Default                      | Notes                                                                               |
+| ------------- | -------------- | ---------------------------- | ----------------------------------------------------------------------------------- |
+| `storeId`     | `string`       | required                     | Sent verbatim as `store-id`; printable ASCII without spaces                         |
+| `storeSecret` | `string`       | required                     | HMAC key; never sent, only used to sign                                             |
+| `baseUrl`     | `string`       | `https://u2.monobank.com.ua` | Sandbox `https://u2-demo-ext.mono.st4g3.com`, stage `https://u2-ext.mono.st4g3.com` |
+| `fetch`       | `FetchLike`    | `globalThis.fetch`           | Injection point for tests, proxies, and other runtimes                              |
+| `retry`       | `RetryOptions` | none                         | Omitting it disables retries                                                        |
+| `timeoutMs`   | `number`       | `10000`                      | Per attempt                                                                         |
+
+Unlike `MonobankCorporateClient`, this client takes the secret itself rather than
+an injected signer, because the scheme is HMAC-SHA256 — which Web Crypto supports
+directly, whereas the Corporate service keys are secp256k1 and it does not.
+
+A store credential cannot be combined with `token` or `corporate` on one
+transport; configuring two is rejected at construction.
+
+```ts
+const installments = new MonobankInstallmentsClient({
+  storeId: "your_store_id",
+  storeSecret: process.env.MONOBANK_STORE_SECRET!,
+});
+```
 
 ## acquiring.webhooks.getPublicKey
 
@@ -1582,6 +1635,433 @@ import { parsePersonalWebhookEvent } from "@liaugust/monobank-sdk";
 const event = parsePersonalWebhookEvent(await request.json());
 
 // Authenticate delivery separately, then pass `event` to application logic.
+```
+
+## installments.clients.validate
+
+```ts
+installments.clients.validate(
+  input: ValidateInstallmentsClientInput,
+  options?: RequestOptions,
+): Promise<InstallmentsClientValidation>
+```
+
+Calls `POST /api/client/validate`, answering whether a phone number belongs to a
+Monobank client. `phone` must be international form — `+` followed by 9 to 15
+digits — and is rejected before Fetch otherwise, because a local-format number
+would come back as an unknown client rather than an error.
+
+**This is a personal-data read.** When `found` is true, `client` carries
+`first_name`, `last_name`, `middle_name`, and `inn`, the person's tax identifier.
+Prefer `validateV2()`, which answers the same question without any of it.
+
+| Property       | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Authentication | `store-id` plus an HMAC body signature in `signature`    |
+| Rate limit     | No endpoint-specific limit is encoded or enforced        |
+| Retries        | Never retried automatically                              |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds |
+| Cancellation   | `options.signal` cancels the active request              |
+| Returns        | `InstallmentsClientValidation`                           |
+
+Rejects with `MonobankApiError` (including `401` when the signature is missing or
+invalid), `MonobankNetworkError`, `MonobankResponseValidationError`, or
+`MonobankValidationError`.
+
+```ts
+const lookup = await installments.clients.validate({
+  phone: "+380501234567",
+});
+
+if (lookup.found && lookup.client !== undefined) {
+  console.log(lookup.client.first_name);
+}
+```
+
+## installments.clients.validateV2
+
+```ts
+installments.clients.validateV2(
+  input: ValidateInstallmentsClientInput,
+  options?: RequestOptions,
+): Promise<InstallmentsClientPresence>
+```
+
+Calls `POST /api/v2/client/validate`, the same question with `found` alone in the
+response. Prefer it: no name and no tax identifier crosses the wire, so the
+caller cannot accidentally log or store either.
+
+| Property       | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Authentication | `store-id` plus an HMAC body signature in `signature`    |
+| Rate limit     | No endpoint-specific limit is encoded or enforced        |
+| Retries        | Never retried automatically                              |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds |
+| Cancellation   | `options.signal` cancels the active request              |
+| Returns        | `InstallmentsClientPresence`                             |
+
+```ts
+const { found } = await installments.clients.validateV2({
+  phone: "+380501234567",
+});
+```
+
+## verifyInstallmentsCallbackSignature
+
+```ts
+verifyInstallmentsCallbackSignature(
+  input: VerifyInstallmentsCallbackSignatureInput,
+): Promise<boolean>
+```
+
+Authenticates a Покупка Частинами callback by recomputing
+`Base64(HMAC-SHA256(body, storeSecret))` and comparing it with the request's
+`signature` header. The comparison is constant-time, so repeated attempts cannot
+reveal the expected value by timing.
+
+Pass the **raw** body — `ArrayBuffer`, `Uint8Array`, or the original string.
+`JSON.parse` followed by `JSON.stringify` can reorder keys and change the bytes
+that were signed, which turns an authentic callback into a rejected one.
+
+```ts
+const raw = await request.arrayBuffer();
+
+if (
+  !(await verifyInstallmentsCallbackSignature({
+    body: raw,
+    signature: request.headers.get("signature") ?? "",
+    storeSecret: process.env.MONOBANK_STORE_SECRET!,
+  }))
+) {
+  return new Response(null, { status: 401 });
+}
+```
+
+## parseInstallmentsCallbackEvent
+
+```ts
+parseInstallmentsCallbackEvent(payload: unknown): InstallmentsCallbackEvent
+```
+
+Validates the shape of a callback body carrying `order_id`, and optionally `state`
+and `order_sub_state`. Both status fields are typed as `string` because Monobank
+documents the status table in prose rather than as a declared enum.
+
+This is shape validation only and proves nothing about the sender — authenticate
+delivery with `verifyInstallmentsCallbackSignature()` first. Monobank sends a
+callback only for terminal outcomes, so intermediate states such as
+`IN_PROCESS/WAITING_FOR_CLIENT` never arrive this way and have to be polled.
+
+Throws `MonobankValidationError` when the payload does not match.
+
+## installments.orders.create
+
+```ts
+installments.orders.create(
+  input: CreateInstallmentsOrderInput,
+  options?: RequestOptions,
+): Promise<NewInstallmentsOrder>
+```
+
+Calls `POST /api/order/create`, raising an order for the client to approve in the
+Monobank app.
+
+**Sums are hryvnia, not minor units.** `total_sum: 2499.99` is sent as written,
+with a documented minimum of `2`; each product `sum` works the same way.
+Multiplying by 100 the way `acquiring.invoices.create()` requires would ask the
+client for a hundred times the price.
+
+| Field                             | Type       | Required | Meaning                                      |
+| --------------------------------- | ---------- | -------- | -------------------------------------------- |
+| `store_order_id`                  | `string`   | Yes      | Store's own order identifier, 1 to 64 chars  |
+| `client_phone`                    | `string`   | Yes      | International format, `+` and 9 to 15 digits |
+| `total_sum`                       | `number`   | Yes      | Hryvnia, minimum `2`                         |
+| `invoice`                         | `object`   | Yes      | `number`, `date`, `source`, `point_id`       |
+| `available_programs`              | `object[]` | Yes      | `type` and `available_parts_count`           |
+| `products`                        | `object[]` | Yes      | `name`, `count`, `sum` in hryvnia            |
+| `result_callback`                 | `string`   | No       | URL Monobank posts terminal outcomes to      |
+| `additional_params`               | `object`   | No       | `seller_phone`, `nds`, `ext_initial_sum`     |
+| `financial_company_merchant_info` | `object`   | No       | `store_name`, `edrpou_code`, `iban_account`  |
+
+The nested objects are **forwarded whole**. Monobank documents their fields only
+through a request sample, so an undocumented key you send reaches the API instead
+of being silently dropped — the failure mode that lost four `invoice/create`
+fields before it was found.
+
+Never retried: a retry would raise a second order against the same
+`store_order_id`.
+
+| Property       | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Authentication | `store-id` plus an HMAC body signature in `signature`    |
+| Rate limit     | No endpoint-specific limit is encoded or enforced        |
+| Retries        | Never retried automatically                              |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds |
+| Cancellation   | `options.signal` cancels the active request              |
+| Returns        | `NewInstallmentsOrder`                                   |
+
+Rejects with `MonobankApiError` (including `401` for a missing or invalid
+signature), `MonobankNetworkError`, `MonobankResponseValidationError`, or
+`MonobankValidationError`.
+
+```ts
+const order = await installments.orders.create({
+  available_programs: [
+    { available_parts_count: [3, 6, 10], type: "payment_installments" },
+  ],
+  client_phone: "+380501234567",
+  invoice: { date: "2024-01-15", number: "INV-1", source: "INTERNET" },
+  products: [{ count: 1, name: "TV", sum: 2_499.99 }],
+  store_order_id: "ORD-1",
+  total_sum: 2_499.99,
+});
+```
+
+## installments.orders.getState
+
+```ts
+installments.orders.getState(
+  input: InstallmentsOrderIdentifierInput,
+  options?: RequestOptions,
+): Promise<InstallmentsOrderState>
+```
+
+Calls `POST /api/order/state`. `order_id` is validated as a UUID before Fetch, so
+a malformed identifier fails locally rather than as a `404` that reads like an
+unknown order.
+
+This is the polling counterpart to `result_callback`: Monobank delivers callbacks
+only for **terminal** outcomes, so intermediate states such as
+`IN_PROCESS/WAITING_FOR_CLIENT` are visible only here.
+
+Only `order_id` is required in the response, and `message` is explicitly `null` on
+success rather than absent. `state` and `order_sub_state` are typed as `string`
+because the documented status table is prose rather than a declared enum.
+
+| Property       | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Authentication | `store-id` plus an HMAC body signature in `signature`    |
+| Rate limit     | No endpoint-specific limit is encoded or enforced        |
+| Retries        | Never retried automatically                              |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds |
+| Cancellation   | `options.signal` cancels the active request              |
+| Returns        | `InstallmentsOrderState`                                 |
+
+Rejects with `MonobankApiError` (including `401` for a missing or invalid
+signature and `404` for an unknown order), `MonobankNetworkError`, `MonobankResponseValidationError`, or
+`MonobankValidationError`.
+
+```ts
+const state = await installments.orders.getState({ order_id: orderId });
+
+if (state.order_sub_state === "WAITING_FOR_STORE_CONFIRM") {
+  // The client approved the credit; release the goods and confirm.
+}
+```
+
+## installments.orders.confirm
+
+```ts
+installments.orders.confirm(
+  input: InstallmentsOrderIdentifierInput,
+  options?: RequestOptions,
+): Promise<InstallmentsOrderState>
+```
+
+Calls `POST /api/order/confirm`, activating the installment plan after the goods
+are released. Monobank documents `WAITING_FOR_STORE_CONFIRM` as the state where
+the client has approved the credit and the store may hand the goods over —
+**until this call lands, the plan is not active.**
+
+| Property       | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Authentication | `store-id` plus an HMAC body signature in `signature`    |
+| Rate limit     | No endpoint-specific limit is encoded or enforced        |
+| Retries        | Never retried automatically                              |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds |
+| Cancellation   | `options.signal` cancels the active request              |
+| Returns        | `InstallmentsOrderState`                                 |
+
+Rejects with `MonobankApiError` (including `401` for a missing or invalid
+signature and `404` for an unknown order), `MonobankNetworkError`, `MonobankResponseValidationError`, or
+`MonobankValidationError`.
+
+```ts
+await installments.orders.confirm({ order_id: orderId });
+```
+
+## installments.orders.reject
+
+```ts
+installments.orders.reject(
+  input: InstallmentsOrderIdentifierInput,
+  options?: RequestOptions,
+): Promise<InstallmentsOrderState>
+```
+
+Calls `POST /api/order/reject`, the counterpart to `confirm()` when the store
+cannot fulfil an order that is waiting on it.
+
+| Property       | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Authentication | `store-id` plus an HMAC body signature in `signature`    |
+| Rate limit     | No endpoint-specific limit is encoded or enforced        |
+| Retries        | Never retried automatically                              |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds |
+| Cancellation   | `options.signal` cancels the active request              |
+| Returns        | `InstallmentsOrderState`                                 |
+
+Rejects with `MonobankApiError` (including `401` for a missing or invalid
+signature and `404` for an unknown order), `MonobankNetworkError`, `MonobankResponseValidationError`, or
+`MonobankValidationError`.
+
+```ts
+await installments.orders.reject({ order_id: orderId });
+```
+
+## installments.orders.getData
+
+```ts
+installments.orders.getData(
+  input: InstallmentsOrderIdentifierInput,
+  options?: RequestOptions,
+): Promise<InstallmentsOrderData>
+```
+
+Calls `POST /api/order/data` for the settlement details of one order.
+
+Every field is optional, because Monobank documents this response with a sample
+rather than a schema. Two details are preserved rather than corrected:
+`create_timestamp` and each `reverse_list[].timestamp` are explicitly `null`
+before they are set, and **`maskedCard` is camelCase amid otherwise snake_case
+fields** — that is how Monobank spells it. `total_sum` and each
+`reverse_list[].sum` are hryvnia. `iban` and `maskedCard` describe where money
+moves, so treat both as payment data rather than display strings.
+
+| Property       | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Authentication | `store-id` plus an HMAC body signature in `signature`    |
+| Rate limit     | No endpoint-specific limit is encoded or enforced        |
+| Retries        | Never retried automatically                              |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds |
+| Cancellation   | `options.signal` cancels the active request              |
+| Returns        | `InstallmentsOrderData`                                  |
+
+Rejects with `MonobankApiError` (including `401` for a missing or invalid
+signature and `404` for an unknown order), `MonobankNetworkError`, `MonobankResponseValidationError`, or
+`MonobankValidationError`.
+
+```ts
+const data = await installments.orders.getData({ order_id: orderId });
+```
+
+## installments.orders.getInfo
+
+```ts
+installments.orders.getInfo(
+  input: InstallmentsOrderIdentifierInput,
+  options?: RequestOptions,
+): Promise<InstallmentsOrderData>
+```
+
+Calls `POST /api/order/info`. Monobank documents this endpoint with **the same
+request and response shapes** as `/api/order/data`, so both are exposed rather
+than one being assumed an alias of the other. Prefer `getData()` unless an
+integration was built against `info`.
+
+| Property       | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Authentication | `store-id` plus an HMAC body signature in `signature`    |
+| Rate limit     | No endpoint-specific limit is encoded or enforced        |
+| Retries        | Never retried automatically                              |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds |
+| Cancellation   | `options.signal` cancels the active request              |
+| Returns        | `InstallmentsOrderData`                                  |
+
+Rejects with `MonobankApiError` (including `401` for a missing or invalid
+signature and `404` for an unknown order), `MonobankNetworkError`, `MonobankResponseValidationError`, or
+`MonobankValidationError`.
+
+```ts
+const info = await installments.orders.getInfo({ order_id: orderId });
+```
+
+## installments.orders.checkPaid
+
+```ts
+installments.orders.checkPaid(
+  input: InstallmentsOrderIdentifierInput,
+  options?: RequestOptions,
+): Promise<InstallmentsOrderPayment>
+```
+
+Calls `POST /api/order/check/paid`. `fully_paid` reports whether the client has
+finished paying, and `bank_can_return_money_to_card` whether a refund can go back
+to the card at all rather than being handed over as cash — read it before setting
+`return_money_to_card: true` on `returnGoods()`.
+
+| Property       | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Authentication | `store-id` plus an HMAC body signature in `signature`    |
+| Rate limit     | No endpoint-specific limit is encoded or enforced        |
+| Retries        | Never retried automatically                              |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds |
+| Cancellation   | `options.signal` cancels the active request              |
+| Returns        | `InstallmentsOrderPayment`                               |
+
+Rejects with `MonobankApiError` (including `401` for a missing or invalid
+signature and `404` for an unknown order), `MonobankNetworkError`, `MonobankResponseValidationError`, or
+`MonobankValidationError`.
+
+```ts
+const payment = await installments.orders.checkPaid({ order_id: orderId });
+```
+
+## installments.orders.returnGoods
+
+```ts
+installments.orders.returnGoods(
+  input: ReturnInstallmentsOrderInput,
+  options?: RequestOptions,
+): Promise<InstallmentsOrderReturn>
+```
+
+Calls `POST /api/order/return`. Named for the operation Monobank documents —
+returning goods — rather than the path segment, since `return` is awkward as a
+method name.
+
+| Field                  | Type      | Required | Meaning                                    |
+| ---------------------- | --------- | -------- | ------------------------------------------ |
+| `order_id`             | `string`  | Yes      | UUID of the order                          |
+| `sum`                  | `number`  | Yes      | Hryvnia, minimum `1`                       |
+| `store_return_id`      | `string`  | Yes      | Store's own identifier for this return     |
+| `return_money_to_card` | `boolean` | Yes      | Card refund when `true`, cash when `false` |
+| `additional_params`    | `object`  | No       | `nds`; forwarded whole                     |
+
+**This moves money and is never retried.** A retry can refund twice, and
+`store_return_id` is the store's idempotency handle rather than something the SDK
+can reuse safely on its own.
+
+| Property       | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Authentication | `store-id` plus an HMAC body signature in `signature`    |
+| Rate limit     | No endpoint-specific limit is encoded or enforced        |
+| Retries        | Never retried automatically                              |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds |
+| Cancellation   | `options.signal` cancels the active request              |
+| Returns        | `InstallmentsOrderReturn`                                |
+
+Rejects with `MonobankApiError` (including `401` for a missing or invalid
+signature and `404` for an unknown order), `MonobankNetworkError`, `MonobankResponseValidationError`, or
+`MonobankValidationError`.
+
+```ts
+await installments.orders.returnGoods({
+  order_id: orderId,
+  return_money_to_card: true,
+  store_return_id: "RET-1",
+  sum: 1_250.5,
+});
 ```
 
 ## corporate.access.request

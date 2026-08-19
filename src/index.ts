@@ -281,6 +281,50 @@ export type { MonobankResponseValidationErrorOptions } from "./errors/monobank-r
 export { MonobankResponseValidationError } from "./errors/monobank-response-validation-error.js";
 export type { MonobankValidationErrorOptions } from "./errors/monobank-validation-error.js";
 export { MonobankValidationError } from "./errors/monobank-validation-error.js";
+export type { InstallmentsCallbackEvent } from "./installments/callbacks/installments-callback-event.js";
+export {
+  installmentsCallbackEventSchema,
+  parseInstallmentsCallbackEvent,
+} from "./installments/callbacks/installments-callback-event.js";
+export type { VerifyInstallmentsCallbackSignatureInput } from "./installments/callbacks/verify-installments-callback-signature.js";
+export { verifyInstallmentsCallbackSignature } from "./installments/callbacks/verify-installments-callback-signature.js";
+export { MonobankInstallmentsClient } from "./installments/client/monobank-installments-client.js";
+export type { MonobankInstallmentsClientOptions } from "./installments/client/monobank-installments-client-options.js";
+export type {
+  InstallmentsClientPresence,
+  InstallmentsClientValidation,
+  ValidateInstallmentsClientInput,
+} from "./installments/clients/validate-client/validate-client.js";
+export {
+  installmentsClientPresenceSchema,
+  installmentsClientValidationSchema,
+} from "./installments/clients/validate-client/validate-client.js";
+export type { InstallmentsOrderPayment } from "./installments/orders/check-order-paid/check-order-paid.js";
+export { installmentsOrderPaymentSchema } from "./installments/orders/check-order-paid/check-order-paid.js";
+export type {
+  CreateInstallmentsOrderInput,
+  InstallmentsOrderInvoiceInput,
+  InstallmentsProductInput,
+  InstallmentsProgramInput,
+  NewInstallmentsOrder,
+} from "./installments/orders/create-order/create-order.js";
+export { newInstallmentsOrderSchema } from "./installments/orders/create-order/create-order.js";
+export type {
+  InstallmentsOrderData,
+  InstallmentsOrderReverse,
+} from "./installments/orders/models/installments-order-data.js";
+export {
+  installmentsOrderDataSchema,
+  installmentsOrderReverseSchema,
+} from "./installments/orders/models/installments-order-data.js";
+export type { InstallmentsOrderState } from "./installments/orders/models/installments-order-state.js";
+export { installmentsOrderStateSchema } from "./installments/orders/models/installments-order-state.js";
+export type {
+  InstallmentsOrderReturn,
+  ReturnInstallmentsOrderInput,
+} from "./installments/orders/return-order/return-order.js";
+export { installmentsOrderReturnSchema } from "./installments/orders/return-order/return-order.js";
+export type { InstallmentsOrderIdentifierInput } from "./installments/orders/shared/order-identifier.js";
 export { MonobankPersonalClient } from "./personal/client/monobank-personal-client.js";
 export type { MonobankPersonalClientOptions } from "./personal/client/monobank-personal-client-options.js";
 export type { ClientInfo } from "./personal/client-info/get-info/get-info.js";

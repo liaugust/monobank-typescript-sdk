@@ -7,6 +7,7 @@ import type { ResponseSchema } from "../response-schema.js";
 import type { StoredTransportOptions } from "../transport-options.js";
 import type { CorporateSignatureSpec } from "./corporate-signature.js";
 import { createCorporateSignatureInput } from "./corporate-signature.js";
+import { createInstallmentsSignature } from "./installments-signature.js";
 
 export interface JsonRequest<T> extends EmptyRequest {
   readonly schema: ResponseSchema<T>;
@@ -70,10 +71,27 @@ export async function createRequestInit(
   attemptSignal: AbortSignal,
 ): Promise<RequestInit> {
   const headers = new Headers(request.headers);
-  headers.set("Accept", "application/json");
+
+  if (!headers.has("Accept")) {
+    headers.set("Accept", "application/json");
+  }
+
+  const body =
+    request.body === undefined ? undefined : JSON.stringify(request.body);
+
+  if (body !== undefined) {
+    headers.set("Content-Type", "application/json");
+  }
 
   if (request.auth) {
-    await applyCredentialHeaders(headers, request, options, url, attemptSignal);
+    await applyCredentialHeaders(
+      headers,
+      request,
+      options,
+      url,
+      attemptSignal,
+      body,
+    );
   }
 
   const init: RequestInit = { headers, method, redirect: "error" };
@@ -82,9 +100,8 @@ export async function createRequestInit(
     init.signal = request.signal;
   }
 
-  if (request.body !== undefined) {
-    headers.set("Content-Type", "application/json");
-    init.body = JSON.stringify(request.body);
+  if (body !== undefined) {
+    init.body = body;
   }
 
   return init;
@@ -96,7 +113,23 @@ async function applyCredentialHeaders(
   options: StoredTransportOptions,
   url: URL,
   attemptSignal: AbortSignal,
+  body: string | undefined,
 ): Promise<void> {
+  const installments = options.installments;
+
+  if (installments !== undefined) {
+    headers.set(
+      "store-id",
+      requireSafeHeaderValue(installments.storeId, "storeId", request.endpoint),
+    );
+    headers.set(
+      "signature",
+      await createInstallmentsSignature(installments.storeSecret, body ?? ""),
+    );
+
+    return;
+  }
+
   const corporate = options.corporate;
 
   if (corporate === undefined) {
@@ -306,7 +339,7 @@ function validateEndpointUrl(
   endpoint: string,
   baseUrl: URL,
   auth: boolean,
-  authenticatedPathPrefix: "/api/merchant/" | "/personal/",
+  authenticatedPathPrefix: "/api/" | "/api/merchant/" | "/personal/",
 ): URL {
   const issues: string[] = [];
 
