@@ -2,7 +2,20 @@
 
 All notable changes to this package are documented here.
 
-## Unreleased
+## 0.5.0 - 2026-08-20
+
+Every operation Monobank documents is now implemented: 63 of 63, counted across
+both of its documentation sites. `0.4.0` claimed completeness at "37 of 37" and
+was wrong twice over — coverage had been measured against the Redoc specs at
+`api.monobank.ua/docs/` alone, while the newer <https://monobank.ua/api-docs>
+documents 27 further operations, and the implemented total was 36 rather than 37.
+This release adds those 27 and corrects the claim wherever it was published.
+
+Покупка Частинами arrives as a fifth credential family, and it follows none of
+the conventions the other four share: its own origin, a `store-id` header with an
+HMAC-SHA256 body signature, snake_case fields, and sums in hryvnia rather than
+minor currency units. Those differences are upstream, and the package preserves
+them rather than papering over them.
 
 ### Added
 
