@@ -1,13 +1,16 @@
 # @liaugust/monobank-sdk
 
-> Unofficial, strict, runtime-validated TypeScript SDK covering every documented
-> Monobank endpoint across the Public, Personal, Acquiring, and Corporate APIs. Supports Node.js 22.12.0+, ESM,
-> CommonJS, and modern browser bundlers. Zod Mini validates every successful
-> JSON response.
+> Unofficial, strict, runtime-validated TypeScript SDK for the Monobank API,
+> spanning the Public, Personal, Acquiring, and Corporate credential families.
+> It implements 36 of the 63 documented operations, not the whole API. Supports
+> Node.js 22.12.0+, ESM, CommonJS, and modern browser bundlers. Zod Mini
+> validates every successful JSON response.
 
 Package: https://www.npmjs.com/package/@liaugust/monobank-sdk
 Repository: https://github.com/liaugust/monobank-typescript-sdk
 API reference: https://github.com/liaugust/monobank-typescript-sdk/blob/main/docs/API.md
+Upstream docs: https://monobank.ua/api-docs and https://api.monobank.ua/docs/
+Uncovered endpoints: https://github.com/liaugust/monobank-typescript-sdk/issues/59
 License: MIT
 
 ## Use the package

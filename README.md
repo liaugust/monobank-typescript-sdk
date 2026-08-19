@@ -7,10 +7,10 @@
 
 A strict, runtime-validated TypeScript SDK for the Monobank API.
 
-It covers every operation Monobank documents — Public, Personal, Acquiring, and
-Corporate — and gives applications typed responses without trusting the wire:
-every successful JSON payload crosses a Zod validation boundary before it reaches
-your code.
+It spans four credential families — Public, Personal, Acquiring, and Corporate —
+and gives applications typed responses without trusting the wire: every
+successful JSON payload crosses a Zod validation boundary before it reaches your
+code. Coverage of the Monobank API is partial; see [Coverage](#coverage).
 
 > [!IMPORTANT]
 > This is an unofficial community package. It is not developed, sponsored, or
@@ -19,6 +19,7 @@ your code.
 ## Contents
 
 - [Why this SDK?](#why-this-sdk)
+- [Coverage](#coverage)
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Quick start](#quick-start)
@@ -44,7 +45,7 @@ your code.
 
 ## Why this SDK?
 
-- Complete coverage of the documented Monobank API across four credential families
+- One package for four credential families, each with its own auth model
 - Runtime validation for successful API responses and webhook payloads
 - Strict TypeScript types with preserved JSDoc in published declarations
 - ESM, CommonJS, and modern browser-bundler support
@@ -53,6 +54,19 @@ your code.
 - Explicit cancellation, timeouts, and bounded retries for safe GET requests
 - Credential-safe errors that do not retain tokens or raw Personal payloads
 - Forward-compatible response objects that preserve additive upstream fields
+
+## Coverage
+
+36 of the 63 operations Monobank documents are implemented. Monobank publishes
+two documentation sites and neither is a superset of the other:
+
+- <https://monobank.ua/api-docs> — current; 46 operations, 19 of them implemented
+- <https://api.monobank.ua/docs/> — older Redoc specs; 17 further operations
+  appear only here, all implemented, and cover all of Personal and Corporate
+
+Not covered yet: Acquiring recurring payments, monopay keys, T2P terminals,
+split receivers, POS cancellation, and all of Покупка Частинами. Every gap is
+tracked under [issue #59](https://github.com/liaugust/monobank-typescript-sdk/issues/59).
 
 ## Requirements
 
