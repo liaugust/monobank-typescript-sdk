@@ -25,8 +25,8 @@ both before concluding that an endpoint exists or does not:
   Corporate, plus `/bank/sync`, `/api/merchant/employee/list`, and
   `/api/merchant/invoice/sync-payment`.
 
-49 of the 63 documented operations are implemented. The 14 that remain are all
-of Покупка Частинами, tracked under issue #59.
+All 63 documented operations are implemented, enumerated under issue #59. A call
+Monobank documents that is missing here is a bug, not an intentional omission.
 
 ## Rules for Consumer Code
 
@@ -101,9 +101,9 @@ of Покупка Частинами, tracked under issue #59.
   infrastructure and refresh it only after verification with the cached key
   fails; the SDK intentionally does not own cache policy.
 - Call only methods listed in `docs/API.md`, and never invent one. Absence from
-  that file says nothing about upstream: 14 documented operations are still
-  unimplemented, so check `Documentation Sources` before telling a caller that
-  Monobank has no such endpoint.
+  that file is now expected to mean the endpoint does not exist, but confirm it
+  against `Documentation Sources` before saying so: the sites change, and that
+  assumption was wrong for 27 endpoints as recently as this milestone.
 - Treat a Corporate `sign` result as credential material; the SDK sends it as
   `X-Sign` and never logs it. Return base64 of the raw 64-byte `r || s` pair, not
   DER. Monobank documents neither the digest nor whether the signed `URL` includes
@@ -122,6 +122,14 @@ of Покупка Частинами, tracked under issue #59.
   `acquiring.statements.get()` takes. `dateFrom` is required upstream, and a
   reversed window is rejected before Fetch because Monobank would answer it with
   an empty result rather than an error.
+- Treat `installments.letters.*` payloads as the most sensitive data in the
+  package. They carry a full name, a tax identifier, and up to four government
+  identity documents. Read only the fields the letter requires, never log them, and
+  never persist them outside secured storage.
+- Expect `installments.letters.download()` to return bytes rather than a validated
+  object. It is the only non-JSON success in the package; check its `contentType`
+  instead of assuming a PDF, and remember an empty body is already rejected as a
+  broken response.
 - Never send a monopay private key anywhere. `acquiring.monopay.importKey()`
   takes the Base64 public half only, and deleting a key invalidates every widget
   signature made with it.

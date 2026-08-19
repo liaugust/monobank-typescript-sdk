@@ -6,6 +6,23 @@ All notable changes to this package are documented here.
 
 ### Added
 
+- `installments.letters` for guarantee letters: `getData(input)`,
+  `getDataV2(input)`, and `download(input)`. The letter payload carries a name, a
+  tax identifier, and up to four government identity documents, which the docs and
+  JSDoc mark as the most sensitive data in the package. `download()` returns the
+  letter as bytes rather than a validated object, since Monobank sends a document
+  rather than JSON. Exports `InstallmentsGuaranteeLetterData`,
+  `InstallmentsLetterCustomer`, `InstallmentsIdentityDocument`,
+  `InstallmentsLetterInput`, `MonobankBinaryPayload`, and the schemas.
+- `installments.reports.getStoreReport(input)` for daily settlement. Sums are
+  hryvnia and `operation_timestamp` is `null` until the transfer is made, so an
+  order can appear before its money moves. Exports `InstallmentsStoreReport`,
+  `InstallmentsStoreReportOrder`, `GetInstallmentsStoreReportInput`, and their
+  schemas.
+- The transport can now read a successful non-JSON body. `postBinary()` returns raw
+  bytes and the declared content type, and rejects an empty success as a broken
+  response, which is the check that replaces schema validation for a body no schema
+  can describe.
 - `installments.orders` covering the eight documented order endpoints:
   `create(input)`, `getState(input)`, `confirm(input)`, `reject(input)`,
   `getData(input)`, `getInfo(input)`, `checkPaid(input)`, and

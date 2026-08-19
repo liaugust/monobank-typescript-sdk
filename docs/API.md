@@ -66,6 +66,10 @@ supported contract.
 - [installments.orders.getInfo](#installmentsordersgetinfo)
 - [installments.orders.checkPaid](#installmentsorderscheckpaid)
 - [installments.orders.returnGoods](#installmentsordersreturngoods)
+- [installments.letters.getData](#installmentslettersgetdata)
+- [installments.letters.getDataV2](#installmentslettersgetdatav2)
+- [installments.letters.download](#installmentslettersdownload)
+- [installments.reports.getStoreReport](#installmentsreportsgetstorereport)
 - [corporate.access.request](#corporateaccessrequest)
 - [corporate.access.check](#corporateaccesscheck)
 - [corporate.clients.getInfo](#corporateclientsgetinfo)
@@ -2062,6 +2066,166 @@ await installments.orders.returnGoods({
   store_return_id: "RET-1",
   sum: 1_250.5,
 });
+```
+
+## installments.letters.getData
+
+```ts
+installments.letters.getData(
+  input: InstallmentsLetterInput,
+  options?: RequestOptions,
+): Promise<InstallmentsGuaranteeLetterData>
+```
+
+Calls `POST /api/order/data/for/guarantee/letter` for the source data behind a
+guarantee letter.
+
+**This is the most sensitive payload in the package.** `expansion.customer`
+carries a full name, `inn` (the tax identifier), and up to four government
+identity documents under `document`: `passport`, `id_card`, `residence_permit`,
+and `international_passport`. Read only the fields the letter requires, keep them
+out of logs, and hold them under your own retention rules.
+
+Every field is optional, because Monobank documents this response with a sample
+rather than a schema. The four document kinds share overlapping fields — `series`
+is absent from an ID card, `valid_until` and `registry_number` from a passport —
+so one loose document schema covers all four. Amounts are hryvnia, and
+`header.answer_datetime` is explicitly `null` until set. `expansion.sign` and
+`expansion.stamp` are the bank's signature and stamp values for the letter.
+
+`invoice` on the request is forwarded whole: Monobank documents `number` and
+`date` by example only, so an undocumented key reaches the API rather than being
+dropped.
+
+| Property       | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Authentication | `store-id` plus an HMAC body signature in `signature`    |
+| Rate limit     | No endpoint-specific limit is encoded or enforced        |
+| Retries        | Never retried automatically                              |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds |
+| Cancellation   | `options.signal` cancels the active request              |
+| Returns        | `InstallmentsGuaranteeLetterData`                        |
+
+Rejects with `MonobankApiError` (including `401` for a missing or invalid
+signature), `MonobankNetworkError`, `MonobankResponseValidationError`, or
+`MonobankValidationError`.
+
+```ts
+const data = await installments.letters.getData({ order_id: orderId });
+
+console.log(data.expansion?.bank?.agreement);
+```
+
+## installments.letters.getDataV2
+
+```ts
+installments.letters.getDataV2(
+  input: InstallmentsLetterInput,
+  options?: RequestOptions,
+): Promise<InstallmentsGuaranteeLetterData>
+```
+
+Calls `POST /api/v2/order/data/for/guarantee/letter`. Monobank documents the same
+structure as `getData()`, with `contract_number` and `contract_date` added to the
+header, so both share one schema rather than two that would drift apart. The same
+identity data and the same handling rules apply.
+
+| Property       | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Authentication | `store-id` plus an HMAC body signature in `signature`    |
+| Rate limit     | No endpoint-specific limit is encoded or enforced        |
+| Retries        | Never retried automatically                              |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds |
+| Cancellation   | `options.signal` cancels the active request              |
+| Returns        | `InstallmentsGuaranteeLetterData`                        |
+
+```ts
+const data = await installments.letters.getDataV2({ order_id: orderId });
+```
+
+## installments.letters.download
+
+```ts
+installments.letters.download(
+  input: InstallmentsLetterInput,
+  options?: RequestOptions,
+): Promise<MonobankBinaryPayload>
+```
+
+Calls `POST /api/order/guarantee/letter`, returning the letter as a document.
+
+**This is the only method in the package whose success is not JSON.** Every other
+successful payload crosses a Zod boundary; a document cannot, so this returns raw
+`bytes` and the `contentType` Monobank declared, and nothing decodes the body.
+
+The check that replaces schema validation is emptiness: a zero-length success is a
+broken response rather than an empty document, so it rejects with
+`MonobankResponseValidationError` instead of handing over an empty file. The
+request sends `Accept: application/pdf`, but the returned `contentType` is
+whatever Monobank actually declared — check it rather than assuming a PDF.
+
+The document contains the customer's identity data, so store it under the same
+rules as `getData()`.
+
+| Property       | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Authentication | `store-id` plus an HMAC body signature in `signature`    |
+| Rate limit     | No endpoint-specific limit is encoded or enforced        |
+| Retries        | Never retried automatically                              |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds |
+| Cancellation   | `options.signal` cancels the active request              |
+| Returns        | `MonobankBinaryPayload`                                  |
+
+Rejects with `MonobankApiError` (including `401` for a missing or invalid
+signature), `MonobankNetworkError`, `MonobankResponseValidationError` when the body
+is empty, or `MonobankValidationError`.
+
+```ts
+const letter = await installments.letters.download({ order_id: orderId });
+
+if (letter.contentType?.startsWith("application/pdf") === true) {
+  await writeFile("guarantee-letter.pdf", letter.bytes);
+}
+```
+
+## installments.reports.getStoreReport
+
+```ts
+installments.reports.getStoreReport(
+  input: GetInstallmentsStoreReportInput,
+  options?: RequestOptions,
+): Promise<InstallmentsStoreReport>
+```
+
+Calls `POST /api/store/report` for the store's settled orders on one day. `date`
+is a plain `YYYY-MM-DD` day and is rejected before Fetch in any other form,
+because Monobank documents no time component and a timestamp would silently select
+nothing.
+
+Each line reports `transferred_sum` against `total_sum`, with `commission` and
+`commission_percent` explaining the difference, and `pay_parts` giving the number
+of instalments. Those sums are hryvnia rather than minor units.
+`operation_timestamp` is explicitly `null` until the transfer is made, so **an
+order can appear in the report before its money moves** — treat a `null` there as
+pending rather than as a missing field.
+
+| Property       | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Authentication | `store-id` plus an HMAC body signature in `signature`    |
+| Rate limit     | No endpoint-specific limit is encoded or enforced        |
+| Retries        | Never retried automatically                              |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds |
+| Cancellation   | `options.signal` cancels the active request              |
+| Returns        | `InstallmentsStoreReport`                                |
+
+```ts
+const report = await installments.reports.getStoreReport({
+  date: "2024-01-15",
+});
+
+for (const order of report.orders) {
+  console.log(order.order_id, order.transferred_sum, order.commission);
+}
 ```
 
 ## corporate.access.request
