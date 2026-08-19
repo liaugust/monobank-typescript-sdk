@@ -16,8 +16,8 @@ Monobank publishes two sites and neither is a superset of the other. Consult
 both before concluding that an endpoint exists or does not:
 
 - <https://monobank.ua/api-docs> — current, and the only source for Acquiring
-  recurring payments, monopay keys, T2P terminals, split receivers, and Покупка
-  Частинами. Its section indexes list paths without fields, so open each
+  recurring payments, monopay keys, T2P terminals, split receivers, POS refunds,
+  and Покупка Частинами. Its section indexes list paths without fields, so open each
   endpoint page; reading an index alone is how four `invoice/create` fields were
   missed.
 - <https://api.monobank.ua/docs/> — older Redoc specs (`index`, `acquiring`,
@@ -25,8 +25,8 @@ both before concluding that an endpoint exists or does not:
   Corporate, plus `/bank/sync`, `/api/merchant/employee/list`, and
   `/api/merchant/invoice/sync-payment`.
 
-42 of the 63 documented operations are implemented. Gaps are tracked under
-issue #59.
+49 of the 63 documented operations are implemented. The 14 that remain are all
+of Покупка Частинами, tracked under issue #59.
 
 ## Rules for Consumer Code
 
@@ -75,7 +75,7 @@ issue #59.
   infrastructure and refresh it only after verification with the cached key
   fails; the SDK intentionally does not own cache policy.
 - Call only methods listed in `docs/API.md`, and never invent one. Absence from
-  that file says nothing about upstream: 21 documented operations are still
+  that file says nothing about upstream: 14 documented operations are still
   unimplemented, so check `Documentation Sources` before telling a caller that
   Monobank has no such endpoint.
 - Treat a Corporate `sign` result as credential material; the SDK sends it as
@@ -96,6 +96,18 @@ issue #59.
   `acquiring.statements.get()` takes. `dateFrom` is required upstream, and a
   reversed window is rejected before Fetch because Monobank would answer it with
   an empty result rather than an error.
+- Never send a monopay private key anywhere. `acquiring.monopay.importKey()`
+  takes the Base64 public half only, and deleting a key invalidates every widget
+  signature made with it.
+- Read `acquiring.t2p.getPaymentStatus()` fields as documented rather than as the
+  rest of the API spells them: `ccy` is alphabetic such as `UAH`, `dataTime` is
+  space-separated rather than RFC-3339, `errorMessage` is explicitly `null` on
+  success, and `maskedPan` holds the card number while `cardMask` holds the
+  scheme. Do not normalize any of them.
+- Treat `acquiring.split.listReceivers()` results as counterparty data. Each
+  entry's `edrpou` identifies a real business.
+- Never retry `acquiring.pos.cancelTransaction()`. It moves money, and its success
+  response means the refund was initiated rather than settled.
 - Treat `acquiring.invoices.payDirect()` and `acquiring.invoices.syncPayment()`
   as PCI DSS surfaces. Never log, serialize, persist, or echo raw card details
   or crypto-container values, and prefer a hosted invoice or a stored card

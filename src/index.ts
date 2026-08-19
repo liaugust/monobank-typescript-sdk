@@ -54,6 +54,7 @@ export {
   DiscountMode,
   DiscountType,
 } from "./acquiring/invoices/models/invoice-discount.js";
+export { InvoiceDisplayType } from "./acquiring/invoices/models/invoice-display-type.js";
 export {
   InvoicePaymentMethod,
   InvoicePaymentSystem,
@@ -78,6 +79,25 @@ export type {
 export { SyncPaymentPanType } from "./acquiring/invoices/sync-payment/sync-payment.js";
 export type { MerchantDetails } from "./acquiring/merchant/get-merchant-details/get-merchant-details.js";
 export { merchantDetailsSchema } from "./acquiring/merchant/get-merchant-details/get-merchant-details.js";
+export type { DeleteMonopaySigningKeyInput } from "./acquiring/monopay/delete-monopay-key/delete-monopay-key.js";
+export type {
+  ImportedMonopaySigningKey,
+  ImportMonopaySigningKeyInput,
+} from "./acquiring/monopay/import-monopay-key/import-monopay-key.js";
+export { importedMonopaySigningKeySchema } from "./acquiring/monopay/import-monopay-key/import-monopay-key.js";
+export type {
+  MonopaySigningKey,
+  MonopaySigningKeyList,
+} from "./acquiring/monopay/models/monopay-signing-key.js";
+export {
+  monopaySigningKeyListSchema,
+  monopaySigningKeySchema,
+} from "./acquiring/monopay/models/monopay-signing-key.js";
+export type {
+  AcquiringPosCancellation,
+  CancelAcquiringPosTransactionInput,
+} from "./acquiring/pos/cancel-pos-transaction/cancel-pos-transaction.js";
+export { acquiringPosCancellationSchema } from "./acquiring/pos/cancel-pos-transaction/cancel-pos-transaction.js";
 export type { GetAcquiringQrDetailsInput } from "./acquiring/qr/get-qr-details/get-qr-details.js";
 export type {
   AcquiringQrCashier,
@@ -96,6 +116,14 @@ export {
   acquiringCardPaymentSchema,
   AcquiringCardPaymentStatus,
 } from "./acquiring/shared/models/card-payment.js";
+export type {
+  AcquiringSplitReceiver,
+  AcquiringSplitReceiverList,
+} from "./acquiring/split/models/split-receiver.js";
+export {
+  acquiringSplitReceiverListSchema,
+  acquiringSplitReceiverSchema,
+} from "./acquiring/split/models/split-receiver.js";
 export type {
   AcquiringStatementUnixTimeInput,
   GetAcquiringStatementsInput,
@@ -164,6 +192,17 @@ export type {
   AcquiringSubscriptionDateInput,
   AcquiringSubscriptionPageInput,
 } from "./acquiring/subscriptions/shared/subscription-page-query.js";
+export type { GetAcquiringT2pPaymentStatusInput } from "./acquiring/t2p/get-t2p-payment-status/get-t2p-payment-status.js";
+export type { AcquiringT2pPayment } from "./acquiring/t2p/models/t2p-payment.js";
+export { acquiringT2pPaymentSchema } from "./acquiring/t2p/models/t2p-payment.js";
+export type {
+  AcquiringT2pTerminal,
+  AcquiringT2pTerminalList,
+} from "./acquiring/t2p/models/t2p-terminal.js";
+export {
+  acquiringT2pTerminalListSchema,
+  acquiringT2pTerminalSchema,
+} from "./acquiring/t2p/models/t2p-terminal.js";
 export type { DeleteAcquiringWalletCardInput } from "./acquiring/wallet/delete-wallet-card/delete-wallet-card.js";
 export type { ListAcquiringWalletCardsInput } from "./acquiring/wallet/list-wallet-cards/list-wallet-cards.js";
 export type {
@@ -287,6 +326,7 @@ export {
   currencyRatesSchema,
 } from "./public/currency/get-rates/get-rates.js";
 export type { RequestOptions } from "./shared/request-options.js";
+export type { Rfc3339TimeInput } from "./shared/rfc3339-time.js";
 export type { StatementWindowInput } from "./shared/statement-endpoint.js";
 export type {
   CorporateSignatureInput,

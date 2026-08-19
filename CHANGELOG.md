@@ -6,6 +6,29 @@ All notable changes to this package are documented here.
 
 ### Added
 
+- `acquiring.monopay` for the monopay button's signing keys: `listKeys()`,
+  `importKey(input)`, and `deleteKey(input)`. Entries arrive under `result`
+  rather than `list`, as Monobank documents. `importKey` takes the Base64 public
+  half only; deleting a key invalidates every widget signature made with it.
+  Exports `MonopaySigningKey`, `MonopaySigningKeyList`,
+  `ImportedMonopaySigningKey`, their schemas, and the input types.
+- `acquiring.t2p` for tap-to-phone: `listTerminals()` and
+  `getPaymentStatus(input)`. Monobank keeps these payments for 90 days and
+  answers 404 afterwards. Three response fields diverge from the rest of the API
+  and are preserved as documented rather than normalized: `ccy` is alphabetic
+  such as `UAH`, `dataTime` is space-separated rather than RFC-3339, and
+  `errorMessage` is explicitly `null` on success. Exports `AcquiringT2pPayment`,
+  `AcquiringT2pTerminal`, `AcquiringT2pTerminalList`, and their schemas.
+- `acquiring.split.listReceivers()` for split-payment receivers. A returned
+  `splitReceiverId` is what `merchantPaymInfo.basketOrder[].splitReceiverId`
+  expects on `acquiring.invoices.create()`. Exports `AcquiringSplitReceiver`,
+  `AcquiringSplitReceiverList`, and their schemas.
+- `acquiring.pos.cancelTransaction(input)` refunding a POS transaction by `rrn`.
+  A successful response acknowledges that the refund was initiated rather than
+  settled, and the request is never retried because retrying could refund twice.
+  Exports `AcquiringPosCancellation` and its schema.
+- `Rfc3339TimeInput` for the timestamp inputs Monobank documents as RFC-3339,
+  now shared by the subscription windows and the monopay key expiry.
 - `acquiring.subscriptions` covering the six documented recurring-payment
   endpoints: `create(input)`, `getStatus(input)`, `list(input)`,
   `getPayments(input)`, `edit(input)`, and `remove(input)`. `create` returns the
@@ -27,6 +50,18 @@ All notable changes to this package are documented here.
 
 ### Fixed
 
+- `acquiring.invoices.create()` no longer discards documented request fields.
+  `successUrl`, `failUrl`, `displayType`, and `withAppUrl` were absent from the
+  request schema, and because request schemas are built with `z.object`, which
+  strips unknown keys, a caller who set one got no error and no effect. The same
+  silent drop applied to `merchantPaymInfo.metadata` and
+  `merchantPaymInfo.basketOrder[].splitReceiverId`, both found while auditing the
+  endpoint. All six are now accepted, validated, and sent, and `NewInvoice`
+  carries the documented `appUrl` deeplink returned when `withAppUrl` is sent.
+- `InvoicePaymentType` gained the documented `Verification` value, and a
+  verification invoice is rejected before Fetch unless `amount` is `0` and
+  `saveCardData.saveCard` is `true`, which Monobank documents as mandatory for
+  it. Exports `InvoiceDisplayType` for the `displayType` values.
 - Corrected the coverage claim. `0.4.0` announced "every operation Monobank
   documents: 37 of 37"; both numbers were wrong. Coverage was measured against
   the Redoc specs at `api.monobank.ua/docs/` alone, while the newer

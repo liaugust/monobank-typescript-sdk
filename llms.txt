@@ -2,7 +2,7 @@
 
 > Unofficial, strict, runtime-validated TypeScript SDK for the Monobank API,
 > spanning the Public, Personal, Acquiring, and Corporate credential families.
-> It implements 42 of the 63 documented operations, not the whole API. Supports
+> It implements 49 of the 63 documented operations, not the whole API. Supports
 > Node.js 22.12.0+, ESM, CommonJS, and modern browser bundlers. Zod Mini
 > validates every successful JSON response.
 
@@ -190,6 +190,36 @@ fails with reason `timeout`.
 - `acquiring.subscriptions.remove(input, options?)`: authenticated
   `/api/merchant/subscription/remove`; POSTs `{ subscriptionId }` to deactivate
   without refunding; returns `Promise<void>`; mutating, never retried.
+- `acquiring.monopay.listKeys(options?)`: authenticated
+  `/api/merchant/monopay/pubkey-list`; returns `Promise<MonopaySigningKeyList>`
+  whose entries arrive under `result` rather than `list`; safe GET eligible for
+  configured retries.
+- `acquiring.monopay.importKey(input, options?)`: authenticated
+  `/api/merchant/monopay/pubkey-import`; POSTs the Base64 **public** half as
+  `keyValue` with optional `keyName` and `expiresAt`; returns
+  `Promise<ImportedMonopaySigningKey>` whose `result.keyId` names the key;
+  mutating, never retried. The private half must never enter the SDK.
+- `acquiring.monopay.deleteKey(input, options?)`: authenticated
+  `/api/merchant/monopay/pubkey-delete`; POSTs `{ keyId }`; returns
+  `Promise<void>`; invalidates every widget signature made with that key;
+  mutating, never retried.
+- `acquiring.t2p.listTerminals(options?)`: authenticated
+  `/api/merchant/t2p/terminal/list`; returns
+  `Promise<AcquiringT2pTerminalList>`; safe GET eligible for configured retries.
+- `acquiring.t2p.getPaymentStatus(input, options?)`: authenticated
+  `/api/merchant/t2p/terminal/payment/external/status`; takes
+  `externalPaymentId`; returns `Promise<AcquiringT2pPayment>`; Monobank keeps
+  these payments 90 days and answers 404 afterwards; safe GET eligible for
+  configured retries.
+- `acquiring.split.listReceivers(options?)`: authenticated
+  `/api/merchant/split-receiver/list`; returns
+  `Promise<AcquiringSplitReceiverList>` whose `splitReceiverId` values feed
+  `merchantPaymInfo.basketOrder[].splitReceiverId`; each entry's `edrpou`
+  identifies a real business; safe GET eligible for configured retries.
+- `acquiring.pos.cancelTransaction(input, options?)`: authenticated
+  `/api/merchant/pos-transaction-cancel`; POSTs `{ rrn, amount }` to refund a POS
+  transaction; returns `Promise<AcquiringPosCancellation>` acknowledging the
+  refund was initiated rather than settled; moves money, never retried.
 - `acquiring.webhooks.getPublicKey(options?)`: authenticated
   `/api/merchant/pubkey`; returns `Promise<AcquiringWebhookPublicKey>`; caller
   owns caching and refresh after signature verification fails.
@@ -198,6 +228,14 @@ fails with reason `timeout`.
   `Promise<boolean>` and requires no additional runtime dependency.
 - `acquiring.invoices.create(input, options?)`: creates a hosted Acquiring
   invoice; returns `Promise<NewInvoice>`; never retried automatically.
+  `redirectUrl` covers both outcomes, while `successUrl` and `failUrl` split
+  them and are disabled by default until Monobank support enables them.
+  `displayType: "iframe"` returns a widget link; `withAppUrl: true` adds
+  `appUrl`, a `monobank://` deeplink, to the result and is unsupported for QR
+  and verification payments. `paymentType: "verification"` requires `amount: 0`
+  and `saveCardData.saveCard: true` and is rejected locally without them.
+  `merchantPaymInfo.metadata` and `merchantPaymInfo.basketOrder[].splitReceiverId`
+  are forwarded as given.
 - `acquiring.invoices.getStatus(input, options?)`: returns `Promise<Invoice>`
   for an `invoiceId`; safe GET eligible for configured retries.
 - `acquiring.invoices.cancel(input, options?)`: full or partial payment
@@ -281,6 +319,10 @@ See `src/index.ts` for the complete authoritative export list, including types.
   request inputs use Unix seconds while response `date` fields use RFC-3339.
 - Acquiring subscription windows are RFC-3339 in both directions; a `Date` is
   accepted and serialized with `toISOString()`.
+- Tap-to-phone payments break these conventions and are preserved as documented:
+  `ccy` is alphabetic such as `UAH`, `dataTime` is space-separated rather than
+  RFC-3339, `errorMessage` is explicitly `null` on success, and `maskedPan` holds
+  the card number while `cardMask` holds the scheme.
 - `BankSync.serverTimeMsec` is Unix milliseconds.
 - Response schemas preserve unknown additive fields.
 - Upstream field spelling is preserved, including `webHookUrl` on invoices and
@@ -303,14 +345,16 @@ See `src/index.ts` for the complete authoritative export list, including types.
   `acquiring.invoices.finalize()`, `acquiring.invoices.payDirect()`,
   `acquiring.invoices.syncPayment()`, `acquiring.wallet.pay()`,
   `acquiring.wallet.deleteCard()`, `acquiring.qr.resetAmount()`,
-  `acquiring.subscriptions.create()`, `acquiring.subscriptions.edit()`, or
-  `acquiring.subscriptions.remove()` automatically.
+  `acquiring.subscriptions.create()`, `acquiring.subscriptions.edit()`,
+  `acquiring.subscriptions.remove()`, `acquiring.monopay.importKey()`,
+  `acquiring.monopay.deleteKey()`, or `acquiring.pos.cancelTransaction()`
+  automatically.
 - Never log, persist, or echo raw card details or Apple Pay and Google Pay
   crypto-container values. Prefer `acquiring.invoices.create()` or
   `acquiring.wallet.pay()` over `acquiring.invoices.payDirect()`.
 - Do not invent Acquiring APIs beyond the implemented merchant-details,
-  submerchant-list, QR, subscription, statement, webhook-trust, and
-  invoice-lifecycle
+  submerchant-list, QR, subscription, monopay-key, tap-to-phone, split-receiver,
+  POS-refund, statement, webhook-trust, and invoice-lifecycle
   methods.
 - Prefer exported SDK types, schemas, value objects, and error classes over
   duplicate local definitions.
