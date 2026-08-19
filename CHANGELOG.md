@@ -6,6 +6,17 @@ All notable changes to this package are documented here.
 
 ### Added
 
+- `installments.orders` covering the eight documented order endpoints:
+  `create(input)`, `getState(input)`, `confirm(input)`, `reject(input)`,
+  `getData(input)`, `getInfo(input)`, `checkPaid(input)`, and
+  `returnGoods(input)`. Sums are hryvnia rather than minor units, order
+  identifiers are validated as UUIDs before Fetch, and the nested request objects
+  are forwarded whole because Monobank documents their fields only by sample.
+  `getData` and `getInfo` are both exposed because Monobank documents them with
+  identical shapes rather than as aliases. Exports `InstallmentsOrderState`,
+  `InstallmentsOrderData`, `InstallmentsOrderReverse`, `InstallmentsOrderPayment`,
+  `InstallmentsOrderReturn`, `NewInstallmentsOrder`, the input types, and the
+  matching schemas.
 - `MonobankInstallmentsClient` for Покупка Частинами, the fifth credential family.
   It authenticates with a `store-id` header and a `signature` header holding
   `Base64(HMAC-SHA256(request_body, store_secret))`, which the SDK computes with

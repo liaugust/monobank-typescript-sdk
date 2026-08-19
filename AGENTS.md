@@ -62,6 +62,16 @@ of Покупка Частинами, tracked under issue #59.
   `verifyInstallmentsCallbackSignature()` over the exact raw request bytes before
   parsing it. Re-serializing the parsed body can reorder keys and invalidate the
   signature. `parseInstallmentsCallbackEvent()` is shape validation only.
+- Release Покупка Частинами goods only on `WAITING_FOR_STORE_CONFIRM`, then call
+  `orders.confirm()` to activate the plan, or `orders.reject()` when the order
+  cannot be fulfilled. The plan is not active until one of those lands.
+- Send Покупка Частинами sums as hryvnia. `total_sum: 2499.99` is correct;
+  multiplying by 100 as the Acquiring family requires would charge a hundred times
+  the price.
+- Read `orders.checkPaid().bank_can_return_money_to_card` before setting
+  `return_money_to_card: true` on `orders.returnGoods()`. Never retry a return: it
+  moves money, and `store_return_id` is the store's idempotency handle, not the
+  SDK's.
 - Do not expect a Покупка Частинами callback for an intermediate state. Monobank
   sends one only for terminal outcomes, so poll `orders.getState()` for the rest.
 - Never hardcode, log, serialize, or commit real tokens or API payloads.

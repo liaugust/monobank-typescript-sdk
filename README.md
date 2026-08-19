@@ -794,6 +794,62 @@ Prefer `validateV2()` over `validate()`. Both answer whether a phone number
 belongs to a Monobank client, but `validate()` also returns the person's name and
 tax identifier, which most callers do not need and should not store.
 
+#### Orders
+
+The order lifecycle is a state machine, and one state matters more than the rest:
+
+```ts
+const order = await installments.orders.create({
+  available_programs: [
+    { available_parts_count: [3, 6, 10], type: "payment_installments" },
+  ],
+  client_phone: "+380501234567",
+  invoice: { date: "2024-01-15", number: "INV-1", source: "INTERNET" },
+  products: [{ count: 1, name: "TV", sum: 2_499.99 }],
+  result_callback: "https://shop.example.com/api/order/callback",
+  store_order_id: "ORD-1",
+  total_sum: 2_499.99,
+});
+
+const state = await installments.orders.getState({ order_id: order.order_id });
+
+if (state.order_sub_state === "WAITING_FOR_STORE_CONFIRM") {
+  // The client approved the credit. Release the goods, then activate the plan:
+  await installments.orders.confirm({ order_id: order.order_id });
+}
+```
+
+`WAITING_FOR_STORE_CONFIRM` means the client approved the credit, so the goods can
+be released. **The plan is not active until `confirm()` lands** — call `reject()`
+instead if the order cannot be fulfilled.
+
+Sums here are **hryvnia, not minor units**: `total_sum: 2_499.99` is sent as
+written. Multiplying by 100 the way the Acquiring family requires would ask the
+client for a hundred times the price.
+
+`getData()` and `getInfo()` both read settlement details, and Monobank documents
+them with identical shapes, so both are exposed rather than one being assumed an
+alias. Returns go through `returnGoods()`, and `checkPaid()` reports whether the
+bank can refund to the card at all before you ask it to:
+
+```ts
+const payment = await installments.orders.checkPaid({
+  order_id: order.order_id,
+});
+
+await installments.orders.returnGoods({
+  order_id: order.order_id,
+  return_money_to_card: payment.bank_can_return_money_to_card === true,
+  store_return_id: "RET-1",
+  sum: 1_250.5,
+});
+```
+
+Nested request objects — `invoice`, `additional_params`,
+`financial_company_merchant_info`, and each product — are **forwarded whole**.
+Monobank documents their fields only through samples, so an undocumented key you
+send reaches the API rather than being silently dropped.
+
 #### Verifying callbacks
 
 Monobank signs callbacks with the same scheme it requires on requests, so verify
