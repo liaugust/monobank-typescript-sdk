@@ -7,10 +7,10 @@
 
 A strict, runtime-validated TypeScript SDK for the Monobank API.
 
-It gives applications typed Public, Personal, Acquiring, and Corporate API
-responses
-without trusting the wire: every successful JSON payload crosses a Zod
-validation boundary before it reaches your code.
+It covers every operation Monobank documents — Public, Personal, Acquiring, and
+Corporate — and gives applications typed responses without trusting the wire:
+every successful JSON payload crosses a Zod validation boundary before it reaches
+your code.
 
 > [!IMPORTANT]
 > This is an unofficial community package. It is not developed, sponsored, or
@@ -44,6 +44,7 @@ validation boundary before it reaches your code.
 
 ## Why this SDK?
 
+- Complete coverage of the documented Monobank API across four credential families
 - Runtime validation for successful API responses and webhook payloads
 - Strict TypeScript types with preserved JSDoc in published declarations
 - ESM, CommonJS, and modern browser-bundler support
