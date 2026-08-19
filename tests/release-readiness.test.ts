@@ -6,20 +6,24 @@ import { describe, expect, it } from "vitest";
 
 const repositoryRoot = resolve(import.meta.dirname, "..");
 
+const releaseTagScript = "scripts/check-release-tag.mjs";
+
 function readRepositoryFile(path: string): string {
   return readFileSync(resolve(repositoryRoot, path), "utf8");
 }
 
-function declaredVersion(): string {
-  const packageJson = JSON.parse(readRepositoryFile("package.json")) as {
+function readManifest(): {
+  scripts: Record<string, string>;
+  version: string;
+} {
+  return JSON.parse(readRepositoryFile("package.json")) as {
+    scripts: Record<string, string>;
     version: string;
   };
-
-  return packageJson.version;
 }
 
 function runReleaseTagCheck(...args: readonly string[]) {
-  return spawnSync("pnpm", ["check:release-tag", ...args], {
+  return spawnSync(process.execPath, [releaseTagScript, ...args], {
     cwd: repositoryRoot,
     encoding: "utf8",
   });
@@ -50,8 +54,14 @@ describe("release readiness", () => {
     expect(workflow).not.toContain("--provenance");
   });
 
+  it("resolves the release-tag script the workflow calls by name", () => {
+    expect(readManifest().scripts["check:release-tag"]).toContain(
+      releaseTagScript,
+    );
+  });
+
   it("accepts only a release tag matching the package version", () => {
-    const version = declaredVersion();
+    const { version } = readManifest();
     const matching = runReleaseTagCheck("--", `v${version}`);
     const mismatching = runReleaseTagCheck("--", "v9.9.9");
 
@@ -66,7 +76,7 @@ describe("release readiness", () => {
     const missing = runReleaseTagCheck();
     const extra = runReleaseTagCheck(
       "--",
-      `v${declaredVersion()}`,
+      `v${readManifest().version}`,
       "unexpected",
     );
 

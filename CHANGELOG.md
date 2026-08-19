@@ -2,6 +2,18 @@
 
 All notable changes to this package are documented here.
 
+## Unreleased
+
+### Fixed
+
+- Corrected the coverage claim. `0.4.0` announced "every operation Monobank
+  documents: 37 of 37"; both numbers were wrong. Coverage was measured against
+  the Redoc specs at `api.monobank.ua/docs/` alone, while the newer
+  <https://monobank.ua/api-docs> documents 27 further operations, and the
+  implemented total is 36 rather than 37. Actual coverage is 36 of the 63
+  operations the two sites document together. `README.md`, `llms.txt`, and
+  `AGENTS.md` now state the counts and link the gap tracker.
+
 ## 0.4.0 - 2026-08-19
 
 The Corporate provider API is now covered, completing every operation Monobank

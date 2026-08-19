@@ -8,7 +8,25 @@ Monobank documentation over inferred API behavior.
 
 Provide a strict TypeScript boundary around Monobank APIs without leaking
 credentials or trusting upstream JSON. The package is unofficial and must not
-claim endorsement by Monobank.
+claim endorsement by Monobank or completeness of the API surface.
+
+## Documentation Sources
+
+Monobank publishes two sites and neither is a superset of the other. Consult
+both before concluding that an endpoint exists or does not:
+
+- <https://monobank.ua/api-docs> — current, and the only source for Acquiring
+  recurring payments, monopay keys, T2P terminals, split receivers, and Покупка
+  Частинами. Its section indexes list paths without fields, so open each
+  endpoint page; reading an index alone is how four `invoice/create` fields were
+  missed.
+- <https://api.monobank.ua/docs/> — older Redoc specs (`index`, `acquiring`,
+  `corporate`), and the only source for 17 operations: all of Personal and
+  Corporate, plus `/bank/sync`, `/api/merchant/employee/list`, and
+  `/api/merchant/invoice/sync-payment`.
+
+36 of the 63 documented operations are implemented. Gaps are tracked under
+issue #59.
 
 ## Rules for Consumer Code
 
@@ -56,10 +74,10 @@ claim endorsement by Monobank.
 - Cache the result of `acquiring.webhooks.getPublicKey()` in application
   infrastructure and refresh it only after verification with the cached key
   fails; the SDK intentionally does not own cache policy.
-- Use only documented methods. The surface covers every operation Monobank
-  documents across the Public, Personal, Acquiring, and Corporate families, so a
-  call you cannot find in `docs/API.md` does not exist upstream either. Do not
-  invent calls beyond that set.
+- Call only methods listed in `docs/API.md`, and never invent one. Absence from
+  that file says nothing about upstream: 27 documented operations are still
+  unimplemented, so check `Documentation Sources` before telling a caller that
+  Monobank has no such endpoint.
 - Treat a Corporate `sign` result as credential material; the SDK sends it as
   `X-Sign` and never logs it. Return base64 of the raw 64-byte `r || s` pair, not
   DER. Monobank documents neither the digest nor whether the signed `URL` includes
@@ -304,8 +322,11 @@ make verification pass.
 - State security boundaries next to sensitive examples.
 - Explain wire units and unusual upstream casing.
 - Avoid promises the SDK does not implement.
-- Keep `README.md` human-friendly, `docs/API.md` complete, `llms.txt` compact
-  and discoverable, and this file operational.
+- Never describe the coverage as complete. The operation counts live in
+  `README.md`, `llms.txt`, and this file; changing coverage means updating all
+  three together.
+- Keep `README.md` human-friendly, `docs/API.md` exhaustive for the implemented
+  surface, `llms.txt` compact and discoverable, and this file operational.
 
 ## Commits and Releases
 
