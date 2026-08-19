@@ -127,6 +127,19 @@ for (const memberName of [
   );
 }
 
+const installmentsClientClass = findClass("MonobankInstallmentsClient");
+assert.ok(
+  hasJSDoc(installmentsClientClass),
+  "MonobankInstallmentsClient JSDoc is missing",
+);
+
+for (const memberName of ["constructor", "clients"]) {
+  assert.ok(
+    hasJSDoc(findClassMember(installmentsClientClass, memberName)),
+    `MonobankInstallmentsClient.${memberName} JSDoc is missing`,
+  );
+}
+
 const corporateClientClass = findClass("MonobankCorporateClient");
 assert.ok(
   hasJSDoc(corporateClientClass),
@@ -180,6 +193,7 @@ const resourceContracts = [
     ["constructor", "getPaymentStatus", "listTerminals"],
   ],
   ["MonobankAcquiringWebhooks", ["constructor", "getPublicKey"]],
+  ["MonobankInstallmentsClients", ["constructor", "validate", "validateV2"]],
   ["MonobankCorporateAccess", ["constructor", "check", "request"]],
   ["MonobankCorporateClients", ["constructor", "getInfo", "getStatements"]],
   [

@@ -50,8 +50,24 @@ of Покупка Частинами, tracked under issue #59.
   function. It takes no token. Omit `keyId` only for the registration flow,
   which is what issues it. Never place a private key inside the SDK or in
   application logs; the signer is the only thing that touches it.
+- Construct `MonobankInstallmentsClient` with a `storeId` and `storeSecret`. The
+  secret is a symmetric HMAC key the SDK signs request bodies with, so it never
+  leaves the process on the wire; treat it like a token and keep it out of logs
+  and source. This family lives on `https://u2.monobank.com.ua`, not
+  `api.monobank.ua`.
+- Prefer `installments.clients.validateV2()` over `validate()`. Both answer
+  whether a phone number belongs to a client, but `validate()` also returns a
+  name and tax identifier that most callers neither need nor should store.
+- Authenticate a Покупка Частинами callback with
+  `verifyInstallmentsCallbackSignature()` over the exact raw request bytes before
+  parsing it. Re-serializing the parsed body can reorder keys and invalidate the
+  signature. `parseInstallmentsCallbackEvent()` is shape validation only.
+- Do not expect a Покупка Частинами callback for an intermediate state. Monobank
+  sends one only for terminal outcomes, so poll `orders.getState()` for the rest.
 - Never hardcode, log, serialize, or commit real tokens or API payloads.
-- Treat all monetary integers as minor currency units.
+- Treat all monetary integers as minor currency units, except in Покупка
+  Частинами, where sums are hryvnia with decimals such as `2499.99`. Its wire
+  fields are also snake_case. Preserve both rather than normalizing.
 - Treat rate and Personal statement timestamps as Unix seconds. Acquiring
   statement request inputs use Unix seconds and response dates use RFC-3339;
   `serverTimeMsec` is Unix milliseconds.

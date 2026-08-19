@@ -6,23 +6,26 @@ import type {
   CorporateSigner,
 } from "./corporate-signer.js";
 import type { FetchLike } from "./fetch-like.js";
+import type { InstallmentsCredential } from "./installments-credential.js";
 import type { RetryOptions } from "./retry-options.js";
 
 export interface TransportOptions {
-  readonly authenticatedPathPrefix?: "/api/merchant/" | "/personal/";
+  readonly authenticatedPathPrefix?: "/api/" | "/api/merchant/" | "/personal/";
   readonly baseUrl?: string;
   readonly corporate?: CorporateCredential;
   readonly fetch?: FetchLike;
+  readonly installments?: InstallmentsCredential;
   readonly retry?: RetryOptions;
   readonly timeoutMs?: number;
   readonly token?: string;
 }
 
 export interface StoredTransportOptions {
-  readonly authenticatedPathPrefix: "/api/merchant/" | "/personal/";
+  readonly authenticatedPathPrefix: "/api/" | "/api/merchant/" | "/personal/";
   readonly baseUrl: URL;
   readonly corporate?: CorporateCredential;
   readonly fetch: FetchLike;
+  readonly installments?: InstallmentsCredential;
   readonly retry?: RetryOptions;
   readonly timeoutMs: number;
   readonly token?: string;
@@ -41,11 +44,18 @@ export function validateTransportOptions(
     options.corporate === undefined
       ? undefined
       : validateCorporateCredential(options.corporate);
+  const installments =
+    options.installments === undefined
+      ? undefined
+      : validateInstallmentsCredential(options.installments);
 
-  if (token !== undefined && corporate !== undefined) {
+  if (
+    [token, corporate, installments].filter((value) => value !== undefined)
+      .length > 1
+  ) {
     throw new MonobankValidationError({
       issues: [
-        "token and corporate must not be configured on the same transport",
+        "token, corporate, and installments must not be configured on the same transport",
       ],
       message: "Invalid Monobank transport configuration.",
     });
@@ -55,11 +65,14 @@ export function validateTransportOptions(
     authenticatedPathPrefix: options.authenticatedPathPrefix ?? "/personal/",
     baseUrl: validateBaseUrl(
       options.baseUrl ?? defaultBaseUrl,
-      token !== undefined || corporate !== undefined,
+      token !== undefined ||
+        corporate !== undefined ||
+        installments !== undefined,
     ),
     fetch: options.fetch ?? validateGlobalFetch(),
     timeoutMs: validateTimeout(options.timeoutMs ?? defaultTimeoutMs),
     ...(corporate === undefined ? {} : { corporate }),
+    ...(installments === undefined ? {} : { installments }),
     ...(token === undefined ? {} : { token }),
     ...(retry === undefined ? {} : { retry: validateRetry(retry) }),
   };
@@ -102,6 +115,41 @@ function validateCorporateCredential(
   };
 }
 
+const installmentsCredentialSchema = z.object({
+  storeId: z.string().check(z.refine((value) => /^[!-~]+$/u.test(value))),
+  storeSecret: z.string().check(z.minLength(1)),
+});
+
+/**
+ * Validates the store identifier and secret before any request.
+ *
+ * The identifier is restricted to printable ASCII without spaces because it is
+ * sent verbatim as `store-id`; a control character would otherwise make
+ * `Headers.set` throw per request instead of failing once here. The secret has no
+ * such restriction: it is never sent, only used as an HMAC key. A copy is
+ * returned so mutating the caller's object cannot bypass this one-time check.
+ * @param credential Configured store identifier and secret.
+ * @returns A copy of the validated credential.
+ * @throws {MonobankValidationError} When the identifier is unusable as a header value or the secret is empty.
+ */
+function validateInstallmentsCredential(
+  credential: InstallmentsCredential,
+): InstallmentsCredential {
+  if (!installmentsCredentialSchema.safeParse(credential).success) {
+    throw new MonobankValidationError({
+      issues: [
+        "installments.storeId must be printable ASCII without spaces, and installments.storeSecret must be a nonempty string",
+      ],
+      message: "Invalid Monobank transport configuration.",
+    });
+  }
+
+  return {
+    storeId: credential.storeId,
+    storeSecret: credential.storeSecret,
+  };
+}
+
 /**
  * Validates the configured token before any request.
  *
@@ -127,9 +175,9 @@ function validateToken(token: string): string {
 /**
  * Validates the configured base URL.
  *
- * Every authenticated request carries a credential on the wire, either a token
- * in `X-Token` or a Corporate signature in `X-Sign`, so a cleartext origin would
- * expose it. Loopback is exempt because that traffic never leaves the machine.
+ * Every authenticated request carries a credential on the wire: a token in
+ * `X-Token`, a Corporate signature in `X-Sign`, or a store identifier and body
+ * signature in `store-id` and `signature`, so a cleartext origin would expose it. Loopback is exempt because that traffic never leaves the machine.
  * @param value Configured base URL.
  * @param hasCredential Whether authenticated requests will carry a credential.
  * @returns The parsed base URL.

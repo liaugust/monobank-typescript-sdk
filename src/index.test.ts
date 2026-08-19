@@ -31,6 +31,7 @@ describe("public package surface", () => {
       "MonobankAcquiringClient",
       "MonobankApiError",
       "MonobankCorporateClient",
+      "MonobankInstallmentsClient",
       "MonobankNetworkError",
       "MonobankPersonalClient",
       "MonobankPublicClient",
@@ -82,6 +83,9 @@ describe("public package surface", () => {
       "documentSigningStatusSchema",
       "finalizeInvoiceResponseSchema",
       "importedMonopaySigningKeySchema",
+      "installmentsCallbackEventSchema",
+      "installmentsClientPresenceSchema",
+      "installmentsClientValidationSchema",
       "invoiceFiscalChecksSchema",
       "invoiceStatusSchema",
       "jarSchema",
@@ -92,6 +96,7 @@ describe("public package surface", () => {
       "monopaySigningKeySchema",
       "newAcquiringSubscriptionSchema",
       "newInvoiceSchema",
+      "parseInstallmentsCallbackEvent",
       "parsePersonalWebhookEvent",
       "personalWebhookEventSchema",
       "receiptSchema",
@@ -99,6 +104,7 @@ describe("public package surface", () => {
       "statementItemSchema",
       "statementItemsSchema",
       "verifyAcquiringWebhookSignature",
+      "verifyInstallmentsCallbackSignature",
     ]);
   });
 });

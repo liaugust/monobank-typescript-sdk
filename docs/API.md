@@ -13,6 +13,7 @@ supported contract.
 - [MonobankPersonalClient](#monobankpersonalclient)
 - [MonobankAcquiringClient](#monobankacquiringclient)
 - [MonobankCorporateClient](#monobankcorporateclient)
+- [MonobankInstallmentsClient](#monobankinstallmentsclient)
 - [acquiring.webhooks.getPublicKey](#acquiringwebhooksgetpublickey)
 - [verifyAcquiringWebhookSignature](#verifyacquiringwebhooksignature)
 - [merchant.getDetails](#merchantgetdetails)
@@ -53,6 +54,10 @@ supported contract.
 - [statements.get](#statementsget)
 - [webhooks.set](#webhooksset)
 - [parsePersonalWebhookEvent](#parsepersonalwebhookevent)
+- [installments.clients.validate](#installmentsclientsvalidate)
+- [installments.clients.validateV2](#installmentsclientsvalidatev2)
+- [verifyInstallmentsCallbackSignature](#verifyinstallmentscallbacksignature)
+- [parseInstallmentsCallbackEvent](#parseinstallmentscallbackevent)
 - [corporate.access.request](#corporateaccessrequest)
 - [corporate.access.check](#corporateaccesscheck)
 - [corporate.clients.getInfo](#corporateclientsgetinfo)
@@ -302,6 +307,46 @@ retried, matching how this SDK treats every other timeout.
 A signer that throws, or returns an empty string, produces
 `MonobankValidationError` before Fetch runs. The signer's own failure is never
 attached as a cause, because a crypto library's error text can echo key material.
+
+## MonobankInstallmentsClient
+
+```ts
+new MonobankInstallmentsClient(options: MonobankInstallmentsClientOptions)
+```
+
+Client for Покупка Частинами, Monobank's buy-now-pay-later API. It differs from
+every other family in this package, and each difference is upstream:
+
+|             | Покупка Частинами                                 | Other families                        |
+| ----------- | ------------------------------------------------- | ------------------------------------- |
+| Origin      | `https://u2.monobank.com.ua`                      | `https://api.monobank.ua`             |
+| Credential  | `store-id` + `signature` headers                  | `X-Token`, or `X-Sign` for Corporate  |
+| Signature   | `Base64(HMAC-SHA256(request_body, store_secret))` | ECDSA over `X-Time`+URL for Corporate |
+| Field names | `snake_case`                                      | `camelCase`                           |
+| Sums        | hryvnia with decimals, `2499.99`                  | integer minor units                   |
+
+| Option        | Type           | Default                      | Notes                                                                               |
+| ------------- | -------------- | ---------------------------- | ----------------------------------------------------------------------------------- |
+| `storeId`     | `string`       | required                     | Sent verbatim as `store-id`; printable ASCII without spaces                         |
+| `storeSecret` | `string`       | required                     | HMAC key; never sent, only used to sign                                             |
+| `baseUrl`     | `string`       | `https://u2.monobank.com.ua` | Sandbox `https://u2-demo-ext.mono.st4g3.com`, stage `https://u2-ext.mono.st4g3.com` |
+| `fetch`       | `FetchLike`    | `globalThis.fetch`           | Injection point for tests, proxies, and other runtimes                              |
+| `retry`       | `RetryOptions` | none                         | Omitting it disables retries                                                        |
+| `timeoutMs`   | `number`       | `10000`                      | Per attempt                                                                         |
+
+Unlike `MonobankCorporateClient`, this client takes the secret itself rather than
+an injected signer, because the scheme is HMAC-SHA256 — which Web Crypto supports
+directly, whereas the Corporate service keys are secp256k1 and it does not.
+
+A store credential cannot be combined with `token` or `corporate` on one
+transport; configuring two is rejected at construction.
+
+```ts
+const installments = new MonobankInstallmentsClient({
+  storeId: "your_store_id",
+  storeSecret: process.env.MONOBANK_STORE_SECRET!,
+});
+```
 
 ## acquiring.webhooks.getPublicKey
 
@@ -1583,6 +1628,123 @@ const event = parsePersonalWebhookEvent(await request.json());
 
 // Authenticate delivery separately, then pass `event` to application logic.
 ```
+
+## installments.clients.validate
+
+```ts
+installments.clients.validate(
+  input: ValidateInstallmentsClientInput,
+  options?: RequestOptions,
+): Promise<InstallmentsClientValidation>
+```
+
+Calls `POST /api/client/validate`, answering whether a phone number belongs to a
+Monobank client. `phone` must be international form — `+` followed by 9 to 15
+digits — and is rejected before Fetch otherwise, because a local-format number
+would come back as an unknown client rather than an error.
+
+**This is a personal-data read.** When `found` is true, `client` carries
+`first_name`, `last_name`, `middle_name`, and `inn`, the person's tax identifier.
+Prefer `validateV2()`, which answers the same question without any of it.
+
+| Property       | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Authentication | `store-id` plus an HMAC body signature in `signature`    |
+| Rate limit     | No endpoint-specific limit is encoded or enforced        |
+| Retries        | Never retried automatically                              |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds |
+| Cancellation   | `options.signal` cancels the active request              |
+| Returns        | `InstallmentsClientValidation`                           |
+
+Rejects with `MonobankApiError` (including `401` when the signature is missing or
+invalid), `MonobankNetworkError`, `MonobankResponseValidationError`, or
+`MonobankValidationError`.
+
+```ts
+const lookup = await installments.clients.validate({
+  phone: "+380501234567",
+});
+
+if (lookup.found && lookup.client !== undefined) {
+  console.log(lookup.client.first_name);
+}
+```
+
+## installments.clients.validateV2
+
+```ts
+installments.clients.validateV2(
+  input: ValidateInstallmentsClientInput,
+  options?: RequestOptions,
+): Promise<InstallmentsClientPresence>
+```
+
+Calls `POST /api/v2/client/validate`, the same question with `found` alone in the
+response. Prefer it: no name and no tax identifier crosses the wire, so the
+caller cannot accidentally log or store either.
+
+| Property       | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Authentication | `store-id` plus an HMAC body signature in `signature`    |
+| Rate limit     | No endpoint-specific limit is encoded or enforced        |
+| Retries        | Never retried automatically                              |
+| Timeout        | `timeoutMs` per attempt; defaults to 10,000 milliseconds |
+| Cancellation   | `options.signal` cancels the active request              |
+| Returns        | `InstallmentsClientPresence`                             |
+
+```ts
+const { found } = await installments.clients.validateV2({
+  phone: "+380501234567",
+});
+```
+
+## verifyInstallmentsCallbackSignature
+
+```ts
+verifyInstallmentsCallbackSignature(
+  input: VerifyInstallmentsCallbackSignatureInput,
+): Promise<boolean>
+```
+
+Authenticates a Покупка Частинами callback by recomputing
+`Base64(HMAC-SHA256(body, storeSecret))` and comparing it with the request's
+`signature` header. The comparison is constant-time, so repeated attempts cannot
+reveal the expected value by timing.
+
+Pass the **raw** body — `ArrayBuffer`, `Uint8Array`, or the original string.
+`JSON.parse` followed by `JSON.stringify` can reorder keys and change the bytes
+that were signed, which turns an authentic callback into a rejected one.
+
+```ts
+const raw = await request.arrayBuffer();
+
+if (
+  !(await verifyInstallmentsCallbackSignature({
+    body: raw,
+    signature: request.headers.get("signature") ?? "",
+    storeSecret: process.env.MONOBANK_STORE_SECRET!,
+  }))
+) {
+  return new Response(null, { status: 401 });
+}
+```
+
+## parseInstallmentsCallbackEvent
+
+```ts
+parseInstallmentsCallbackEvent(payload: unknown): InstallmentsCallbackEvent
+```
+
+Validates the shape of a callback body carrying `order_id`, and optionally `state`
+and `order_sub_state`. Both status fields are typed as `string` because Monobank
+documents the status table in prose rather than as a declared enum.
+
+This is shape validation only and proves nothing about the sender — authenticate
+delivery with `verifyInstallmentsCallbackSignature()` first. Monobank sends a
+callback only for terminal outcomes, so intermediate states such as
+`IN_PROCESS/WAITING_FOR_CLIENT` never arrive this way and have to be polled.
+
+Throws `MonobankValidationError` when the payload does not match.
 
 ## corporate.access.request
 
