@@ -7,6 +7,7 @@ import {
 import {
   createCorporateTransport,
   getCorporateSettings,
+  passthroughSchema,
   shortRetry,
 } from "../../../tests/support/transport.js";
 import { MonobankValidationError } from "../../errors/monobank-validation-error.js";
@@ -98,6 +99,56 @@ describe("Corporate transport credentials", () => {
     await expect(getCorporateSettings(transport)).rejects.toBeInstanceOf(
       MonobankValidationError,
     );
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("fails a signer that never settles once the attempt times out", async () => {
+    vi.useFakeTimers();
+    const fetch = createFetchSequence([jsonResponse({ ok: true })]);
+    const transport = new MonobankTransport({
+      corporate: {
+        keyId: "corporate-key-id",
+        sign: () => new Promise<string>(() => undefined),
+      },
+      fetch,
+      timeoutMs: 250,
+    });
+
+    const request = getCorporateSettings(transport);
+    request.catch(() => undefined);
+    await vi.advanceTimersByTimeAsync(250);
+
+    await expect(request).rejects.toMatchObject({
+      name: "MonobankNetworkError",
+      reason: "timeout",
+    });
+    expect(fetch).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it("reports a caller abort during signing as aborted", async () => {
+    const fetch = createFetchSequence([jsonResponse({ ok: true })]);
+    const transport = new MonobankTransport({
+      corporate: {
+        keyId: "corporate-key-id",
+        sign: () => new Promise<string>(() => undefined),
+      },
+      fetch,
+    });
+    const controller = new AbortController();
+
+    const request = transport.getJson({
+      auth: true,
+      endpoint: "/personal/corp/settings",
+      schema: passthroughSchema,
+      signal: controller.signal,
+      signature: { variant: "time-and-url" },
+    });
+    request.catch(() => undefined);
+    await Promise.resolve();
+    controller.abort();
+
+    await expect(request).rejects.toMatchObject({ reason: "aborted" });
     expect(fetch).not.toHaveBeenCalled();
   });
 

@@ -53,6 +53,16 @@ All notable changes to this package are documented here.
   over the signed `POST /personal/corp/webhook` endpoint, reusing the Personal
   webhook URL validation. Monobank test-POSTs the URL during the call.
 
+### Fixed
+
+- Bound the Corporate signer with the per-attempt timeout. The attempt signal was
+  only ever given to Fetch, so a signing call that never settled blocked the
+  request indefinitely despite a configured `timeoutMs`. Signing now races the
+  attempt and fails with `MonobankNetworkError` and `reason: "timeout"`, or
+  `"aborted"` when the caller cancels, matching how a hanging request behaves. A
+  signer that throws still fails as a non-retryable `MonobankValidationError` with
+  no cause attached.
+
 ### Security
 
 - Drop echoed `X-Sign` and `X-Key-Id` response headers from `MonobankApiError`,

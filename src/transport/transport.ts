@@ -101,6 +101,7 @@ export class MonobankTransport {
           request,
           this.options,
           url,
+          attemptSignal.signal,
         );
         const response = await this.options.fetch(url, {
           ...init,

@@ -58,6 +58,7 @@ export function resolveRequestUrl(
  * @param request Authentication, body, signature, and cancellation inputs.
  * @param options Validated transport configuration.
  * @param url Absolute request URL from `resolveRequestUrl`.
+ * @param attemptSignal Signal aborting this attempt on timeout or caller cancellation, which also bounds the signer.
  * @returns Fetch init carrying credential headers for this attempt.
  * @throws {MonobankValidationError} When the request needs a credential that is not configured, or the Corporate signer fails.
  */
@@ -66,12 +67,13 @@ export async function createRequestInit(
   request: EmptyRequest,
   options: StoredTransportOptions,
   url: URL,
+  attemptSignal: AbortSignal,
 ): Promise<RequestInit> {
   const headers = new Headers(request.headers);
   headers.set("Accept", "application/json");
 
   if (request.auth) {
-    await applyCredentialHeaders(headers, request, options, url);
+    await applyCredentialHeaders(headers, request, options, url, attemptSignal);
   }
 
   const init: RequestInit = { headers, method, redirect: "error" };
@@ -93,6 +95,7 @@ async function applyCredentialHeaders(
   request: EmptyRequest,
   options: StoredTransportOptions,
   url: URL,
+  attemptSignal: AbortSignal,
 ): Promise<void> {
   const corporate = options.corporate;
 
@@ -133,7 +136,12 @@ async function applyCredentialHeaders(
   headers.set(
     "X-Sign",
     requireSafeHeaderValue(
-      await createSignature(corporate.sign, input, request.endpoint),
+      await createSignature(
+        corporate.sign,
+        input,
+        request.endpoint,
+        attemptSignal,
+      ),
       "signature",
       request.endpoint,
     ),
@@ -172,17 +180,64 @@ function requireSafeHeaderValue(
 }
 
 /**
- * Invokes the application's signer and rejects an unusable result.
+ * Invokes the application's signer, bounded by the attempt, and rejects an unusable result.
+ *
+ * The signer runs inside the attempt window so a signing call that never settles
+ * fails with the attempt rather than hanging the request. Losing that race
+ * rejects with an `AbortError`, which the transport classifies from the attempt's
+ * own reason, so a timed-out signer reports a timeout exactly as a timed-out
+ * Fetch does.
  *
  * The signer's own failure is never attached as a cause, because a crypto
  * library's error text can echo key material.
  * @param sign Application-supplied signing function.
  * @param input Payload and components to sign.
  * @param endpoint Endpoint the signature is for.
+ * @param attemptSignal Signal aborting this attempt on timeout or caller cancellation.
  * @returns Value to send as `X-Sign`.
  * @throws {MonobankValidationError} When the signer throws or yields an empty signature.
  */
 async function createSignature(
+  sign: CorporateSigner,
+  input: CorporateSignatureInput,
+  endpoint: string,
+  attemptSignal: AbortSignal,
+): Promise<string> {
+  return await Promise.race([
+    requireSignature(sign, input, endpoint),
+    rejectWhenAborted(attemptSignal),
+  ]);
+}
+
+/**
+ * Builds a promise that rejects when the attempt aborts.
+ *
+ * The listener is registered `once` on a signal that belongs to this attempt
+ * alone, so nothing accumulates across retries. This relies on the attempt signal
+ * not being aborted yet: the transport checks the caller's signal and reaches
+ * signing with no `await` in between, so no abort can interleave. Introducing an
+ * `await` before signing would strand this promise, because a listener added to
+ * an already-aborted signal never fires.
+ * @param signal Signal aborting the current attempt.
+ * @returns Promise that rejects with an `AbortError` when the attempt aborts.
+ */
+function rejectWhenAborted(signal: AbortSignal): Promise<never> {
+  const rejected = new Promise<never>((_resolve, reject) => {
+    signal.addEventListener(
+      "abort",
+      () => {
+        reject(new DOMException("Signing aborted", "AbortError"));
+      },
+      { once: true },
+    );
+  });
+
+  rejected.catch(() => undefined);
+
+  return rejected;
+}
+
+async function requireSignature(
   sign: CorporateSigner,
   input: CorporateSignatureInput,
   endpoint: string,
