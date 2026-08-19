@@ -35,6 +35,12 @@ All notable changes to this package are documented here.
   `MonobankApiError` status 401. Exports `corporateTokenRequestSchema`,
   `CorporateTokenRequest`, `RequestCorporateAccessInput`, and
   `CheckCorporateAccessInput`.
+- `corporate.clients.getInfo(input)` and `corporate.clients.getStatements(input)`
+  reading a granted client's identity and statements under Corporate signing.
+  Both reuse `clientInfoSchema` and `statementItemsSchema`, because the wire
+  contracts match the Personal endpoints and only the credential and the data's
+  owner differ. Exports `GetCorporateClientInfoInput`,
+  `GetCorporateClientStatementsInput`, and `StatementWindowInput`.
 - `corporate.company.setWebhook(input)` configuring the payment-update webhook
   over the signed `POST /personal/corp/webhook` endpoint, reusing the Personal
   webhook URL validation. Monobank test-POSTs the URL during the call.

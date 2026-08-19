@@ -1,5 +1,6 @@
 import { MonobankTransport } from "../../transport/transport.js";
 import { MonobankCorporateAccess } from "../access/monobank-corporate-access.js";
+import { MonobankCorporateClients } from "../clients/monobank-corporate-clients.js";
 import { MonobankCorporateCompany } from "../company/monobank-corporate-company.js";
 import type { MonobankCorporateClientOptions } from "./monobank-corporate-client-options.js";
 
@@ -23,6 +24,9 @@ export class MonobankCorporateClient {
   /** Delegated client-access operations sharing this client's key and transport settings. */
   public readonly access: MonobankCorporateAccess;
 
+  /** Delegated reads of a granted client's data sharing this client's key and transport settings. */
+  public readonly clients: MonobankCorporateClients;
+
   /** Company registration and settings operations sharing this client's key and transport settings. */
   public readonly company: MonobankCorporateCompany;
 
@@ -40,6 +44,7 @@ export class MonobankCorporateClient {
     });
 
     this.access = new MonobankCorporateAccess(transport);
+    this.clients = new MonobankCorporateClients(transport);
     this.company = new MonobankCorporateCompany(transport);
   }
 }
