@@ -40,6 +40,8 @@ supported contract.
 - [statements.get](#statementsget)
 - [webhooks.set](#webhooksset)
 - [parsePersonalWebhookEvent](#parsepersonalwebhookevent)
+- [corporate.access.request](#corporateaccessrequest)
+- [corporate.access.check](#corporateaccesscheck)
 - [corporate.company.register](#corporatecompanyregister)
 - [corporate.company.getRegistrationStatus](#corporatecompanygetregistrationstatus)
 - [corporate.company.getSettings](#corporatecompanygetsettings)
@@ -235,6 +237,7 @@ a request is made.
 
 The client groups operations into resource objects:
 
+- `corporate.access`: delegated client-access grant operations
 - `corporate.company`: company registration and settings operations
 
 ### Signing contract
@@ -1057,6 +1060,65 @@ const event = parsePersonalWebhookEvent(await request.json());
 // Authenticate delivery separately, then pass `event` to application logic.
 ```
 
+## corporate.access.request
+
+```ts
+corporate.access.request(
+  input?: RequestCorporateAccessInput,
+  options?: RequestOptions,
+): Promise<CorporateTokenRequest>
+```
+
+Initializes a request for access to one client's data, over the signed
+`POST /personal/auth/request` endpoint.
+
+| Input         | Type     | Contract                                                                                                                              |
+| ------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `callbackUrl` | `string` | Optional absolute HTTP(S) address, sent as `X-Callback`; Monobank issues a GET to it carrying `X-Request-Id` once the client approves |
+
+Show the returned `acceptUrl` to the client as a QR code, or redirect a mobile
+client to it. Keep `tokenRequestId`: it identifies the grant in
+`corporate.access.check` and in every later delegated read.
+
+Both response fields are optional, because Monobank's `TokenRequest` schema
+declares no `required` array.
+
+Signed with the `X-Time` and URL payload; no `X-Request-Id` is sent. Mutating
+request; never retried.
+
+## corporate.access.check
+
+```ts
+corporate.access.check(
+  input: CheckCorporateAccessInput,
+  options?: RequestOptions,
+): Promise<void>
+```
+
+Checks whether the client granted the requested access, over the signed
+`GET /personal/auth/request` endpoint.
+
+| Input       | Type     | Contract                                                  |
+| ----------- | -------- | --------------------------------------------------------- |
+| `requestId` | `string` | `tokenRequestId` from `request()`; sent as `X-Request-Id` |
+
+Resolves when access is granted. Monobank answers with an empty body, so there
+is no value to return; the status distinguishes the outcomes:
+
+| Status | Meaning                              |
+| ------ | ------------------------------------ |
+| 200    | Access granted; the promise resolves |
+| 401    | The client has not approved yet      |
+| 404    | No such access request               |
+
+Signed with the `X-Time`, `X-Request-Id`, and URL payload — the first operation
+to use that variant. Safe GET; eligible for configured retries, and each retry
+is signed again.
+
+These operations read another person's banking data. The client grants access, it
+covers only the permissions the company registered, and the client can revoke it
+at any time.
+
 ## corporate.company.register
 
 ```ts
@@ -1270,6 +1332,7 @@ preserved.
 | `corporateRegistrationSchema`          | Corporate application acknowledgement |
 | `corporateRegistrationStatusSchema`    | Corporate application status and key  |
 | `corporateSettingsSchema`              | `/personal/corp/settings` response    |
+| `corporateTokenRequestSchema`          | Delegated access-request response     |
 | `currencyRateSchema`                   | One exchange-rate item                |
 | `currencyRatesSchema`                  | `/bank/currency` response array       |
 | `jarSchema`                            | One Personal jar                      |
@@ -1614,6 +1677,8 @@ object containing the target `account` identifier and validated
 | `RegisterCorporateCompanyInput`          | Company authorization application fields                       |
 | `GetCorporateRegistrationStatusInput`    | Public key identifying an application to poll                  |
 | `SetCorporateWebhookInput`               | Request identifier and Corporate webhook address               |
+| `RequestCorporateAccessInput`            | Optional callback address for a delegated access request       |
+| `CheckCorporateAccessInput`              | Request identifier for a delegated access check                |
 | `ResponseValidationIssue`                | Safe schema issue retained by validation errors                |
 | `MonobankApiErrorOptions`                | Public API-error constructor data                              |
 | `MonobankNetworkErrorOptions`            | Public network-error constructor data                          |
@@ -1631,4 +1696,4 @@ package root, including the Personal models plus `MerchantDetails`,
 `AcquiringStatementCancellation`, `NewInvoice`, `Invoice`,
 `InvoiceCancellation`, `InvoiceFinalization`, `InvoiceReceipt`,
 `InvoiceFiscalChecks`, `CorporateSettings`, `CorporateRegistration`, and
-`CorporateRegistrationStatusResult`.
+`CorporateRegistrationStatusResult`, and `CorporateTokenRequest`.

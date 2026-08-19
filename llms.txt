@@ -72,6 +72,14 @@ timeout.
   automatically.
 - `parsePersonalWebhookEvent(input)`: validates webhook JSON shape; does not
   authenticate the sender.
+- `corporate.access.request(input?, options?)`: signed
+  `POST /personal/auth/request`; optional `input.callbackUrl` becomes
+  `X-Callback`; returns `Promise<CorporateTokenRequest>` with `tokenRequestId`
+  and `acceptUrl` to show the client; never retried.
+- `corporate.access.check(input, options?)`: signed
+  `GET /personal/auth/request` with `X-Request-Id` in the signed payload;
+  resolves `Promise<void>` when granted; 401 means still pending and 404 means
+  unknown request; safe GET and re-signed on each retry.
 - `corporate.company.register(input, options?)`: signed pre-key
   `/personal/auth/registration` application; no `X-Key-Id`; returns
   `Promise<CorporateRegistration>`; never retried.
@@ -192,7 +200,7 @@ objects, or raw API payloads.
   `CorporateRegistrationStatus`.
 - Schemas: `accountSchema`, `bankSyncSchema`, `clientInfoSchema`,
   `corporateRegistrationSchema`, `corporateRegistrationStatusSchema`,
-  `corporateSettingsSchema`,
+  `corporateSettingsSchema`, `corporateTokenRequestSchema`,
   `currencyRateSchema`, `currencyRatesSchema`, `jarSchema`,
   `managedAccountSchema`, `managedClientSchema`, `statementItemSchema`,
   `statementItemsSchema`, `personalWebhookEventSchema`,
