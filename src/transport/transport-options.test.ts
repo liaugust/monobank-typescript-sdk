@@ -62,6 +62,16 @@ describe("MonobankTransport options", () => {
   });
 
   it.each([
+    ["an empty token", ""],
+    ["a padded token", " secret-token "],
+    ["a token that would inject a header", "secret\r\nX-Sign: forged"],
+  ])("rejects %s at construction", (_label, token) => {
+    expect(
+      () => new MonobankTransport({ fetch: createFetchSequence([]), token }),
+    ).toThrow(MonobankValidationError);
+  });
+
+  it.each([
     "http://api.example.test",
     "http://gateway.example.test:8080/mono/",
     "http://127.0.0.1.example.test",

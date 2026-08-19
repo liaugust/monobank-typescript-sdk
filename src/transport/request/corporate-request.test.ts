@@ -112,6 +112,36 @@ describe("Corporate transport credentials", () => {
     expect(signature(fetch).get("X-Sign")).toBe("YXN5bmM=");
   });
 
+  it("redacts an echoed key identifier and drops echoed credential headers", async () => {
+    const fetch = createFetchSequence([
+      jsonResponse(
+        { errorDescription: "bad key corporate-key-id supplied" },
+        {
+          headers: {
+            "X-Key-Id": "corporate-key-id",
+            "X-Request-Id": "req-1",
+            "X-Sign": "c2ln",
+          },
+          status: 400,
+        },
+      ),
+    ]);
+    const transport = createCorporateTransport(fetch, () => "c2ln");
+
+    const rejection = await getCorporateSettings(transport).catch(
+      (error: unknown) => error,
+    );
+
+    expect(JSON.stringify(rejection)).not.toContain("corporate-key-id");
+    expect(rejection).toMatchObject({
+      headers: { "x-request-id": "req-1" },
+      upstreamMessage: "bad key [redacted] supplied",
+    });
+    expect(Object.keys((rejection as { headers: object }).headers)).not.toEqual(
+      expect.arrayContaining(["x-sign", "x-key-id"]),
+    );
+  });
+
   it("refuses a transport configured with both a token and a corporate key", () => {
     expect(
       () =>

@@ -212,7 +212,9 @@ tests/consumers/                ESM, CJS, browser, declaration, and tarball chec
 - Keep Zod as the only runtime dependency unless a design change is explicitly
   approved.
 - Keep transport failures credential-safe: never retain tokens, authorization
-  headers, Request objects, or raw API response bodies.
+  headers, Corporate `X-Sign` or `X-Key-Id` headers, Request objects, or raw API
+  response bodies. Redact every configured credential from an upstream message,
+  because a proxy can echo what was submitted.
 - Never follow HTTP redirects. Fetch preserves custom headers such as
   `X-Token` across a cross-origin redirect and replays the method and body on
   307/308, and endpoint validation only vets the initial URL, so the transport

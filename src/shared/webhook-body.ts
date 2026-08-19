@@ -1,3 +1,4 @@
+import { MonobankValidationError } from "../errors/monobank-validation-error.js";
 import { requireAbsoluteHttpUrl } from "./http-url.js";
 
 /** JSON body shared by the Personal and Corporate webhook mutations. */
@@ -10,7 +11,10 @@ export interface WebhookBody {
  * Validates and builds the JSON body for a webhook mutation.
  *
  * Monobank removes the configured webhook when `webHookUrl` is an empty
- * string. Non-empty values must be absolute HTTP(S) URLs.
+ * string. Non-empty values must be absolute HTTP(S) URLs, and must survive URL
+ * parsing unchanged: `new URL()` silently strips tabs and line breaks, so a value
+ * that parses to a different string would be validated as one address and sent as
+ * another.
  * @param webHookUrl Requested webhook address.
  * @param endpoint Endpoint receiving the mutation.
  * @param message Resource-specific validation error message.
@@ -26,7 +30,22 @@ export function createWebhookBody(
     return { webHookUrl: "" };
   }
 
-  requireAbsoluteHttpUrl(webHookUrl, "webHookUrl", endpoint, message);
+  const url = requireAbsoluteHttpUrl(
+    webHookUrl,
+    "webHookUrl",
+    endpoint,
+    message,
+  );
+
+  if (url.href !== webHookUrl) {
+    throw new MonobankValidationError({
+      endpoint,
+      issues: [
+        "webHookUrl must be sent exactly as parsed; remove any surrounding or embedded whitespace",
+      ],
+      message,
+    });
+  }
 
   return { webHookUrl };
 }
