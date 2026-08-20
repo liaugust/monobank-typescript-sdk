@@ -3,8 +3,9 @@
 > Unofficial, strict, runtime-validated TypeScript SDK for the Monobank API,
 > spanning the Public, Personal, Acquiring, Corporate, and Покупка Частинами
 > credential families.
-> It implements all 63 documented operations across both of Monobank's
-> documentation sites. Supports
+> Implements all 63 operations found across Monobank's two documentation sites as
+> last audited on 2026-08-20. This is a dated audit, not a claim about
+> undocumented or future operations. Supports
 > Node.js 22.12.0+, ESM, CommonJS, and modern browser bundlers. Zod Mini
 > validates every successful JSON response.
 
@@ -12,7 +13,7 @@ Package: https://www.npmjs.com/package/@liaugust/monobank-sdk
 Repository: https://github.com/liaugust/monobank-typescript-sdk
 API reference: https://github.com/liaugust/monobank-typescript-sdk/blob/main/docs/API.md
 Upstream docs: https://monobank.ua/api-docs and https://api.monobank.ua/docs/
-Uncovered endpoints: https://github.com/liaugust/monobank-typescript-sdk/issues/59
+Operation inventory: https://github.com/liaugust/monobank-typescript-sdk/issues/59
 License: MIT
 
 ## Use the package
@@ -51,8 +52,9 @@ and defaults to `https://u2.monobank.com.ua` rather than `api.monobank.ua`.
   never retried.
 - `installments.orders.create(input, options?)`: signed `/api/order/create`;
   requires `store_order_id` (1-64 chars), `client_phone`, `total_sum` in hryvnia
-  with a minimum of 2, `invoice`, `available_programs`, and `products`; optional
-  `result_callback`, `additional_params`, and `financial_company_merchant_info`;
+  with a minimum of 2, `invoice`, and non-empty `available_programs` and
+  `products`; optional `result_callback` must be an absolute HTTP(S) URL;
+  `additional_params` and `financial_company_merchant_info` are also optional;
   returns `Promise<NewInstallmentsOrder>`; never retried, since a retry would
   raise a second order for the same `store_order_id`.
 - `installments.orders.getState(input, options?)`: signed `/api/order/state`;
@@ -117,8 +119,10 @@ pair, not DER. Monobank documents neither the digest nor whether `URL` in
 `Sign (X-Time | URL)` includes the query, so the signer also receives `time`,
 `requestId`, and `url` and can rebuild the payload. This SDK signs the path
 with its query. The signer runs once per attempt, because `X-Time` is signed
-and a retry must not replay a stale timestamp. `timeoutMs` bounds the signer as well as the request: a signer that never settles
-fails with reason `timeout`.
+and a retry must not replay a stale timestamp. Its second argument is the
+attempt's `AbortSignal`; pass it to cancellable HSM/KMS work. `timeoutMs` bounds
+the signer as well as the request: a signer that never settles fails with reason
+`timeout`.
 
 ## Client methods
 
@@ -153,8 +157,9 @@ fails with reason `timeout`.
   defaults to `0`; maximum window 2,682,000 seconds; returns
   `Promise<readonly StatementItem[]>`; safe GET.
 - `corporate.documents.requestSigning(input, options?)`: signed monoКЕП
-  request for 1-10 documents; each needs `name` and a ГОСТ 34.311-95 hex `hash`
-  the caller computes, since no JS runtime implements that algorithm; returns
+  request for 1-10 documents; each needs `name` and a 64-character hexadecimal
+  ГОСТ 34.311-95 `hash` the caller computes, since no JS runtime implements that
+  algorithm; optional `callbackUrl` must be absolute HTTP(S); returns
   `Promise<DocumentSigningRequest>` with `requestId` and `deeplink`; valid three
   days; never retried.
 - `corporate.documents.getSigningStatus(input, options?)`: signed status read;
@@ -320,7 +325,13 @@ Each optional request `options` object accepts `signal?: AbortSignal`.
   credentials are sent only to `/personal/*`, and Acquiring credentials only
   to `/api/merchant/*`.
 - `fetch?: FetchLike`: injected Fetch-compatible implementation.
-- `baseUrl?: string`: absolute HTTP(S) origin for controlled proxies or tests, https-only when a token is configured unless the host is loopback.
+- `keyId?: string` and `sign: CorporateSigner`: Corporate credential; omit
+  `keyId` only for registration. The signer receives input plus an `AbortSignal`.
+- `storeId: string` and `storeSecret: string`: Installments credential; the secret
+  signs bodies locally and is never sent.
+- `baseUrl?: string`: absolute HTTP(S) origin for controlled proxies or tests;
+  HTTPS is required whenever any credential is configured unless the host is
+  loopback. Installments defaults to `https://u2.monobank.com.ua`.
 - `timeoutMs?: number`: per-attempt timeout in milliseconds.
 - `retry?: { baseDelayMs; maxAttempts; maxDelayMs }`: bounded retry policy for
   safe GET requests. Retries are disabled when omitted.
@@ -343,32 +354,59 @@ objects, or raw API payloads.
 
 - Enum-like const objects: `AccountType`, `CashbackType`,
   `AcquiringPaymentScheme`, `AcquiringQrAmountType`,
-  `AcquiringStatementStatus`, `InvoicePaymentType`,
+  `AcquiringStatementStatus`, `AcquiringSubscriptionAction`,
+  `AcquiringSubscriptionStatus`, `InvoiceDisplayType`, `InvoicePaymentType`,
   `InvoiceStatus`, `InvoiceCancellationStatus`, `InvoicePaymentSystem`,
   `InvoicePaymentMethod`, `InvoiceWalletStatus`, `DiscountType`, `DiscountMode`,
   `FiscalCheckType`, `FiscalCheckStatus`, `FiscalizationSource`,
   `CorporateRegistrationStatus`, `DocumentSigningState`, `SigningDocumentType`.
-- Schemas: `accountSchema`, `bankSyncSchema`, `clientInfoSchema`,
+- Public, Personal, and Corporate schemas: `accountSchema`, `bankSyncSchema`,
+  `clientInfoSchema`,
   `corporateRegistrationSchema`, `corporateRegistrationStatusSchema`,
   `corporateSettingsSchema`, `corporateTokenRequestSchema`,
   `documentSignatorySchema`, `documentSigningRequestSchema`,
   `documentSigningStatusSchema`, `signingDocumentSchema`,
   `currencyRateSchema`, `currencyRatesSchema`, `jarSchema`,
   `managedAccountSchema`, `managedClientSchema`, `statementItemSchema`,
-  `statementItemsSchema`, `personalWebhookEventSchema`,
-  `merchantDetailsSchema`, `acquiringStatementSchema`,
+  `statementItemsSchema`, `personalWebhookEventSchema`.
+- Acquiring schemas: `merchantDetailsSchema`, `acquiringStatementSchema`,
   `acquiringStatementItemSchema`, `acquiringStatementCancellationSchema`,
   `acquiringSubmerchantSchema`, `acquiringSubmerchantListSchema`,
   `acquiringQrCashierSchema`, `acquiringQrCashierListSchema`,
   `acquiringQrDetailsSchema`, `acquiringWebhookPublicKeySchema`,
+  `acquiringCardPaymentSchema`, `acquiringEmployeeSchema`,
+  `acquiringEmployeeListSchema`, `acquiringWalletCardSchema`,
+  `acquiringWalletSchema`, `acquiringPosCancellationSchema`,
+  `acquiringSplitReceiverSchema`, `acquiringSplitReceiverListSchema`,
+  `acquiringT2pPaymentSchema`, `acquiringT2pTerminalSchema`,
+  `acquiringT2pTerminalListSchema`, `acquiringSubscriptionSchema`,
+  `acquiringSubscriptionSummarySchema`,
+  `acquiringSubscriptionWalletDataSchema`,
+  `acquiringSubscriptionListItemSchema`, `acquiringSubscriptionListSchema`,
+  `acquiringSubscriptionPaginationSchema`,
+  `acquiringSubscriptionPaymentSchema`,
+  `acquiringSubscriptionPaymentListSchema`, `newAcquiringSubscriptionSchema`,
+  `monopaySigningKeySchema`, `monopaySigningKeyListSchema`,
+  `importedMonopaySigningKeySchema`,
   `newInvoiceSchema`, `invoiceStatusSchema`,
   `cancelInvoiceResponseSchema`, `finalizeInvoiceResponseSchema`,
   `receiptSchema`, `invoiceFiscalChecksSchema`.
+- Installments schemas: `installmentsCallbackEventSchema`,
+  `installmentsClientPresenceSchema`, `installmentsClientValidationSchema`,
+  `installmentsGuaranteeLetterDataSchema`,
+  `installmentsIdentityDocumentSchema`, `installmentsLetterCustomerSchema`,
+  `installmentsOrderDataSchema`, `installmentsOrderPaymentSchema`,
+  `installmentsOrderReturnSchema`, `installmentsOrderReverseSchema`,
+  `installmentsOrderStateSchema`, `installmentsStoreReportOrderSchema`,
+  `installmentsStoreReportSchema`, `newInstallmentsOrderSchema`.
 - Errors: `MonobankApiError`, `MonobankNetworkError`,
   `MonobankResponseValidationError`, `MonobankValidationError`.
 - Clients/helpers: `MonobankPublicClient`, `MonobankPersonalClient`,
-  `MonobankAcquiringClient`, `parsePersonalWebhookEvent`,
-  `verifyAcquiringWebhookSignature`. Resource classes are available through
+  `MonobankAcquiringClient`, `MonobankCorporateClient`,
+  `MonobankInstallmentsClient`, `parsePersonalWebhookEvent`,
+  `parseInstallmentsCallbackEvent`, `importAcquiringWebhookPublicKey`,
+  `verifyAcquiringWebhookSignature`, and
+  `verifyInstallmentsCallbackSignature`. Resource classes are available through
   parent properties and are not root runtime exports.
 
 See `src/index.ts` for the complete authoritative export list, including types.
@@ -427,8 +465,8 @@ See `src/index.ts` for the complete authoritative export list, including types.
   narrowed with `retry.retryableStatusCodes`. Prefer `[500, 502, 503, 504]` for a
   Personal client, because `/personal/client-info` and `/personal/statement` allow
   one request per 60 seconds and a retried `429` only spends more quota.
-- Never configure a cleartext `http:` `baseUrl` together with a token; the SDK
-  rejects it at construction unless the host is loopback.
+- Never configure a cleartext `http:` `baseUrl` together with any credential;
+  the SDK rejects it at construction unless the host is loopback.
 - Validate environment configuration before constructing the client.
 
 ## Authoritative project documents

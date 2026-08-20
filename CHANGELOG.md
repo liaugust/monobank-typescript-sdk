@@ -49,6 +49,9 @@ Findings from an internal security, performance, and code-quality review of
 - `parseRetryAfter("")` (an empty but present `Retry-After` header) no longer
   returns an immediate `0` ms delay; it now falls back the same way an absent
   header does.
+- Agent and consumer documentation now agree on the five client families, the
+  complete public resource and schema inventories, credential boundaries,
+  supported Node version, and the dated scope of the 63-operation audit.
 
 ## 0.5.0 - 2026-08-20
 

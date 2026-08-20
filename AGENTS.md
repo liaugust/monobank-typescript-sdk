@@ -8,7 +8,8 @@ Monobank documentation over inferred API behavior.
 
 Provide a strict TypeScript boundary around Monobank APIs without leaking
 credentials or trusting upstream JSON. The package is unofficial and must not
-claim endorsement by Monobank or completeness of the API surface.
+claim endorsement by Monobank or completeness beyond a dated audit of the two
+official documentation sites.
 
 ## Documentation Sources
 
@@ -25,8 +26,10 @@ both before concluding that an endpoint exists or does not:
   Corporate, plus `/bank/sync`, `/api/merchant/employee/list`, and
   `/api/merchant/invoice/sync-payment`.
 
-All 63 documented operations are implemented, enumerated under issue #59. A call
-Monobank documents that is missing here is a bug, not an intentional omission.
+Implements all 63 operations found across Monobank's two documentation sites as
+last audited on 2026-08-20. This does not establish completeness against
+undocumented or future operations. The inventory is maintained under issue #59;
+a currently documented operation missing here is a bug.
 
 ## Rules for Consumer Code
 
@@ -86,8 +89,8 @@ Monobank documents that is missing here is a bug, not an intentional omission.
   and fiscal enum-like values instead of repeating their wire strings.
 - Pass an `AbortSignal` when a caller needs cancellation.
 - Configure retries only when the application accepts repeated safe GET calls.
-  Mutating Personal and Acquiring methods are never retried by the SDK, and no
-  timeout is ever retried.
+  Mutating methods in every credential family are never retried by the SDK, and
+  no timeout is ever retried.
 - Narrow `retry.retryableStatusCodes` to `[500, 502, 503, 504]` for a Personal
   client. Both documented Personal endpoints allow one request per 60 seconds, so
   retrying a `429` cannot succeed and spends more of the quota.
@@ -187,11 +190,13 @@ The root entry point exports:
 - `MonobankPublicClient`
 - `MonobankAcquiringClient`
 - `MonobankCorporateClient`
-- seventeen resource properties exposed through the four parent clients: `bank`,
-  `currency`, `client`, Personal `statements`, Personal `webhooks`, `merchant`,
-  `employees`, `invoices`, Acquiring `statements`, `submerchants`, `qr`,
-  `wallet`, Acquiring `webhooks`, and Corporate `access`, `clients`, `company`,
-  and `documents`
+- `MonobankInstallmentsClient`
+- twenty-six resource properties exposed through the five parent clients:
+  Public `bank` and `currency`; Personal `client`, `statements`, and `webhooks`;
+  Acquiring `employees`, `invoices`, `merchant`, `monopay`, `pos`, `qr`, `split`,
+  `statements`, `submerchants`, `subscriptions`, `t2p`, `wallet`, and `webhooks`;
+  Corporate `access`, `clients`, `company`, and `documents`; and Installments
+  `clients`, `letters`, `orders`, and `reports`
 - enum-like const values, including `AccountType`, `CashbackType`,
   `AcquiringPaymentScheme`, `AcquiringQrAmountType`, `AcquiringStatementStatus`,
   `InvoicePaymentType`, `InvoiceStatus`, `CorporateRegistrationStatus`,
@@ -203,9 +208,13 @@ The root entry point exports:
   access requests, and monoКЕП documents, signatories, and signing status
 - `defaultRetryableStatusCodes`
 - `parsePersonalWebhookEvent`
+- `parseInstallmentsCallbackEvent`
+- `importAcquiringWebhookPublicKey`
 - `verifyAcquiringWebhookSignature`
-- Personal, Acquiring, and Corporate request, response, transport, retry, and
-  error types, including `CorporateSigner` and `CorporateSignatureInput`
+- `verifyInstallmentsCallbackSignature`
+- Personal, Acquiring, Corporate, and Installments request, response, transport,
+  retry, and error types, including `CorporateSigner` and
+  `CorporateSignatureInput`
 - `MonobankApiError`, `MonobankNetworkError`,
   `MonobankResponseValidationError`, and `MonobankValidationError`
 
@@ -221,9 +230,14 @@ src/acquiring/client/           Acquiring parent client and options
 src/acquiring/merchant/         merchant resource and endpoint slice
 src/acquiring/employees/        employee resource and endpoint slice
 src/acquiring/invoices/         invoice endpoints, models, and request helpers
+src/acquiring/monopay/          monopay public-key lifecycle
+src/acquiring/pos/              POS refund initiation
 src/acquiring/qr/               QR cashier resource, endpoints, and models
+src/acquiring/split/            split-payment receiver discovery
 src/acquiring/statements/       statement resource, endpoint, and models
 src/acquiring/submerchants/     submerchant resource, endpoint, and models
+src/acquiring/subscriptions/    recurring-payment lifecycle
+src/acquiring/t2p/              tap-to-phone terminals and payment status
 src/acquiring/shared/           shared Acquiring response models
 src/acquiring/wallet/           tokenized card resource, endpoints, and models
 src/acquiring/webhooks/         trust-key endpoint and signature verification
@@ -232,6 +246,12 @@ src/corporate/client/           Corporate parent client and options
 src/corporate/clients/          delegated reads of a granted client's data
 src/corporate/documents/        monoKEP document signing resource and endpoints
 src/corporate/company/          company resource, endpoint, and response model
+src/installments/callbacks/     callback parsing and HMAC verification
+src/installments/client/        Installments parent client and options
+src/installments/clients/       client eligibility endpoints
+src/installments/letters/       guarantee-letter data and downloads
+src/installments/orders/        order lifecycle endpoints and models
+src/installments/reports/       store settlement reporting
 src/public/client/              token-free Public parent client and options
 src/public/bank/                bank resource and sync endpoint
 src/public/currency/            currency resource and rates endpoint
@@ -244,7 +264,7 @@ src/transport/retry/            retry policy, delay, and Retry-After parsing
 src/transport/response/         successful and failed response normalization
 src/shared/                     request options, validation, URL, webhook body, statement path, unix time
 src/errors/                     public credential-safe error classes
-tests/fixtures/{public,personal,acquiring}/ synthetic contract fixtures
+tests/fixtures/{public,personal,acquiring,corporate}/ synthetic contract fixtures
 tests/types/                    compile-time public API assertions
 tests/consumers/                ESM, CJS, browser, declaration, and tarball checks
 .github/workflows/ci.yml        Node 22/24 verification matrix
@@ -253,9 +273,9 @@ tests/consumers/                ESM, CJS, browser, declaration, and tarball chec
 
 ## Architectural Invariants
 
-- Preserve the separation between Public, Personal, Acquiring, and Corporate
-  clients. A single transport must never hold both a token and a Corporate
-  credential; configuring both is rejected.
+- Preserve the separation between Public, Personal, Acquiring, Corporate, and
+  Installments clients. A single transport must never combine token, Corporate,
+  or Installments credential modes; configuring more than one is rejected.
 - Sign Corporate requests once per attempt, never once per request. `X-Time` is
   signed, so a retry after a backoff delay would replay a stale timestamp.
   The attempt signal is passed into signing, so `timeoutMs` bounds a signer that
@@ -319,6 +339,24 @@ tests/consumers/                ESM, CJS, browser, declaration, and tarball chec
 - Never use untyped `any`, broad lint suppressions, coverage ignores, or unsafe
   type assertions to bypass a contract.
 
+## Common Change Routes
+
+- **Add or change an endpoint:** read both documentation sites and the individual
+  endpoint page, add the smallest failing colocated runtime test, update the
+  resource method and schema, export public values through `src/index.ts`, then
+  update `README.md`, `docs/API.md`, `llms.txt`, and this guide where routing or
+  safety changed.
+- **Change a response schema:** add or update a synthetic fixture, reproduce the
+  accepted or rejected wire shape in a focused test, keep response objects loose,
+  and update the inferred model documentation without duplicating the type.
+- **Add a public export:** update `src/index.ts`, declaration/type assertions,
+  consumer smoke checks, the runtime-schema or supporting-type inventory in
+  `docs/API.md`, and the compact runtime inventory in `llms.txt`.
+- **Change documentation only:** run
+  `pnpm exec vitest run tests/documentation-consistency.test.ts`, then
+  `pnpm verify`; do not rely on conceptual review alone for inventories or
+  version pins.
+
 ## Change Workflow
 
 1. Confirm the intended API contract against current official Monobank
@@ -346,6 +384,8 @@ For every new or changed public export:
 - keep ESM, CommonJS, and browser-bundler compatibility
 - verify the packed tarball, not only the source tree
 - update `README.md`, `docs/API.md`, and `llms.txt`
+- update `AGENTS.md` when the change affects resources, safety rules, repository
+  routing, operation counts, or contributor workflow
 
 ## Verification Standard
 
@@ -382,9 +422,9 @@ make verification pass.
 - State security boundaries next to sensitive examples.
 - Explain wire units and unusual upstream casing.
 - Avoid promises the SDK does not implement.
-- Never describe the coverage as complete. The operation counts live in
-  `README.md`, `llms.txt`, and this file; changing coverage means updating all
-  three together.
+- Describe coverage only as a dated audit of both documentation sites, never as
+  completeness of Monobank's entire or future API. The operation count and audit
+  date live in `README.md`, `llms.txt`, and this file; update all three together.
 - Keep `README.md` human-friendly, `docs/API.md` exhaustive for the implemented
   surface, `llms.txt` compact and discoverable, and this file operational.
 
