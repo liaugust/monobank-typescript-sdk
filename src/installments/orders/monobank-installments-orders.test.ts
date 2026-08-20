@@ -106,6 +106,24 @@ describe("MonobankInstallmentsOrders", () => {
     await expect(
       client.orders.create({ ...createInput, client_phone: "0501234567" }),
     ).rejects.toBeInstanceOf(MonobankValidationError);
+    await expect(
+      client.orders.create({ ...createInput, available_programs: [] }),
+    ).rejects.toBeInstanceOf(MonobankValidationError);
+    await expect(
+      client.orders.create({ ...createInput, products: [] }),
+    ).rejects.toBeInstanceOf(MonobankValidationError);
+    await expect(
+      client.orders.create({
+        ...createInput,
+        result_callback: "not-a-url",
+      }),
+    ).rejects.toBeInstanceOf(MonobankValidationError);
+    await expect(
+      client.orders.create({
+        ...createInput,
+        result_callback: "ftp://shop.example.test/callback",
+      }),
+    ).rejects.toBeInstanceOf(MonobankValidationError);
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -187,6 +205,18 @@ describe("MonobankInstallmentsOrders", () => {
     );
   });
 
+  it("rejects a checkPaid response missing the required fully_paid field", async () => {
+    const fetch = createFetchSequence([
+      jsonResponse({ bank_can_return_money_to_card: true }),
+    ]);
+
+    await expect(
+      createInstallmentsTestClient(fetch).orders.checkPaid({
+        order_id: orderId,
+      }),
+    ).rejects.toBeInstanceOf(MonobankResponseValidationError);
+  });
+
   it("returns goods with its documented parameters", async () => {
     const fetch = createFetchSequence([jsonResponse({ status: "OK" })]);
 
@@ -209,6 +239,19 @@ describe("MonobankInstallmentsOrders", () => {
       store_return_id: "RET-12345",
       sum: 1_250.5,
     });
+  });
+
+  it("rejects a returnGoods response missing the required status field", async () => {
+    const fetch = createFetchSequence([jsonResponse({})]);
+
+    await expect(
+      createInstallmentsTestClient(fetch).orders.returnGoods({
+        order_id: orderId,
+        return_money_to_card: true,
+        store_return_id: "RET-12345",
+        sum: 1_250.5,
+      }),
+    ).rejects.toBeInstanceOf(MonobankResponseValidationError);
   });
 
   it("rejects a return below the documented minimum", async () => {

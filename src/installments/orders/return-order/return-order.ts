@@ -2,12 +2,10 @@ import * as z from "zod/mini";
 
 import { parseMonobankRequest } from "../../../shared/request-validation.js";
 import { invalidInstallmentsRequestMessage } from "../../shared/request-validation.js";
+import { orderIdentifierPattern } from "../shared/order-identifier.js";
 
 /** Root-relative endpoint returning goods from a Покупка Частинами order. */
 export const returnInstallmentsOrderEndpoint = "/api/order/return";
-
-const orderIdentifierPattern =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 
 const returnInstallmentsOrderSchema = z.looseObject({
   additional_params: z.optional(z.looseObject({})),

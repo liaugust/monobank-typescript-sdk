@@ -1,4 +1,5 @@
 import type { RequestOptions } from "../../shared/request-options.js";
+import { requestSignal } from "../../shared/request-options.js";
 import type { MonobankTransport } from "../../transport/transport.js";
 import type {
   GetInstallmentsStoreReportInput,
@@ -53,7 +54,7 @@ export class MonobankInstallmentsReports {
       endpoint: getInstallmentsStoreReportEndpoint,
       retryable: false,
       schema: installmentsStoreReportSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 }

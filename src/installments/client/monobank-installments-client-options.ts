@@ -14,7 +14,15 @@ export interface MonobankInstallmentsClientOptions {
   readonly baseUrl?: string;
   /** Fetch implementation to use instead of `globalThis.fetch`. */
   readonly fetch?: FetchLike;
-  /** Bounded retry policy for safe reads; omit to disable retries. */
+  /**
+   * Bounded retry policy for safe reads; omit to disable retries.
+   *
+   * Покупка Частинами exposes only `POST` endpoints, and the transport's
+   * retry policy only ever applies to safe `GET` requests, so this option has
+   * no effect on any current `MonobankInstallmentsClient` request. It is
+   * still validated and accepted for forward compatibility with a future safe
+   * read endpoint.
+   */
   readonly retry?: RetryOptions;
   /** Store identifier Monobank issued, sent as `store-id`. */
   readonly storeId: string;

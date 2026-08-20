@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { clientInfoFixture } from "../../../tests/fixtures/personal/client-info.js";
+import { expectPersonalCancellation } from "../../../tests/support/caller-cancellation.js";
 import {
   createFetchSequence,
   jsonResponse,
@@ -15,6 +16,7 @@ function textResponse(body: string, init: ResponseInit = {}): Response {
 describe("MonobankPersonalClientInfo", () => {
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it("loads client information with the Personal token", async () => {
@@ -32,17 +34,10 @@ describe("MonobankPersonalClientInfo", () => {
     expect(firstRequestHeaders(fetch).get("X-Token")).toBe("personal-token");
   });
 
-  it("passes caller signals to client-info requests", async () => {
-    const fetch = createFetchSequence([jsonResponse(clientInfoFixture)]);
-    const client = new MonobankPersonalClient({
-      fetch,
-      token: "personal-token",
-    });
-    const controller = new AbortController();
-
-    await client.client.getInfo({ signal: controller.signal });
-
-    expect(fetch.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
+  it("aborts an in-flight client-info request on caller cancellation", async () => {
+    await expectPersonalCancellation((client, signal) =>
+      client.client.getInfo({ signal }),
+    );
   });
 
   it("turns malformed nested payloads into safe validation errors", async () => {
@@ -86,6 +81,7 @@ describe("MonobankPersonalClientInfo", () => {
 
   it("uses configured safe retries", async () => {
     vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(1);
     const fetch = createFetchSequence([
       new Response(null, { status: 503 }),
       jsonResponse(clientInfoFixture),

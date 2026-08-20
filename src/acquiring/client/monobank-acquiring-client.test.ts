@@ -19,6 +19,7 @@ import { MonobankAcquiringClient } from "./monobank-acquiring-client.js";
 describe("MonobankAcquiringClient merchant details", () => {
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it("loads merchant details with X-Token", async () => {
@@ -87,6 +88,7 @@ describe("MonobankAcquiringClient merchant details", () => {
 
   it("uses the configured safe retry policy", async () => {
     vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(1);
     const fetch = createFetchSequence([
       new Response(null, { status: 503 }),
       jsonResponse(merchantDetailsFixture),

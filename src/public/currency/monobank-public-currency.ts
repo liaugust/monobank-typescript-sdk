@@ -1,4 +1,5 @@
 import type { RequestOptions } from "../../shared/request-options.js";
+import { requestSignal } from "../../shared/request-options.js";
 import type { MonobankTransport } from "../../transport/transport.js";
 import type { CurrencyRate } from "./get-rates/get-rates.js";
 import {
@@ -33,7 +34,7 @@ export class MonobankPublicCurrency {
       endpoint: getCurrencyRatesEndpoint,
       retryable: true,
       schema: currencyRatesSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 }

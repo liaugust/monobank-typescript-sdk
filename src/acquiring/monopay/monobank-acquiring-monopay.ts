@@ -1,4 +1,5 @@
 import type { RequestOptions } from "../../shared/request-options.js";
+import { requestSignal } from "../../shared/request-options.js";
 import type { MonobankTransport } from "../../transport/transport.js";
 import type { DeleteMonopaySigningKeyInput } from "./delete-monopay-key/delete-monopay-key.js";
 import {
@@ -58,7 +59,7 @@ export class MonobankAcquiringMonopay {
       body: createDeleteMonopaySigningKeyBody(input),
       endpoint: deleteMonopaySigningKeyEndpoint,
       retryable: false,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 
@@ -95,7 +96,7 @@ export class MonobankAcquiringMonopay {
       endpoint: importMonopaySigningKeyEndpoint,
       retryable: false,
       schema: importedMonopaySigningKeySchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 
@@ -122,7 +123,7 @@ export class MonobankAcquiringMonopay {
       endpoint: listMonopaySigningKeysEndpoint,
       retryable: true,
       schema: monopaySigningKeyListSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 }

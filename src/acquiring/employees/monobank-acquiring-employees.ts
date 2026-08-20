@@ -1,4 +1,5 @@
 import type { RequestOptions } from "../../shared/request-options.js";
+import { requestSignal } from "../../shared/request-options.js";
 import type { MonobankTransport } from "../../transport/transport.js";
 import { listAcquiringEmployeesEndpoint } from "./list-employees/list-employees.js";
 import type { AcquiringEmployeeList } from "./models/acquiring-employee.js";
@@ -41,7 +42,7 @@ export class MonobankAcquiringEmployees {
       endpoint: listAcquiringEmployeesEndpoint,
       retryable: true,
       schema: acquiringEmployeeListSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 }

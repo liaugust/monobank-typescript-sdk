@@ -1,4 +1,4 @@
-import { decodeBase64 } from "./decode-base64.js";
+import { decodeBase64 } from "../../../shared/decode-base64.js";
 
 /**
  * Extracts SPKI bytes from Monobank's base64-encoded PEM public key.

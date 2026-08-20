@@ -82,6 +82,7 @@ describe("public package surface", () => {
       "documentSigningRequestSchema",
       "documentSigningStatusSchema",
       "finalizeInvoiceResponseSchema",
+      "importAcquiringWebhookPublicKey",
       "importedMonopaySigningKeySchema",
       "installmentsCallbackEventSchema",
       "installmentsClientPresenceSchema",

@@ -1,4 +1,5 @@
 import { MonobankValidationError } from "../../errors/monobank-validation-error.js";
+import { printableAsciiPattern } from "../../shared/printable-ascii.js";
 import type {
   CorporateSignatureInput,
   CorporateSigner,
@@ -94,11 +95,11 @@ export async function createRequestInit(
     );
   }
 
+  // `signal` is intentionally absent here: the transport always overrides it
+  // with the per-attempt `attemptSignal`, which already incorporates
+  // `request.signal` (see `attempt-signal.ts`). Setting it here would be dead
+  // code that misleads a reader of this function in isolation.
   const init: RequestInit = { headers, method, redirect: "error" };
-
-  if (request.signal !== undefined) {
-    init.signal = request.signal;
-  }
 
   if (body !== undefined) {
     init.body = body;
@@ -181,8 +182,6 @@ async function applyCredentialHeaders(
   );
 }
 
-const safeHeaderValue = /^[!-~]+$/u;
-
 /**
  * Rejects a credential header value that cannot be sent verbatim.
  *
@@ -201,7 +200,7 @@ function requireSafeHeaderValue(
   field: string,
   endpoint: string,
 ): string {
-  if (!safeHeaderValue.test(value)) {
+  if (!printableAsciiPattern.test(value)) {
     throw new MonobankValidationError({
       endpoint,
       issues: [`${field} must be nonempty printable ASCII without spaces`],
@@ -237,7 +236,7 @@ async function createSignature(
   attemptSignal: AbortSignal,
 ): Promise<string> {
   return await Promise.race([
-    requireSignature(sign, input, endpoint),
+    requireSignature(sign, input, endpoint, attemptSignal),
     rejectWhenAborted(attemptSignal),
   ]);
 }
@@ -274,9 +273,10 @@ async function requireSignature(
   sign: CorporateSigner,
   input: CorporateSignatureInput,
   endpoint: string,
+  attemptSignal: AbortSignal,
 ): Promise<string> {
   try {
-    const signature = await sign(input);
+    const signature = await sign(input, attemptSignal);
 
     if (signature.length > 0) {
       return signature;

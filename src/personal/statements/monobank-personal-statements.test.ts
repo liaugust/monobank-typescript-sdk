@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { statementItemFixture } from "../../../tests/fixtures/personal/statements.js";
+import { expectPersonalCancellation } from "../../../tests/support/caller-cancellation.js";
 import {
   createFetchSequence,
   jsonResponse,
@@ -16,6 +17,7 @@ import type { GetStatementsInput } from "./get-statements/get-statements.js";
 describe("MonobankPersonalClient statements", () => {
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it("builds an encoded statement path from Date inputs", async () => {
@@ -148,24 +150,15 @@ describe("MonobankPersonalClient statements", () => {
     });
   });
 
-  it("passes caller signals to statement requests", async () => {
-    const fetch = createFetchSequence([jsonResponse([statementItemFixture])]);
-    const client = new MonobankPersonalClient({
-      fetch,
-      token: "personal-token",
-    });
-    const controller = new AbortController();
-
-    await client.statements.get(
-      { account: "0", from: 1_785_542_400 },
-      { signal: controller.signal },
+  it("aborts an in-flight statement request on caller cancellation", async () => {
+    await expectPersonalCancellation((client, signal) =>
+      client.statements.get({ account: "0", from: 1_785_542_400 }, { signal }),
     );
-
-    expect(fetch.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
   });
 
   it("uses configured safe retries for statement GET requests", async () => {
     vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(1);
     const fetch = createFetchSequence([
       new Response(null, { status: 503 }),
       jsonResponse([statementItemFixture]),

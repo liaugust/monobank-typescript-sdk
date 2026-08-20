@@ -48,6 +48,11 @@ describe("installments request headers", () => {
     });
 
     expect(firstRequestHeaders(fetch).get("Accept")).toBe("application/pdf");
+    expect(firstRequestHeaders(fetch).get("signature")).toBe(
+      createHmac("sha256", storeSecret)
+        .update(JSON.stringify({ order_id: "order-42" }))
+        .digest("base64"),
+    );
   });
 
   it("defaults Accept to JSON when the operation sets none", async () => {
@@ -61,5 +66,55 @@ describe("installments request headers", () => {
     });
 
     expect(firstRequestHeaders(fetch).get("Accept")).toBe("application/json");
+  });
+
+  it("signs the exact serialized body bytes, not a fixed or empty digest", async () => {
+    const fetch = createFetchSequence([jsonResponse({ ok: true })]);
+    const body = { note: "édition spéciale", order_id: "order-42" };
+
+    await createTransport(fetch).postJson({
+      auth: true,
+      body,
+      endpoint: "/api/order/state",
+      schema: z.looseObject({ ok: z.boolean() }),
+    });
+
+    expect(firstRequestHeaders(fetch).get("signature")).toBe(
+      createHmac("sha256", storeSecret)
+        .update(JSON.stringify(body))
+        .digest("base64"),
+    );
+  });
+
+  it("produces a different signature for a different store secret", async () => {
+    const fetchA = createFetchSequence([jsonResponse({ ok: true })]);
+    const fetchB = createFetchSequence([jsonResponse({ ok: true })]);
+    const body = { order_id: "order-42" };
+    const transportB = new MonobankTransport({
+      authenticatedPathPrefix: "/api/",
+      baseUrl: "https://u2.monobank.com.ua",
+      fetch: fetchB,
+      installments: {
+        storeId: "test_store_with_confirm",
+        storeSecret: "a-different-secret",
+      },
+    });
+
+    await createTransport(fetchA).postJson({
+      auth: true,
+      body,
+      endpoint: "/api/order/state",
+      schema: z.looseObject({ ok: z.boolean() }),
+    });
+    await transportB.postJson({
+      auth: true,
+      body,
+      endpoint: "/api/order/state",
+      schema: z.looseObject({ ok: z.boolean() }),
+    });
+
+    expect(firstRequestHeaders(fetchA).get("signature")).not.toBe(
+      firstRequestHeaders(fetchB).get("signature"),
+    );
   });
 });

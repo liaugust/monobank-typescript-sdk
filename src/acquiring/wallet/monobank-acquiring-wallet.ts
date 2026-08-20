@@ -1,4 +1,5 @@
 import type { RequestOptions } from "../../shared/request-options.js";
+import { requestSignal } from "../../shared/request-options.js";
 import type { MonobankTransport } from "../../transport/transport.js";
 import type { AcquiringCardPayment } from "../shared/models/card-payment.js";
 import { acquiringCardPaymentSchema } from "../shared/models/card-payment.js";
@@ -56,7 +57,7 @@ export class MonobankAcquiringWallet {
       endpoint,
       retryable: true,
       schema: acquiringWalletSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 
@@ -97,7 +98,7 @@ export class MonobankAcquiringWallet {
       endpoint: payWithCardTokenEndpoint,
       retryable: false,
       schema: acquiringCardPaymentSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 
@@ -128,7 +129,7 @@ export class MonobankAcquiringWallet {
       auth: true,
       endpoint,
       retryable: false,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 }

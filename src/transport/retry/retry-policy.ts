@@ -67,5 +67,25 @@ function retryDelayMs(
     return retryAfterMs <= policy.maxDelayMs ? retryAfterMs : undefined;
   }
 
-  return Math.min(policy.baseDelayMs * 2 ** (attempt - 1), policy.maxDelayMs);
+  const cappedDelay = Math.min(
+    policy.baseDelayMs * 2 ** (attempt - 1),
+    policy.maxDelayMs,
+  );
+
+  return applyJitter(cappedDelay);
+}
+
+/**
+ * Applies equal jitter (50%-100% of the capped delay) to an exponential
+ * backoff step.
+ *
+ * Without jitter, every process retrying the same rate-limit or outage window
+ * computes the same delay and retries in lockstep, amplifying load exactly
+ * when Monobank is already stressed. A `Retry-After` value is never passed
+ * through here: Monobank stated that exact delay, so it is honored as-is.
+ * @param cappedDelay Exponential backoff delay after the `maxDelayMs` cap.
+ * @returns Jittered delay in milliseconds.
+ */
+function applyJitter(cappedDelay: number): number {
+  return cappedDelay * (0.5 + Math.random() * 0.5);
 }

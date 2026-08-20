@@ -1,4 +1,5 @@
 import type { RequestOptions } from "../../shared/request-options.js";
+import { requestSignal } from "../../shared/request-options.js";
 import type { MonobankTransport } from "../../transport/transport.js";
 import type { AcquiringCardPayment } from "../shared/models/card-payment.js";
 import { acquiringCardPaymentSchema } from "../shared/models/card-payment.js";
@@ -322,10 +323,4 @@ export class MonobankAcquiringInvoices {
       ...requestSignal(options),
     });
   }
-}
-
-function requestSignal(options: RequestOptions | undefined): {
-  readonly signal?: AbortSignal;
-} {
-  return options?.signal === undefined ? {} : { signal: options.signal };
 }

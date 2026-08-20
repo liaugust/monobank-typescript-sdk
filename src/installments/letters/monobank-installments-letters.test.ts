@@ -11,6 +11,7 @@ import {
   firstRequestUrl,
 } from "../../../tests/support/fetch-request-inspection.js";
 import { createInstallmentsTestClient } from "../../../tests/support/installments-client.js";
+import { MonobankApiError } from "../../errors/monobank-api-error.js";
 import { MonobankResponseValidationError } from "../../errors/monobank-response-validation-error.js";
 import { MonobankValidationError } from "../../errors/monobank-validation-error.js";
 
@@ -180,6 +181,18 @@ describe("MonobankInstallmentsLetters", () => {
         order_id: orderId,
       }),
     ).rejects.toBeInstanceOf(MonobankResponseValidationError);
+  });
+
+  it("maps a non-2xx error response to MonobankApiError without reading it as binary", async () => {
+    const fetch = createFetchSequence([
+      jsonResponse({ errorDescription: "order not found" }, { status: 404 }),
+    ]);
+
+    await expect(
+      createInstallmentsTestClient(fetch).letters.download({
+        order_id: orderId,
+      }),
+    ).rejects.toBeInstanceOf(MonobankApiError);
   });
 
   it("rejects a malformed letter payload", async () => {

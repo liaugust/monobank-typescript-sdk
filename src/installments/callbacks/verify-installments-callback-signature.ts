@@ -1,4 +1,6 @@
-import { createInstallmentsSignature } from "../../transport/request/installments-signature.js";
+import { MonobankValidationError } from "../../errors/monobank-validation-error.js";
+import { decodeBase64 } from "../../shared/decode-base64.js";
+import { computeInstallmentsHmac } from "../../transport/request/installments-signature.js";
 
 /** Inputs required to authenticate a Покупка Частинами callback body. */
 export interface VerifyInstallmentsCallbackSignatureInput {
@@ -18,40 +20,66 @@ export interface VerifyInstallmentsCallbackSignatureInput {
  * requests, so verification recomputes the signature over the exact bytes
  * received. Pass the raw body, not a re-serialized object: `JSON.parse` followed
  * by `JSON.stringify` can reorder keys and change the bytes that were signed.
+ * The body is hashed directly from its original bytes with no intermediate
+ * string round trip.
  *
  * The comparison is length-independent and constant-time over the compared
  * bytes, so a caller cannot learn the expected signature by timing repeated
- * attempts.
+ * attempts. A malformed (non-base64) `signature` is treated as a mismatch
+ * rather than thrown, so this function never throws on attacker-controlled
+ * input.
  * @param input Raw body bytes, the `signature` header value, and the store secret.
  * @returns Whether the signature authenticates the supplied body.
+ * @throws {MonobankValidationError} When `storeSecret` is empty.
  */
 export async function verifyInstallmentsCallbackSignature(
   input: VerifyInstallmentsCallbackSignatureInput,
 ): Promise<boolean> {
-  const expected = await createInstallmentsSignature(
-    input.storeSecret,
-    decodeBody(input.body),
-  );
-
-  return equalsInConstantTime(expected, input.signature);
-}
-
-function decodeBody(body: ArrayBuffer | Uint8Array | string): string {
-  if (typeof body === "string") {
-    return body;
+  if (input.storeSecret.length === 0) {
+    throw new MonobankValidationError({
+      endpoint: "verify-installments-callback-signature",
+      issues: ["storeSecret must be a nonempty string"],
+      message: "Invalid Installments callback verification input.",
+    });
   }
 
-  const bytes =
-    body instanceof ArrayBuffer ? new Uint8Array(body) : Uint8Array.from(body);
+  const expected = await computeInstallmentsHmac(
+    input.storeSecret,
+    toBytes(input.body),
+  );
+  const actual = decodeSignature(input.signature);
 
-  return new TextDecoder().decode(bytes);
+  return equalsInConstantTime(expected, actual);
 }
 
-function equalsInConstantTime(expected: string, actual: string): boolean {
+function toBytes(
+  body: ArrayBuffer | Uint8Array | string,
+): Uint8Array<ArrayBuffer> {
+  if (typeof body === "string") {
+    return new TextEncoder().encode(body);
+  }
+
+  return body instanceof ArrayBuffer
+    ? new Uint8Array(body)
+    : Uint8Array.from(body);
+}
+
+function decodeSignature(signature: string): Uint8Array {
+  try {
+    return decodeBase64(signature);
+  } catch {
+    return new Uint8Array(0);
+  }
+}
+
+function equalsInConstantTime(
+  expected: Uint8Array,
+  actual: Uint8Array,
+): boolean {
   let difference = expected.length ^ actual.length;
 
-  for (let index = 0; index < expected.length; index += 1) {
-    difference |= expected.charCodeAt(index) ^ (actual.charCodeAt(index) || 0);
+  for (const [index, value] of expected.entries()) {
+    difference |= value ^ (actual[index] ?? 0);
   }
 
   return difference === 0;

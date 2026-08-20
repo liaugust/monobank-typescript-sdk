@@ -1,5 +1,6 @@
 import * as z from "zod/mini";
 
+import { isPrintableAscii } from "../../../shared/printable-ascii.js";
 import { parseMonobankRequest } from "../../../shared/request-validation.js";
 
 /** Input identifying the monoКЕП signing request to cancel. */
@@ -11,7 +12,7 @@ export interface CancelDocumentSigningInput {
 const cancelSigningPath = "/personal/signature/cancel";
 
 const cancelSigningSchema = z.object({
-  requestId: z.string().check(z.refine((value) => /^[!-~]+$/u.test(value))),
+  requestId: z.string().check(z.refine(isPrintableAscii)),
 });
 
 /**

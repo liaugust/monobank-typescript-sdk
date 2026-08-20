@@ -1,4 +1,5 @@
 import type { RequestOptions } from "../../shared/request-options.js";
+import { requestSignal } from "../../shared/request-options.js";
 import type { MonobankTransport } from "../../transport/transport.js";
 import type { GetAcquiringStatementsInput } from "./get-statements/get-acquiring-statements.js";
 import { createAcquiringStatementsEndpoint } from "./get-statements/get-acquiring-statements.js";
@@ -49,7 +50,7 @@ export class MonobankAcquiringStatements {
       endpoint,
       retryable: true,
       schema: acquiringStatementSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 }

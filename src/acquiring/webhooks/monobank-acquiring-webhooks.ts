@@ -1,4 +1,5 @@
 import type { RequestOptions } from "../../shared/request-options.js";
+import { requestSignal } from "../../shared/request-options.js";
 import type { MonobankTransport } from "../../transport/transport.js";
 import type { AcquiringWebhookPublicKey } from "./get-public-key/get-public-key.js";
 import {
@@ -35,7 +36,7 @@ export class MonobankAcquiringWebhooks {
       endpoint: getAcquiringWebhookPublicKeyEndpoint,
       retryable: true,
       schema: acquiringWebhookPublicKeySchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 }

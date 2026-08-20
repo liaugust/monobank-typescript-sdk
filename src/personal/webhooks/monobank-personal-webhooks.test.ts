@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { expectPersonalCancellation } from "../../../tests/support/caller-cancellation.js";
 import { createFetchSequence } from "../../../tests/support/create-fetch-sequence.js";
 import { firstRequestHeaders } from "../../../tests/support/fetch-request-inspection.js";
 import { MonobankValidationError } from "../../errors/monobank-validation-error.js";
@@ -63,20 +64,13 @@ describe("MonobankPersonalClient webhook configuration", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("passes caller signals to webhook requests", async () => {
-    const fetch = createFetchSequence([new Response(null)]);
-    const client = new MonobankPersonalClient({
-      fetch,
-      token: "personal-token",
-    });
-    const controller = new AbortController();
-
-    await client.webhooks.set(
-      { webHookUrl: "https://example.test/mono-hook" },
-      { signal: controller.signal },
+  it("aborts an in-flight webhook request on caller cancellation", async () => {
+    await expectPersonalCancellation((client, signal) =>
+      client.webhooks.set(
+        { webHookUrl: "https://example.test/mono-hook" },
+        { signal },
+      ),
     );
-
-    expect(fetch.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
   });
 
   it("surfaces upstream webhook failures without retrying", async () => {

@@ -1,4 +1,5 @@
 import type { RequestOptions } from "../../shared/request-options.js";
+import { requestSignal } from "../../shared/request-options.js";
 import type { MonobankTransport } from "../../transport/transport.js";
 import type {
   AcquiringPosCancellation,
@@ -57,7 +58,7 @@ export class MonobankAcquiringPos {
       endpoint: cancelAcquiringPosTransactionEndpoint,
       retryable: false,
       schema: acquiringPosCancellationSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 }

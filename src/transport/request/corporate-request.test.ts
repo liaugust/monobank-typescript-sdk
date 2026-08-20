@@ -11,6 +11,7 @@ import {
   shortRetry,
 } from "../../../tests/support/transport.js";
 import { MonobankValidationError } from "../../errors/monobank-validation-error.js";
+import type { CorporateSigner } from "../corporate-signer.js";
 import { MonobankTransport } from "../transport.js";
 
 function signature(fetch: ReturnType<typeof createFetchSequence>) {
@@ -30,6 +31,19 @@ describe("Corporate transport credentials", () => {
 
     expect(fetch).toHaveBeenCalledTimes(2);
     expect(sign).toHaveBeenCalledTimes(2);
+  });
+
+  it("passes the attempt's AbortSignal to the signer for cancellable work", async () => {
+    const fetch = createFetchSequence([jsonResponse({ ok: true })]);
+    const sign = vi.fn<CorporateSigner>(() => "c2ln");
+    const transport = createCorporateTransport(fetch, sign);
+
+    await getCorporateSettings(transport);
+
+    expect(sign).toHaveBeenCalledTimes(1);
+    const [, signal] = sign.mock.calls[0] ?? [];
+    expect(signal).toBeInstanceOf(AbortSignal);
+    expect(signal?.aborted).toBe(false);
   });
 
   it("rejects a corporate request that declares no signed payload variant", async () => {

@@ -17,6 +17,7 @@ import { MonobankTransport } from "../transport.js";
 describe("MonobankTransport retry behavior", () => {
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it("does not retry unless a retry policy is configured", async () => {
@@ -29,8 +30,9 @@ describe("MonobankTransport retry behavior", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
-  it("honors Retry-After for a configured safe GET", async () => {
+  it("honors Retry-After exactly, applying no jitter, for a configured safe GET", async () => {
     vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
     const fetch = createFetchSequence([
       new Response(null, { headers: { "Retry-After": "2" }, status: 429 }),
       jsonResponse({ ok: true }),
@@ -53,6 +55,7 @@ describe("MonobankTransport retry behavior", () => {
 
   it("uses capped exponential backoff when Retry-After is absent", async () => {
     vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(1);
     const fetch = createFetchSequence([
       new Response(null, { status: 500 }),
       new Response(null, { status: 502 }),
@@ -78,10 +81,34 @@ describe("MonobankTransport retry behavior", () => {
     expect(fetch).toHaveBeenCalledTimes(3);
   });
 
+  it("applies equal jitter to exponential backoff, never below half the capped delay", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const fetch = createFetchSequence([
+      new Response(null, { status: 500 }),
+      jsonResponse({ ok: true }),
+    ]);
+    const transport = new MonobankTransport({
+      fetch,
+      retry: { baseDelayMs: 100, maxAttempts: 2, maxDelayMs: 100 },
+      token: "secret-token",
+    });
+
+    const result = requestSafeGet(transport);
+    result.catch(() => undefined);
+    await vi.advanceTimersByTimeAsync(49);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fetch).toHaveBeenCalledTimes(2);
+
+    await expect(result).resolves.toEqual({ ok: true });
+  });
+
   it.each([429, 500, 502, 503, 504])(
     "retries status %i for configured safe GET requests",
     async (status) => {
       vi.useFakeTimers();
+      vi.spyOn(Math, "random").mockReturnValue(1);
       const fetch = createFetchSequence([
         new Response(null, { status }),
         jsonResponse({ ok: true }),
@@ -210,6 +237,7 @@ describe("MonobankTransport retry behavior", () => {
 
   it("classifies caller abort during retry delay as aborted", async () => {
     vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(1);
     const controller = new AbortController();
     const fetch = createFetchSequence([
       new Response(null, { status: 503 }),
