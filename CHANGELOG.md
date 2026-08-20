@@ -4,6 +4,8 @@ All notable changes to this package are documented here.
 
 ## Unreleased
 
+## 0.6.0 - 2026-08-20
+
 Findings from an internal security, performance, and code-quality review of
 `transport`, `shared`, `acquiring`, `corporate`, `installments`, and `personal`.
 
