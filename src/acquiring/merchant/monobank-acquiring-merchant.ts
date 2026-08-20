@@ -1,4 +1,5 @@
 import type { RequestOptions } from "../../shared/request-options.js";
+import { requestSignal } from "../../shared/request-options.js";
 import type { MonobankTransport } from "../../transport/transport.js";
 import type { MerchantDetails } from "./get-merchant-details/get-merchant-details.js";
 import { merchantDetailsSchema } from "./get-merchant-details/get-merchant-details.js";
@@ -30,7 +31,7 @@ export class MonobankAcquiringMerchant {
       endpoint: "/api/merchant/details",
       retryable: true,
       schema: merchantDetailsSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 }

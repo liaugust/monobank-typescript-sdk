@@ -9,7 +9,7 @@ export function parseRetryAfter(
   value: string | null,
   nowMs: number,
 ): number | undefined {
-  if (value === null) {
+  if (value === null || value.trim() === "") {
     return undefined;
   }
 

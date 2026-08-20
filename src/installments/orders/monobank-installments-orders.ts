@@ -1,4 +1,5 @@
 import type { RequestOptions } from "../../shared/request-options.js";
+import { requestSignal } from "../../shared/request-options.js";
 import type { MonobankTransport } from "../../transport/transport.js";
 import type { InstallmentsOrderPayment } from "./check-order-paid/check-order-paid.js";
 import {
@@ -81,7 +82,7 @@ export class MonobankInstallmentsOrders {
       endpoint: checkInstallmentsOrderPaidEndpoint,
       retryable: false,
       schema: installmentsOrderPaymentSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 
@@ -118,7 +119,7 @@ export class MonobankInstallmentsOrders {
       endpoint: confirmInstallmentsOrderEndpoint,
       retryable: false,
       schema: installmentsOrderStateSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 
@@ -160,7 +161,7 @@ export class MonobankInstallmentsOrders {
       endpoint: createInstallmentsOrderEndpoint,
       retryable: false,
       schema: newInstallmentsOrderSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 
@@ -197,7 +198,7 @@ export class MonobankInstallmentsOrders {
       endpoint: getInstallmentsOrderDataEndpoint,
       retryable: false,
       schema: installmentsOrderDataSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 
@@ -233,7 +234,7 @@ export class MonobankInstallmentsOrders {
       endpoint: getInstallmentsOrderInfoEndpoint,
       retryable: false,
       schema: installmentsOrderDataSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 
@@ -270,7 +271,7 @@ export class MonobankInstallmentsOrders {
       endpoint: getInstallmentsOrderStateEndpoint,
       retryable: false,
       schema: installmentsOrderStateSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 
@@ -305,7 +306,7 @@ export class MonobankInstallmentsOrders {
       endpoint: rejectInstallmentsOrderEndpoint,
       retryable: false,
       schema: installmentsOrderStateSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 
@@ -346,7 +347,7 @@ export class MonobankInstallmentsOrders {
       endpoint: returnInstallmentsOrderEndpoint,
       retryable: false,
       schema: installmentsOrderReturnSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 }

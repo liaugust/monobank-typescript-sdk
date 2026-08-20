@@ -1,4 +1,5 @@
 import type { RequestOptions } from "../../shared/request-options.js";
+import { requestSignal } from "../../shared/request-options.js";
 import type { MonobankTransport } from "../../transport/transport.js";
 import { listAcquiringSplitReceiversEndpoint } from "./list-split-receivers/list-split-receivers.js";
 import type { AcquiringSplitReceiverList } from "./models/split-receiver.js";
@@ -45,7 +46,7 @@ export class MonobankAcquiringSplit {
       endpoint: listAcquiringSplitReceiversEndpoint,
       retryable: true,
       schema: acquiringSplitReceiverListSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 }

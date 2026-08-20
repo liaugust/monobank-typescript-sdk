@@ -2,6 +2,54 @@
 
 All notable changes to this package are documented here.
 
+## Unreleased
+
+Findings from an internal security, performance, and code-quality review of
+`transport`, `shared`, `acquiring`, `corporate`, `installments`, and `personal`.
+
+### Added
+
+- `importAcquiringWebhookPublicKey(publicKey)`, so a high-throughput webhook
+  receiver can import Monobank's ECDSA public key once and reuse it across
+  `verifyAcquiringWebhookSignature()` calls instead of re-parsing it per event.
+- `expectPersonalCancellation` test helper, matching the real mid-flight abort
+  coverage the other four credential families already had.
+
+### Changed
+
+- Exponential retry backoff now applies 50%-100% jitter to the capped delay, so
+  concurrent clients retrying the same rate-limit or outage window no longer
+  retry in lockstep. An explicit `Retry-After` value is still honored exactly.
+- `CorporateSigner` now receives the attempt's `AbortSignal` as a second
+  argument, so a signer backed by an HSM/KMS call can cancel its own work when
+  the attempt times out or the caller aborts, instead of continuing unobserved.
+- The Покупка Частинами HMAC key is now imported once per `storeSecret` and
+  reused, instead of being re-imported from raw bytes on every signed request
+  and every callback verification.
+- `installments.orders.create()` now rejects an empty `available_programs` or
+  `products` array ahead of Fetch, matching the documented "at least one is
+  required" contract instead of failing only upstream.
+- `installments.orders.create()`'s `result_callback` and
+  `corporate.documents.requestSigning()`'s `callbackUrl` now require an
+  absolute HTTP(S) URL ahead of Fetch, matching every other callback/webhook
+  URL field in the package.
+- `corporate.documents.requestSigning()` now validates each document's `hash`
+  as 64 hex characters, catching an obviously malformed value (though not a
+  same-length SHA-256 digest computed by mistake instead of ГОСТ 34.311-95).
+- `verifyInstallmentsCallbackSignature()` now hashes the received bytes
+  directly instead of decoding them to a string and back, and compares raw
+  HMAC digest bytes instead of base64 strings; it also rejects an empty
+  `storeSecret` instead of silently "verifying" against an empty key.
+- `X-Cms`/`X-Cms-Version` invoice-creation headers are now validated as
+  control-character-free text ahead of Fetch, consistent with every other
+  header value the package builds, instead of only checking for non-empty.
+
+### Fixed
+
+- `parseRetryAfter("")` (an empty but present `Retry-After` header) no longer
+  returns an immediate `0` ms delay; it now falls back the same way an absent
+  header does.
+
 ## 0.5.0 - 2026-08-20
 
 Every operation Monobank documents is now implemented: 63 of 63, counted across

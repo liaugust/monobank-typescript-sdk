@@ -1,4 +1,5 @@
 import type { RequestOptions } from "../../shared/request-options.js";
+import { requestSignal } from "../../shared/request-options.js";
 import type { MonobankTransport } from "../../transport/transport.js";
 import type { GetAcquiringQrDetailsInput } from "./get-qr-details/get-qr-details.js";
 import { createAcquiringQrDetailsEndpoint } from "./get-qr-details/get-qr-details.js";
@@ -48,7 +49,7 @@ export class MonobankAcquiringQr {
       endpoint: listAcquiringQrCashiersEndpoint,
       retryable: true,
       schema: acquiringQrCashierListSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 
@@ -88,7 +89,7 @@ export class MonobankAcquiringQr {
       endpoint,
       retryable: true,
       schema: acquiringQrDetailsSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 
@@ -120,7 +121,7 @@ export class MonobankAcquiringQr {
       body: createResetAcquiringQrAmountBody(input),
       endpoint: resetAcquiringQrAmountEndpoint,
       retryable: false,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 }

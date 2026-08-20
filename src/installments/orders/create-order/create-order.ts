@@ -1,5 +1,6 @@
 import * as z from "zod/mini";
 
+import { requireAbsoluteHttpUrl } from "../../../shared/http-url.js";
 import { parseMonobankRequest } from "../../../shared/request-validation.js";
 import { invalidInstallmentsRequestMessage } from "../../shared/request-validation.js";
 
@@ -8,18 +9,20 @@ export const createInstallmentsOrderEndpoint = "/api/order/create";
 
 const createInstallmentsOrderSchema = z.looseObject({
   additional_params: z.optional(z.looseObject({})),
-  available_programs: z.array(
-    z.looseObject({
-      available_parts_count: z.optional(z.array(z.int())),
-      type: z.optional(z.string()),
-    }),
-  ),
+  available_programs: z
+    .array(
+      z.looseObject({
+        available_parts_count: z.optional(z.array(z.int())),
+        type: z.optional(z.string()),
+      }),
+    )
+    .check(z.minLength(1)),
   client_phone: z
     .string()
     .check(z.refine((value) => /^\+[0-9]{9,15}$/u.test(value))),
   financial_company_merchant_info: z.optional(z.looseObject({})),
   invoice: z.looseObject({}),
-  products: z.array(z.looseObject({})),
+  products: z.array(z.looseObject({})).check(z.minLength(1)),
   result_callback: z.optional(z.string()),
   store_order_id: z.string().check(z.minLength(1), z.maxLength(64)),
   total_sum: z.number().check(z.minimum(2)),
@@ -87,10 +90,10 @@ export interface CreateInstallmentsOrderInput {
   readonly financial_company_merchant_info?: Readonly<Record<string, unknown>>;
   /** Invoice this order is raised against. */
   readonly invoice: InstallmentsOrderInvoiceInput;
-  /** Line items being bought. */
+  /** Line items being bought; at least one is required. */
   readonly products: readonly InstallmentsProductInput[];
   /**
-   * Optional URL Monobank posts the order result to.
+   * Optional absolute HTTP(S) URL Monobank posts the order result to.
    *
    * Callbacks arrive only for terminal outcomes; poll `getState()` for the rest,
    * and authenticate every callback with
@@ -129,10 +132,21 @@ export type NewInstallmentsOrder = z.infer<typeof newInstallmentsOrderSchema>;
 export function createInstallmentsOrderBody(
   input: CreateInstallmentsOrderInput,
 ): CreateInstallmentsOrderBody {
-  return parseMonobankRequest(
+  const parsed = parseMonobankRequest(
     createInstallmentsOrderSchema,
     input,
     createInstallmentsOrderEndpoint,
     invalidInstallmentsRequestMessage,
   );
+
+  if (parsed.result_callback !== undefined) {
+    requireAbsoluteHttpUrl(
+      parsed.result_callback,
+      "result_callback",
+      createInstallmentsOrderEndpoint,
+      invalidInstallmentsRequestMessage,
+    );
+  }
+
+  return parsed;
 }

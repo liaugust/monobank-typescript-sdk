@@ -24,9 +24,16 @@ export interface CorporateSignatureInput {
  * matching Monobank's documented example, not a DER structure; the digest it
  * applies is undocumented. Called once per attempt, because `X-Time` is signed
  * and a retry must not replay a stale timestamp.
+ *
+ * `signal` aborts when the attempt times out or the caller cancels. The
+ * transport already stops waiting on the signer once `signal` aborts, but it
+ * cannot stop the signer's own work (e.g. an in-flight HSM/KMS call): pass
+ * `signal` through to any cancellable operation the signer performs so that
+ * work is not left running after the SDK has given up on it.
  */
 export type CorporateSigner = (
   input: CorporateSignatureInput,
+  signal: AbortSignal,
 ) => Promise<string> | string;
 
 /** Corporate service key identifier paired with the signer holding its private key. */

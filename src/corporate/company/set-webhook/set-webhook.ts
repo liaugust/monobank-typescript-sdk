@@ -1,5 +1,6 @@
 import * as z from "zod/mini";
 
+import { isPrintableAscii } from "../../../shared/printable-ascii.js";
 import { parseMonobankRequest } from "../../../shared/request-validation.js";
 import type { WebhookBody } from "../../../shared/webhook-body.js";
 import { createWebhookBody } from "../../../shared/webhook-body.js";
@@ -16,7 +17,7 @@ export interface SetCorporateWebhookInput {
 export const setCorporateWebhookEndpoint = "/personal/corp/webhook";
 
 const setCorporateWebhookSchema = z.object({
-  requestId: z.string().check(z.refine((value) => /^[!-~]+$/u.test(value))),
+  requestId: z.string().check(z.refine(isPrintableAscii)),
   webHookUrl: z.string(),
 });
 

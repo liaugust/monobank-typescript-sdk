@@ -1,3 +1,5 @@
+import { createSign, generateKeyPairSync } from "node:crypto";
+
 import { describe, expect, it } from "vitest";
 
 import { validAcquiringWebhookSignatureFixture } from "../../../../tests/fixtures/acquiring/webhooks.js";
@@ -6,7 +8,10 @@ import {
   containsStringRecursively,
 } from "../../../../tests/support/transport.js";
 import { MonobankValidationError } from "../../../errors/monobank-validation-error.js";
-import { verifyAcquiringWebhookSignature } from "./verify-acquiring-webhook-signature.js";
+import {
+  importAcquiringWebhookPublicKey,
+  verifyAcquiringWebhookSignature,
+} from "./verify-acquiring-webhook-signature.js";
 
 describe("verifyAcquiringWebhookSignature", () => {
   it("authenticates a real DER-encoded P-256 signature over the exact body bytes", async () => {
@@ -23,6 +28,27 @@ describe("verifyAcquiringWebhookSignature", () => {
     ).resolves.toBe(true);
   });
 
+  it("accepts a pre-imported CryptoKey, reused across calls", async () => {
+    const body = new TextEncoder().encode(
+      validAcquiringWebhookSignatureFixture.body,
+    );
+    const publicKey = await importAcquiringWebhookPublicKey(
+      validAcquiringWebhookSignatureFixture.publicKey,
+    );
+
+    expect(publicKey).toBeInstanceOf(CryptoKey);
+
+    for (let call = 0; call < 2; call += 1) {
+      await expect(
+        verifyAcquiringWebhookSignature({
+          body,
+          publicKey,
+          signature: validAcquiringWebhookSignatureFixture.signature,
+        }),
+      ).resolves.toBe(true);
+    }
+  });
+
   it("returns false when the raw webhook body bytes have changed", async () => {
     const body = new TextEncoder().encode(
       `${validAcquiringWebhookSignatureFixture.body} `,
@@ -33,6 +59,27 @@ describe("verifyAcquiringWebhookSignature", () => {
         body,
         publicKey: validAcquiringWebhookSignatureFixture.publicKey,
         signature: validAcquiringWebhookSignatureFixture.signature,
+      }),
+    ).resolves.toBe(false);
+  });
+
+  it("returns false for a well-formed signature made with a different key", async () => {
+    const body = new TextEncoder().encode(
+      validAcquiringWebhookSignatureFixture.body,
+    );
+    const { privateKey } = generateKeyPairSync("ec", {
+      namedCurve: "prime256v1",
+    });
+    const signer = createSign("SHA256");
+    signer.update(Buffer.from(body));
+    signer.end();
+    const signature = signer.sign(privateKey).toString("base64");
+
+    await expect(
+      verifyAcquiringWebhookSignature({
+        body,
+        publicKey: validAcquiringWebhookSignatureFixture.publicKey,
+        signature,
       }),
     ).resolves.toBe(false);
   });

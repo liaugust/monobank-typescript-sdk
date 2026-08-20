@@ -1,4 +1,5 @@
 import type { RequestOptions } from "../../shared/request-options.js";
+import { requestSignal } from "../../shared/request-options.js";
 import type { MonobankTransport } from "../../transport/transport.js";
 import type { CancelDocumentSigningInput } from "./cancel-signing/cancel-signing.js";
 import { createCancelDocumentSigningEndpoint } from "./cancel-signing/cancel-signing.js";
@@ -64,7 +65,7 @@ export class MonobankCorporateDocuments {
       retryable: false,
       schema: documentSigningRequestSchema,
       signature: { variant: "time-and-url" },
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 
@@ -93,7 +94,7 @@ export class MonobankCorporateDocuments {
       retryable: true,
       schema: documentSigningStatusSchema,
       signature: { variant: "time-and-url" },
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 
@@ -118,7 +119,7 @@ export class MonobankCorporateDocuments {
       endpoint,
       retryable: false,
       signature: { variant: "time-and-url" },
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 }

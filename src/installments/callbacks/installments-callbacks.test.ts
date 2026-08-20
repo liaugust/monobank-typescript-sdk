@@ -54,6 +54,16 @@ describe("verifyInstallmentsCallbackSignature", () => {
     ).resolves.toBe(false);
   });
 
+  it("rejects an empty storeSecret instead of verifying against an empty key", async () => {
+    await expect(
+      verifyInstallmentsCallbackSignature({
+        body,
+        signature: sign(body),
+        storeSecret: "",
+      }),
+    ).rejects.toBeInstanceOf(MonobankValidationError);
+  });
+
   it("refuses a signature made with another secret", async () => {
     await expect(
       verifyInstallmentsCallbackSignature({
@@ -67,7 +77,12 @@ describe("verifyInstallmentsCallbackSignature", () => {
   it("refuses a truncated and an overlong signature", async () => {
     const signature = sign(body);
 
-    for (const candidate of [signature.slice(0, -4), `${signature}AAAA`, ""]) {
+    for (const candidate of [
+      signature.slice(0, -4),
+      `${signature}AAAA`,
+      "",
+      "not base64!",
+    ]) {
       await expect(
         verifyInstallmentsCallbackSignature({
           body,

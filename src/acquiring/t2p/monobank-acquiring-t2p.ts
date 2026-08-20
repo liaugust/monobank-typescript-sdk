@@ -1,4 +1,5 @@
 import type { RequestOptions } from "../../shared/request-options.js";
+import { requestSignal } from "../../shared/request-options.js";
 import type { MonobankTransport } from "../../transport/transport.js";
 import type { GetAcquiringT2pPaymentStatusInput } from "./get-t2p-payment-status/get-t2p-payment-status.js";
 import { createAcquiringT2pPaymentStatusEndpoint } from "./get-t2p-payment-status/get-t2p-payment-status.js";
@@ -56,7 +57,7 @@ export class MonobankAcquiringT2p {
       endpoint,
       retryable: true,
       schema: acquiringT2pPaymentSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 
@@ -85,7 +86,7 @@ export class MonobankAcquiringT2p {
       endpoint: listAcquiringT2pTerminalsEndpoint,
       retryable: true,
       schema: acquiringT2pTerminalListSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 }

@@ -1,4 +1,5 @@
 import type { RequestOptions } from "../../shared/request-options.js";
+import { requestSignal } from "../../shared/request-options.js";
 import type { MonobankTransport } from "../../transport/transport.js";
 import type { SetWebhookInput } from "./set-webhook/set-webhook.js";
 import {
@@ -47,7 +48,7 @@ export class MonobankPersonalWebhooks {
       body: createSetWebhookBody(input),
       endpoint: setWebhookEndpoint,
       retryable: false,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 }

@@ -1,4 +1,5 @@
 import type { RequestOptions } from "../../shared/request-options.js";
+import { requestSignal } from "../../shared/request-options.js";
 import type { MonobankTransport } from "../../transport/transport.js";
 import type {
   CorporateRegistrationStatusResult,
@@ -71,7 +72,7 @@ export class MonobankCorporateCompany {
       retryable: false,
       schema: corporateRegistrationSchema,
       signature: { preRegistration: true, variant: "time-and-url" },
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 
@@ -103,7 +104,7 @@ export class MonobankCorporateCompany {
       retryable: false,
       schema: corporateRegistrationStatusSchema,
       signature: { preRegistration: true, variant: "time-and-url" },
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 
@@ -133,7 +134,7 @@ export class MonobankCorporateCompany {
       endpoint: setCorporateWebhookEndpoint,
       retryable: false,
       signature: { requestId: parsed.requestId, variant: "time-and-url" },
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 
@@ -162,7 +163,7 @@ export class MonobankCorporateCompany {
       retryable: true,
       schema: corporateSettingsSchema,
       signature: { requestId: parsed.requestId, variant: "time-and-url" },
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 }

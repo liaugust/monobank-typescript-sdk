@@ -1,4 +1,5 @@
 import type { RequestOptions } from "../../shared/request-options.js";
+import { requestSignal } from "../../shared/request-options.js";
 import type { MonobankBinaryPayload } from "../../transport/response/read-binary-payload.js";
 import type { MonobankTransport } from "../../transport/transport.js";
 import type { InstallmentsLetterInput } from "./get-letter-data/get-letter-data.js";
@@ -63,7 +64,7 @@ export class MonobankInstallmentsLetters {
       endpoint: downloadInstallmentsLetterEndpoint,
       headers: { Accept: "application/pdf" },
       retryable: false,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 
@@ -104,7 +105,7 @@ export class MonobankInstallmentsLetters {
       endpoint: getInstallmentsLetterDataEndpoint,
       retryable: false,
       schema: installmentsGuaranteeLetterDataSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 
@@ -139,7 +140,7 @@ export class MonobankInstallmentsLetters {
       endpoint: getInstallmentsLetterDataV2Endpoint,
       retryable: false,
       schema: installmentsGuaranteeLetterDataSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 }

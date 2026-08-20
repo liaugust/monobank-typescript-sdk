@@ -9,7 +9,8 @@ export interface InstallmentsOrderIdentifierInput {
   readonly order_id: string;
 }
 
-const orderIdentifierPattern =
+/** Matches the UUID shape Monobank documents for a Покупка Частинами order identifier. */
+export const orderIdentifierPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 
 const orderIdentifierSchema = z.object({

@@ -1,4 +1,5 @@
 import type { RequestOptions } from "../../shared/request-options.js";
+import { requestSignal } from "../../shared/request-options.js";
 import type { MonobankTransport } from "../../transport/transport.js";
 import type {
   GetStatementsInput,
@@ -55,7 +56,7 @@ export class MonobankPersonalStatements {
       endpoint: createStatementsEndpoint(createStatementRequestInput(input)),
       retryable: true,
       schema: statementItemsSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 }

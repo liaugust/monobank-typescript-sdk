@@ -1,5 +1,6 @@
 import * as z from "zod/mini";
 
+import { isPrintableAscii } from "../../../shared/printable-ascii.js";
 import { parseMonobankRequest } from "../../../shared/request-validation.js";
 import { signingDocumentSchema } from "../models/signing-document.js";
 
@@ -12,7 +13,7 @@ export interface GetDocumentSigningStatusInput {
 const getSigningStatusPath = "/personal/signature/status";
 
 const signingRequestIdentifierSchema = z.object({
-  requestId: z.string().check(z.refine((value) => /^[!-~]+$/u.test(value))),
+  requestId: z.string().check(z.refine(isPrintableAscii)),
 });
 
 /**

@@ -16,6 +16,7 @@ supported contract.
 - [MonobankInstallmentsClient](#monobankinstallmentsclient)
 - [acquiring.webhooks.getPublicKey](#acquiringwebhooksgetpublickey)
 - [verifyAcquiringWebhookSignature](#verifyacquiringwebhooksignature)
+- [importAcquiringWebhookPublicKey](#importacquiringwebhookpublickey)
 - [merchant.getDetails](#merchantgetdetails)
 - [acquiring.submerchants.list](#acquiringsubmerchantslist)
 - [acquiring.employees.list](#acquiringemployeeslist)
@@ -258,14 +259,14 @@ holds the private key.
 
 ### Constructor options
 
-| Option      | Type              | Default                   | Contract                                                                                                                |
-| ----------- | ----------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `keyId`     | `string`          | Optional                  | Printable ASCII service key identifier; omit only for the registration flow, which is what issues it                    |
-| `sign`      | `CorporateSigner` | Required                  | Function returning the `X-Sign` value; may be synchronous or asynchronous                                               |
-| `baseUrl`   | `string`          | `https://api.monobank.ua` | Absolute HTTP(S) origin, primarily for controlled proxies and tests; must use `https` unless it targets a loopback host |
-| `fetch`     | `FetchLike`       | `globalThis.fetch`        | Required when the runtime does not provide global Fetch; must honor `RequestInit.redirect`                              |
-| `timeoutMs` | `number`          | `10_000`                  | Positive finite per-attempt timeout in milliseconds, covering both the signer and the request                           |
-| `retry`     | `RetryOptions`    | Disabled                  | Bounded policy for retry-eligible safe GET requests; narrow `retryableStatusCodes` when a retry cannot help             |
+| Option      | Type              | Default                   | Contract                                                                                                                                                                    |
+| ----------- | ----------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `keyId`     | `string`          | Optional                  | Printable ASCII service key identifier; omit only for the registration flow, which is what issues it                                                                        |
+| `sign`      | `CorporateSigner` | Required                  | Function returning the `X-Sign` value; may be synchronous or asynchronous; receives an `AbortSignal` to cancel its own work when the attempt times out or the caller aborts |
+| `baseUrl`   | `string`          | `https://api.monobank.ua` | Absolute HTTP(S) origin, primarily for controlled proxies and tests; must use `https` unless it targets a loopback host                                                     |
+| `fetch`     | `FetchLike`       | `globalThis.fetch`        | Required when the runtime does not provide global Fetch; must honor `RequestInit.redirect`                                                                                  |
+| `timeoutMs` | `number`          | `10_000`                  | Positive finite per-attempt timeout in milliseconds, covering both the signer and the request                                                                               |
+| `retry`     | `RetryOptions`    | Disabled                  | Bounded policy for retry-eligible safe GET requests; narrow `retryableStatusCodes` when a retry cannot help                                                                 |
 
 A transport cannot hold both a `token` and a Corporate credential; attempting it
 throws `MonobankValidationError`. Invalid constructor configuration throws before
@@ -401,11 +402,11 @@ Authenticates an Acquiring webhook with built-in Web Crypto in supported Node
 and browser runtimes. No Node-only crypto import or additional runtime
 dependency is required.
 
-| Input       | Type                        | Contract                                                     |
-| ----------- | --------------------------- | ------------------------------------------------------------ |
-| `body`      | `ArrayBuffer \| Uint8Array` | Exact raw request body bytes                                 |
-| `publicKey` | `string`                    | Base64-encoded X.509 ECDSA key from `getPublicKey()`         |
-| `signature` | `string`                    | Base64-encoded ASN.1 DER value from the `X-Sign` HTTP header |
+| Input       | Type                        | Contract                                                                                                |
+| ----------- | --------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `body`      | `ArrayBuffer \| Uint8Array` | Exact raw request body bytes                                                                            |
+| `publicKey` | `CryptoKey \| string`       | Base64-encoded X.509 ECDSA key from `getPublicKey()`, or a key from `importAcquiringWebhookPublicKey()` |
+| `signature` | `string`                    | Base64-encoded ASN.1 DER value from the `X-Sign` HTTP header                                            |
 
 Returns `true` when the P-256 ECDSA/SHA-256 signature authenticates the exact
 body bytes and `false` when a structurally valid signature does not match.
@@ -430,6 +431,34 @@ const trusted = await verifyAcquiringWebhookSignature({
 
 The signature covers the raw wire bytes. Do not parse and reserialize JSON,
 change whitespace, or decode the body before verification.
+
+A high-throughput webhook receiver should import the key once with
+`importAcquiringWebhookPublicKey(publicKey)` and pass the resulting `CryptoKey`
+on every call, instead of passing the base64 string and re-parsing it on every
+incoming event:
+
+```ts
+const cachedKey = await importAcquiringWebhookPublicKey(publicKey);
+
+// On every webhook:
+const trusted = await verifyAcquiringWebhookSignature({
+  body,
+  publicKey: cachedKey,
+  signature,
+});
+```
+
+## importAcquiringWebhookPublicKey
+
+```ts
+importAcquiringWebhookPublicKey(publicKey: string): Promise<CryptoKey>
+```
+
+Imports Monobank's base64-encoded X.509 ECDSA webhook public key once, so it
+can be reused across many `verifyAcquiringWebhookSignature()` calls instead of
+being re-parsed and re-imported on every incoming webhook. Throws
+`MonobankValidationError` when `publicKey` is not a base64-encoded X.509 ECDSA
+public key.
 
 ## merchant.getDetails
 
@@ -2536,8 +2565,11 @@ Two limits are structural rather than configurable:
   budget again. This applies to Corporate signing too, which runs inside the same
   attempt window.
 
-`Retry-After` is honored when present and suppresses the retry when the requested
-delay exceeds `maxDelayMs`.
+`Retry-After` is honored exactly as Monobank sent it (unjittered) and suppresses
+the retry when the requested delay exceeds `maxDelayMs`. When Monobank sends no
+`Retry-After`, the computed exponential-backoff delay is jittered to 50%-100%
+of its capped value, so that many processes retrying the same rate-limit or
+outage window do not retry in lockstep and amplify load right after it.
 
 ### Narrowing the set
 

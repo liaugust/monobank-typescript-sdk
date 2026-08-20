@@ -1,4 +1,5 @@
 import type { RequestOptions } from "../../shared/request-options.js";
+import { requestSignal } from "../../shared/request-options.js";
 import type { MonobankTransport } from "../../transport/transport.js";
 import { listAcquiringSubmerchantsEndpoint } from "./list-submerchants/list-submerchants.js";
 import type { AcquiringSubmerchantList } from "./models/acquiring-submerchant.js";
@@ -31,7 +32,7 @@ export class MonobankAcquiringSubmerchants {
       endpoint: listAcquiringSubmerchantsEndpoint,
       retryable: true,
       schema: acquiringSubmerchantListSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 }

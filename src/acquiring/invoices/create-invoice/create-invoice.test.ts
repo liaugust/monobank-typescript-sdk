@@ -151,6 +151,15 @@ describe("create invoice contract", () => {
     expect(() => createInvoiceHeaders({ cms: "" })).toThrow(
       MonobankValidationError,
     );
+    expect(createInvoiceHeaders({ cms: "Synthetic Shop" })).toEqual({
+      "X-Cms": "Synthetic Shop",
+    });
+    expect(() => createInvoiceHeaders({ cms: "bad\tvalue" })).toThrow(
+      MonobankValidationError,
+    );
+    expect(() =>
+      createInvoiceHeaders({ cmsVersion: "1.0\r\ninjected" }),
+    ).toThrow(MonobankValidationError);
     expect(() => createInvoiceBody({ amount: 42.5 })).toThrow(
       MonobankValidationError,
     );

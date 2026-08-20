@@ -1,4 +1,5 @@
 import type { RequestOptions } from "../../shared/request-options.js";
+import { requestSignal } from "../../shared/request-options.js";
 import type { MonobankTransport } from "../../transport/transport.js";
 import type { CheckCorporateAccessInput } from "./check-access/check-access.js";
 import {
@@ -61,7 +62,7 @@ export class MonobankCorporateAccess {
       retryable: false,
       schema: corporateTokenRequestSchema,
       signature: { variant: "time-and-url" },
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 
@@ -94,7 +95,7 @@ export class MonobankCorporateAccess {
         requestId: parsed.requestId,
         variant: "time-request-id-and-url",
       },
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 }

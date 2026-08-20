@@ -1,5 +1,6 @@
 import * as z from "zod/mini";
 
+import { isPrintableAscii } from "../../../shared/printable-ascii.js";
 import { parseMonobankRequest } from "../../../shared/request-validation.js";
 
 /** Input identifying one signed corporate settings request. */
@@ -12,7 +13,7 @@ export interface GetCorporateSettingsInput {
 export const corporateSettingsEndpoint = "/personal/corp/settings";
 
 const getCorporateSettingsSchema = z.object({
-  requestId: z.string().check(z.refine((value) => /^[!-~]+$/u.test(value))),
+  requestId: z.string().check(z.refine(isPrintableAscii)),
 });
 
 /**

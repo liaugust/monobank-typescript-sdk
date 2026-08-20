@@ -3,6 +3,7 @@ import { clientInfoSchema } from "../../personal/client-info/get-info/get-info.j
 import type { StatementItem } from "../../personal/statements/models/statement-item.js";
 import { statementItemsSchema } from "../../personal/statements/models/statement-item.js";
 import type { RequestOptions } from "../../shared/request-options.js";
+import { requestSignal } from "../../shared/request-options.js";
 import type { MonobankTransport } from "../../transport/transport.js";
 import type { GetCorporateClientInfoInput } from "./get-client-info/get-client-info.js";
 import {
@@ -37,7 +38,10 @@ export class MonobankCorporateClients {
    *
    * Signed with the `X-Time`, `X-Request-Id`, and URL payload. Safe GET;
    * eligible for configured retries. Monobank limits this endpoint to one
-   * request per 60 seconds.
+   * request per 60 seconds, so a configured retry policy that includes `429`
+   * spends more of an already-exhausted quota rather than helping: pass
+   * `retryableStatusCodes: [500, 502, 503, 504]` for a client that paces
+   * itself against this limit.
    * @param input Grant identifier from `access.request()`.
    * @param options Optional cancellation controls for this request.
    * @returns Validated client identity, accounts, and any jars the grant exposes.
@@ -61,7 +65,7 @@ export class MonobankCorporateClients {
         requestId: parsed.requestId,
         variant: "time-request-id-and-url",
       },
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 
@@ -71,7 +75,12 @@ export class MonobankCorporateClients {
    * The account defaults to `0`, the default UAH account, and the inclusive
    * window must not exceed 2,682,000 seconds. Signed with the `X-Time`,
    * `X-Request-Id`, and URL payload, which covers the encoded account and both
-   * timestamps. Safe GET; eligible for configured retries.
+   * timestamps. Safe GET; eligible for configured retries. This targets the
+   * same `/personal/statement` endpoint the Personal client uses, which
+   * Monobank limits to one request per 60 seconds, so a configured retry
+   * policy that includes `429` spends more of an already-exhausted quota
+   * rather than helping: pass `retryableStatusCodes: [500, 502, 503, 504]`
+   * for a client that paces itself against this limit.
    * @param input Grant identifier, account, and Unix-second or `Date` window.
    * @param options Optional cancellation controls for this request.
    * @returns Validated transactions, newest first.
@@ -95,7 +104,7 @@ export class MonobankCorporateClients {
         requestId: parsed.requestId,
         variant: "time-request-id-and-url",
       },
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 }

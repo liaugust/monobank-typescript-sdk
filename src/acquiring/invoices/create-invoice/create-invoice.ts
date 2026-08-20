@@ -1,5 +1,6 @@
 import * as z from "zod/mini";
 
+import { isPrintableAsciiWithSpaces } from "../../../shared/printable-ascii.js";
 import type { RequestOptions } from "../../../shared/request-options.js";
 import type { InvoiceDisplayType } from "../models/invoice-display-type.js";
 import { InvoiceDisplayType as InvoiceDisplayTypeValues } from "../models/invoice-display-type.js";
@@ -46,8 +47,10 @@ const createInvoiceSchema = z
   );
 
 const createInvoiceOptionsSchema = z.object({
-  cms: z.optional(z.string().check(z.minLength(1))),
-  cmsVersion: z.optional(z.string().check(z.minLength(1))),
+  cms: z.optional(z.string().check(z.refine(isPrintableAsciiWithSpaces))),
+  cmsVersion: z.optional(
+    z.string().check(z.refine(isPrintableAsciiWithSpaces)),
+  ),
 });
 
 type CreateInvoiceBody = z.output<typeof createInvoiceSchema>;

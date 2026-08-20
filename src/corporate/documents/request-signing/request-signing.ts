@@ -1,17 +1,23 @@
 import * as z from "zod/mini";
 
+import { requireAbsoluteHttpUrl } from "../../../shared/http-url.js";
 import { parseMonobankRequest } from "../../../shared/request-validation.js";
 import type { SigningDocumentType } from "../models/signing-document.js";
 import { SigningDocumentType as documentTypes } from "../models/signing-document.js";
 
+const gostHashPattern = /^[0-9a-f]{64}$/iu;
+
 /** One document submitted for monoКЕП signing. */
 export interface SigningDocumentInput {
   /**
-   * Document hash as HEX, using **ГОСТ 34.311-95**.
+   * Document hash as 64 hex characters, using **ГОСТ 34.311-95**.
    *
    * Neither Web Crypto nor `node:crypto` implements that algorithm, so the SDK
-   * never computes or verifies this value. A SHA-256 hex string is the same
-   * length and produces a well-formed request that is silently wrong.
+   * never computes or verifies the digest itself: only the hex shape (64
+   * characters, `0-9a-f`) is checked, which catches an obviously wrong value
+   * such as a truncated string but not a same-length SHA-256 digest computed
+   * by mistake instead of ГОСТ 34.311-95 — that produces a well-formed but
+   * silently wrong request.
    */
   readonly hash: string;
   /** Link to the document shown to the signatory. */
@@ -24,7 +30,7 @@ export interface SigningDocumentInput {
 
 /** Input creating a monoКЕП signing request. */
 export interface RequestDocumentSigningInput {
-  /** Address monoКЕП notifies about signing progress. */
+  /** Absolute HTTP(S) address monoКЕП notifies about signing progress. */
   readonly callbackUrl?: string;
   /** One to ten documents to sign. */
   readonly documents: readonly SigningDocumentInput[];
@@ -43,7 +49,9 @@ const requestDocumentSigningSchema = z.object({
   documents: z
     .array(
       z.object({
-        hash: nonempty(),
+        hash: z
+          .string()
+          .check(z.refine((value) => gostHashPattern.test(value))),
         link: z.optional(z.string()),
         name: nonempty(),
         type: z.optional(z.enum(documentTypes)),
@@ -75,15 +83,26 @@ type RequestDocumentSigningBody = z.infer<typeof requestDocumentSigningSchema>;
  * Validates the signing request ahead of Fetch.
  * @param input Documents, signer policy, and optional callback address.
  * @returns Parsed request body.
- * @throws {MonobankValidationError} When the document list is empty, longer than ten, or a document lacks a name or hash.
+ * @throws {MonobankValidationError} When the document list is empty, longer than ten, a document lacks a name or a well-formed hash, or the callback address is not an absolute HTTP(S) URL.
  */
 export function parseRequestDocumentSigningInput(
   input: RequestDocumentSigningInput,
 ): RequestDocumentSigningBody {
-  return parseMonobankRequest(
+  const parsed = parseMonobankRequest(
     requestDocumentSigningSchema,
     input,
     requestDocumentSigningEndpoint,
     "Invalid monoKEP signing request.",
   );
+
+  if (parsed.callbackUrl !== undefined) {
+    requireAbsoluteHttpUrl(
+      parsed.callbackUrl,
+      "callbackUrl",
+      requestDocumentSigningEndpoint,
+      "Invalid monoKEP signing request.",
+    );
+  }
+
+  return parsed;
 }

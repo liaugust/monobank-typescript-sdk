@@ -1,6 +1,7 @@
 import * as z from "zod/mini";
 
 import { MonobankValidationError } from "../errors/monobank-validation-error.js";
+import { isPrintableAscii } from "../shared/printable-ascii.js";
 import type {
   CorporateCredential,
   CorporateSigner,
@@ -79,9 +80,7 @@ export function validateTransportOptions(
 }
 
 const corporateCredentialSchema = z.object({
-  keyId: z.optional(
-    z.string().check(z.refine((value) => /^[!-~]+$/u.test(value))),
-  ),
+  keyId: z.optional(z.string().check(z.refine(isPrintableAscii))),
   sign: z.custom<CorporateSigner>((value) => typeof value === "function"),
 });
 
@@ -116,7 +115,7 @@ function validateCorporateCredential(
 }
 
 const installmentsCredentialSchema = z.object({
-  storeId: z.string().check(z.refine((value) => /^[!-~]+$/u.test(value))),
+  storeId: z.string().check(z.refine(isPrintableAscii)),
   storeSecret: z.string().check(z.minLength(1)),
 });
 
@@ -162,7 +161,7 @@ function validateInstallmentsCredential(
  * @throws {MonobankValidationError} When the token is unusable as a header value.
  */
 function validateToken(token: string): string {
-  if (!/^[!-~]+$/u.test(token)) {
+  if (!isPrintableAscii(token)) {
     throw new MonobankValidationError({
       issues: ["token must be printable ASCII without spaces"],
       message: "Invalid Monobank transport configuration.",

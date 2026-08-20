@@ -42,6 +42,39 @@ describe("documents.requestSigning", () => {
     );
   });
 
+  it("accepts an absolute HTTP(S) callbackUrl", async () => {
+    const fetch = createFetchSequence([
+      jsonResponse(documentSigningRequestFixture),
+    ]);
+    const client = createCorporateTestClient(fetch);
+
+    await expect(
+      client.documents.requestSigning({
+        ...documentSigningInputFixture,
+        callbackUrl: "https://shop.example.test/monokep-callback",
+      }),
+    ).resolves.toEqual(documentSigningRequestFixture);
+    expect(firstRequestBody(fetch)).toEqual({
+      ...documentSigningInputFixture,
+      callbackUrl: "https://shop.example.test/monokep-callback",
+    });
+  });
+
+  it("rejects a callbackUrl that is not an absolute HTTP(S) URL", async () => {
+    const fetch = createFetchSequence([
+      jsonResponse(documentSigningRequestFixture),
+    ]);
+    const client = createCorporateTestClient(fetch);
+
+    await expect(
+      client.documents.requestSigning({
+        ...documentSigningInputFixture,
+        callbackUrl: "not-a-url",
+      }),
+    ).rejects.toBeInstanceOf(MonobankValidationError);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("is never retried because it creates signing state", async () => {
     const fetch = createFetchSequence([
       jsonResponse({ message: "server error" }, { status: 500 }),
@@ -127,6 +160,34 @@ describe("documents.getSigningStatus", () => {
     const fetch = createFetchSequence([
       jsonResponse({
         documents: [{ hash: "A4", name: "D", status: "review" }],
+      }),
+    ]);
+    const client = createCorporateTestClient(fetch);
+
+    await expect(
+      client.documents.getSigningStatus({ requestId: "req-1" }),
+    ).rejects.toMatchObject({ name: "MonobankResponseValidationError" });
+  });
+
+  it("rejects a signatory missing a required field", async () => {
+    const fetch = createFetchSequence([
+      jsonResponse({
+        documents: [
+          {
+            hash: "A4",
+            name: "D",
+            signers: [
+              {
+                certSerial: "382367105294AF970400000058B38300BAE33C02",
+                date: "2025-01-21T18:15:00.000Z",
+                name: "Шевченко Роман Петрович",
+                signature: "MIIJQwIBADANBgkqhkiG9w0BAQEFAASCCS0wggkp",
+                // tin is required by documentSignatorySchema but omitted here.
+              },
+            ],
+            status: "signed",
+          },
+        ],
       }),
     ]);
     const client = createCorporateTestClient(fetch);

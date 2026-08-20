@@ -1,5 +1,6 @@
 import * as z from "zod/mini";
 
+import { isPrintableAscii } from "../../../shared/printable-ascii.js";
 import { parseMonobankRequest } from "../../../shared/request-validation.js";
 import type { StatementWindowInput } from "../../../shared/statement-endpoint.js";
 import { createStatementEndpointPath } from "../../../shared/statement-endpoint.js";
@@ -14,7 +15,7 @@ const corporateClientStatementsMessage =
   "Invalid corporate client statement request.";
 
 const getCorporateClientStatementsSchema = z.object({
-  requestId: z.string().check(z.refine((value) => /^[!-~]+$/u.test(value))),
+  requestId: z.string().check(z.refine(isPrintableAscii)),
 });
 
 /**

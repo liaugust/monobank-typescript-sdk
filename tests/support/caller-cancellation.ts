@@ -3,6 +3,7 @@ import { expect } from "vitest";
 import { MonobankAcquiringClient } from "../../src/acquiring/client/monobank-acquiring-client.js";
 import { MonobankCorporateClient } from "../../src/corporate/client/monobank-corporate-client.js";
 import { MonobankInstallmentsClient } from "../../src/installments/client/monobank-installments-client.js";
+import { MonobankPersonalClient } from "../../src/personal/client/monobank-personal-client.js";
 import type { FetchLike } from "../../src/transport/fetch-like.js";
 import { createAbortableFetch } from "./create-abortable-fetch.js";
 
@@ -61,6 +62,15 @@ export async function expectInstallmentsCancellation(
         storeId: "test_store_with_confirm",
         storeSecret: "secret_98765432--123-123",
       }),
+    start,
+  );
+}
+
+export async function expectPersonalCancellation(
+  start: CancellableCall<MonobankPersonalClient>,
+): Promise<void> {
+  await expectClientCancellation(
+    (fetch) => new MonobankPersonalClient({ fetch, token: "personal-token" }),
     start,
   );
 }

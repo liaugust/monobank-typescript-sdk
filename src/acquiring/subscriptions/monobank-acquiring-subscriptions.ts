@@ -1,4 +1,5 @@
 import type { RequestOptions } from "../../shared/request-options.js";
+import { requestSignal } from "../../shared/request-options.js";
 import type { MonobankTransport } from "../../transport/transport.js";
 import type {
   CreateAcquiringSubscriptionInput,
@@ -76,7 +77,7 @@ export class MonobankAcquiringSubscriptions {
       body: createEditAcquiringSubscriptionBody(input),
       endpoint: editAcquiringSubscriptionEndpoint,
       retryable: false,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 
@@ -113,7 +114,7 @@ export class MonobankAcquiringSubscriptions {
       endpoint: createAcquiringSubscriptionEndpoint,
       retryable: false,
       schema: newAcquiringSubscriptionSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 
@@ -150,7 +151,7 @@ export class MonobankAcquiringSubscriptions {
       endpoint,
       retryable: true,
       schema: acquiringSubscriptionPaymentListSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 
@@ -189,7 +190,7 @@ export class MonobankAcquiringSubscriptions {
       endpoint,
       retryable: true,
       schema: acquiringSubscriptionSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 
@@ -226,7 +227,7 @@ export class MonobankAcquiringSubscriptions {
       endpoint,
       retryable: true,
       schema: acquiringSubscriptionListSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 
@@ -258,7 +259,7 @@ export class MonobankAcquiringSubscriptions {
       body: createRemoveAcquiringSubscriptionBody(input),
       endpoint: removeAcquiringSubscriptionEndpoint,
       retryable: false,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 }

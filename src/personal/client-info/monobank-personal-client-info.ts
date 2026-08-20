@@ -1,4 +1,5 @@
 import type { RequestOptions } from "../../shared/request-options.js";
+import { requestSignal } from "../../shared/request-options.js";
 import type { MonobankTransport } from "../../transport/transport.js";
 import type { ClientInfo } from "./get-info/get-info.js";
 import {
@@ -36,7 +37,7 @@ export class MonobankPersonalClientInfo {
       endpoint: getClientInfoEndpoint,
       retryable: true,
       schema: clientInfoSchema,
-      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      ...requestSignal(options),
     });
   }
 }

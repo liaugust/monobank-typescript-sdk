@@ -1,6 +1,7 @@
 import * as z from "zod/mini";
 
 import { parseMonobankRequest } from "../../../shared/request-validation.js";
+import { orderIdentifierPattern } from "../../orders/shared/order-identifier.js";
 import { invalidInstallmentsRequestMessage } from "../../shared/request-validation.js";
 
 /** Root-relative endpoint returning guarantee-letter source data. */
@@ -13,9 +14,6 @@ export const getInstallmentsLetterDataV2Endpoint =
 
 /** Root-relative endpoint returning the guarantee letter itself as a document. */
 export const downloadInstallmentsLetterEndpoint = "/api/order/guarantee/letter";
-
-const orderIdentifierPattern =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 
 const installmentsLetterRequestSchema = z.looseObject({
   invoice: z.optional(z.looseObject({})),

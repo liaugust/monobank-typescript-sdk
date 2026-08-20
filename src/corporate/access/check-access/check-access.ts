@@ -1,5 +1,6 @@
 import * as z from "zod/mini";
 
+import { isPrintableAscii } from "../../../shared/printable-ascii.js";
 import { parseMonobankRequest } from "../../../shared/request-validation.js";
 
 /** Input identifying the access request whose grant state is being checked. */
@@ -12,7 +13,7 @@ export interface CheckCorporateAccessInput {
 export const checkCorporateAccessEndpoint = "/personal/auth/request";
 
 const checkCorporateAccessSchema = z.object({
-  requestId: z.string().check(z.refine((value) => /^[!-~]+$/u.test(value))),
+  requestId: z.string().check(z.refine(isPrintableAscii)),
 });
 
 /**
