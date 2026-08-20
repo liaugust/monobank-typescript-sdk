@@ -4,9 +4,10 @@ about: Report incorrect SDK behavior
 labels: bug
 ---
 
-> **Never paste a real token, statement, account identifier, or client profile.**
-> Redact them or use synthetic values. See `SECURITY.md`; report vulnerabilities
-> privately through GitHub Security Advisories rather than in a public issue.
+> **Never paste a real credential, card value, identity document, statement,
+> account identifier, webhook body, or client profile.** Redact them or use
+> synthetic values. See `SECURITY.md`; report vulnerabilities privately through
+> GitHub Security Advisories rather than in a public issue.
 
 ## What happened
 
@@ -25,7 +26,9 @@ labels: bug
 - `@liaugust/monobank-sdk` version:
 - Node.js version:
 - Module system: ESM / CommonJS / browser bundler
-- Client: `MonobankPublicClient` / `MonobankPersonalClient` / `MonobankAcquiringClient`
+- Client: `MonobankPublicClient` / `MonobankPersonalClient` /
+  `MonobankAcquiringClient` / `MonobankCorporateClient` /
+  `MonobankInstallmentsClient`
 - Method:
 
 ## Upstream response

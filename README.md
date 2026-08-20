@@ -9,9 +9,9 @@ A strict, runtime-validated TypeScript SDK for the Monobank API.
 
 It spans five credential families — Public, Personal, Acquiring, Corporate, and
 Покупка Частинами — and gives applications typed responses without trusting the
-wire: every
-successful JSON payload crosses a Zod validation boundary before it reaches your
-code. Coverage of the Monobank API is partial; see [Coverage](#coverage).
+wire: every successful JSON payload crosses a Zod validation boundary before it
+reaches your code. Coverage is measured against both official documentation
+sites; see [Coverage](#coverage).
 
 > [!IMPORTANT]
 > This is an unofficial community package. It is not developed, sponsored, or
@@ -64,17 +64,17 @@ code. Coverage of the Monobank API is partial; see [Coverage](#coverage).
 
 ## Coverage
 
-All 63 operations Monobank documents are implemented, across two documentation
-sites neither of which is a superset of the other:
+Implements all 63 operations found across Monobank's two documentation sites as
+last audited on 2026-08-20. The sites are not supersets of one another:
 
 - <https://monobank.ua/api-docs> — current; 46 operations
 - <https://api.monobank.ua/docs/> — older Redoc specs; 17 further operations
   appear only here, covering all of Personal and Corporate
 
-Coverage is measured against both sites and enumerated in
-[issue #59](https://github.com/liaugust/monobank-typescript-sdk/issues/59). If
-Monobank documents something this package lacks, that is a bug worth reporting
-rather than an intentional omission.
+This is a dated documentation audit, not a claim that Monobank's entire or future
+API surface is complete. The operation inventory is maintained in
+[issue #59](https://github.com/liaugust/monobank-typescript-sdk/issues/59). If a
+currently documented operation is missing, report it as a bug.
 
 ## Requirements
 
@@ -127,6 +127,9 @@ configuration or a secret manager. The non-null assertion above keeps the
 example focused; production code should validate the environment value first.
 
 ## API at a glance
+
+This table highlights representative calls and credential boundaries. It is not
+the complete method inventory; use the [API reference](docs/API.md) for that.
 
 | Call                                             | Authentication  | Result                              | Notes                                           |
 | ------------------------------------------------ | --------------- | ----------------------------------- | ----------------------------------------------- |
@@ -709,7 +712,8 @@ The signer runs once per attempt, because `X-Time` is signed and a retry must no
 replay a stale timestamp. It runs **inside** the per-attempt `timeoutMs` budget:
 a signing call that never settles fails with `MonobankNetworkError` and
 `reason: "timeout"`, exactly as a hanging request does, and like any timeout it is
-not retried.
+not retried. The signer receives the attempt's `AbortSignal` as its second
+argument; pass it to cancellable HSM or KMS work so that operation also stops.
 
 A signer that throws or returns an empty string produces a
 `MonobankValidationError` before Fetch runs, with no cause attached, because a
@@ -820,6 +824,9 @@ if (state.order_sub_state === "WAITING_FOR_STORE_CONFIRM") {
   await installments.orders.confirm({ order_id: order.order_id });
 }
 ```
+
+`available_programs` and `products` must each contain at least one item.
+`result_callback`, when present, must be an absolute HTTP(S) URL.
 
 `WAITING_FOR_STORE_CONFIRM` means the client approved the credit, so the goods can
 be released. **The plan is not active until `confirm()` lands** — call `reject()`
@@ -951,9 +958,8 @@ spent — a one-second backoff cannot succeed and only spends more of it. If you
 application already paces itself, excluding `429` is the right trade.
 
 Retries are disabled unless configured. A retry policy applies only to safe
-GET requests and respects `Retry-After`. Mutating methods are never retried,
-including `personal.webhooks.set()`, every `acquiring.invoices` mutation, and
-`acquiring.qr.resetAmount()`.
+GET requests and respects `Retry-After`. Mutating methods in every credential
+family are never retried automatically.
 
 ```ts
 const monobank = new MonobankPersonalClient({
@@ -1013,9 +1019,10 @@ try {
 Public errors retain only bounded diagnostic data. They intentionally exclude
 tokens, authorization headers, request objects, and raw API payloads.
 
-A cleartext `http:` base URL is rejected at construction whenever a token is
-configured, unless it targets a loopback host, so a credential is never sent
-over an unencrypted connection.
+A cleartext `http:` base URL is rejected at construction whenever any credential
+is configured, unless it targets a loopback host, so a token, Corporate
+signature, or Installments store credential is never sent over an unencrypted
+connection.
 
 The SDK sets `redirect: "error"` on every request, so it never follows HTTP
 redirects when using the runtime's built-in Fetch. Fetch keeps custom headers
@@ -1032,7 +1039,8 @@ attempts before failing. Mutating requests are never retried.
 ## Runtime schemas
 
 The package exports its Zod Mini schemas for applications that need the exact
-same validation boundary:
+same validation boundary. A representative import is shown below; the
+[API reference](docs/API.md#runtime-schemas) lists every exported schema.
 
 ```ts
 import {
@@ -1058,8 +1066,10 @@ while unknown additive fields are preserved for forward compatibility.
 
 ## Data conventions
 
-- Monetary integers are expressed in the currency's minor units.
-- Currency codes are numeric ISO 4217 codes.
+- Monetary integers are expressed in the currency's minor units, except
+  Покупка Частинами sums, which are decimal hryvnia values.
+- Currency codes are numeric ISO 4217 codes, except the alphabetic `ccy` returned
+  by tap-to-phone payment status.
 - Rate and Personal statement timestamps are Unix seconds. Acquiring statement
   request inputs use Unix seconds and response dates use RFC-3339.
 - `BankSync.serverTimeMsec` is Unix milliseconds.
@@ -1090,9 +1100,11 @@ synthetic fixtures and injected Fetch implementations.
 - [llms.txt](llms.txt) gives language models a compact package and API map.
 - [AGENTS.md](AGENTS.md) defines safe usage and contribution rules for coding
   agents.
-- [CONTRIBUTING.md](CONTRIBUTING.md) explains the contributor workflow.
+- [CONTRIBUTING.md](https://github.com/liaugust/monobank-typescript-sdk/blob/main/CONTRIBUTING.md)
+  explains the contributor workflow.
 - [SECURITY.md](SECURITY.md) explains private vulnerability reporting.
-- [RELEASING.md](RELEASING.md) documents trusted npm publishing.
+- [RELEASING.md](https://github.com/liaugust/monobank-typescript-sdk/blob/main/RELEASING.md)
+  documents trusted npm publishing.
 
 ## License
 

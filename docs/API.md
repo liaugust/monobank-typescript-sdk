@@ -6,6 +6,14 @@ The package has one root entry point. Import public clients, values, schemas,
 errors, and types from `@liaugust/monobank-sdk`; internal file paths are not a
 supported contract.
 
+| Client                       | Credential boundary               | Default origin               | Resources                                                                                                                                        |
+| ---------------------------- | --------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `MonobankPublicClient`       | None                              | `https://api.monobank.ua`    | `bank`, `currency`                                                                                                                               |
+| `MonobankPersonalClient`     | Personal `X-Token`                | `https://api.monobank.ua`    | `client`, `statements`, `webhooks`                                                                                                               |
+| `MonobankAcquiringClient`    | Acquiring `X-Token`               | `https://api.monobank.ua`    | `employees`, `invoices`, `merchant`, `monopay`, `pos`, `qr`, `split`, `statements`, `submerchants`, `subscriptions`, `t2p`, `wallet`, `webhooks` |
+| `MonobankCorporateClient`    | `X-Key-Id` plus injected signer   | `https://api.monobank.ua`    | `access`, `clients`, `company`, `documents`                                                                                                      |
+| `MonobankInstallmentsClient` | `store-id` plus HMAC body signing | `https://u2.monobank.com.ua` | `clients`, `letters`, `orders`, `reports`                                                                                                        |
+
 ## Contents
 
 - [Shared conventions](#shared-conventions)
@@ -91,8 +99,10 @@ supported contract.
 
 ## Shared conventions
 
-- Monetary integers use the currency's minor units.
-- Currency codes are numeric ISO 4217 codes.
+- Monetary integers use the currency's minor units, except Покупка Частинами
+  sums, which are decimal hryvnia values such as `2499.99`.
+- Currency codes are numeric ISO 4217 codes, except the alphabetic `ccy` returned
+  by `acquiring.t2p.getPaymentStatus()`.
 - Rate and Personal statement timestamps are Unix seconds. Acquiring statement
   request inputs use Unix seconds and response dates use RFC-3339.
 - `BankSync.serverTimeMsec` is Unix milliseconds.
@@ -235,9 +245,14 @@ The client groups operations into resource objects:
 - `acquiring.employees`: employee operations for tip routing
 - `acquiring.merchant`: merchant identity operations
 - `acquiring.invoices`: invoice lifecycle operations
+- `acquiring.monopay`: monopay signing-key lifecycle
+- `acquiring.pos`: POS refund initiation
 - `acquiring.qr`: QR cashier listing, details, and amount reset
+- `acquiring.split`: split-payment receiver discovery
 - `acquiring.statements`: transaction statement operations
 - `acquiring.submerchants`: submerchant terminal operations
+- `acquiring.subscriptions`: recurring-payment lifecycle
+- `acquiring.t2p`: tap-to-phone terminals and payment status
 - `acquiring.wallet`: tokenized card operations
 - `acquiring.webhooks`: webhook trust-material operations
 
@@ -360,6 +375,9 @@ const installments = new MonobankInstallmentsClient({
   storeSecret: process.env.MONOBANK_STORE_SECRET!,
 });
 ```
+
+The client groups operations into `installments.clients`,
+`installments.letters`, `installments.orders`, and `installments.reports`.
 
 ## acquiring.webhooks.getPublicKey
 
@@ -810,7 +828,8 @@ input validation happens before Fetch.
 
 `CreateInvoiceOptions` extends `RequestOptions` with optional `cms` and
 `cmsVersion` strings. They are sent as the official `X-Cms` and
-`X-Cms-Version` integration-attribution headers.
+`X-Cms-Version` integration-attribution headers and must not contain control
+characters.
 
 ```ts
 const created = await acquiring.invoices.create({
@@ -1804,17 +1823,17 @@ with a documented minimum of `2`; each product `sum` works the same way.
 Multiplying by 100 the way `acquiring.invoices.create()` requires would ask the
 client for a hundred times the price.
 
-| Field                             | Type       | Required | Meaning                                      |
-| --------------------------------- | ---------- | -------- | -------------------------------------------- |
-| `store_order_id`                  | `string`   | Yes      | Store's own order identifier, 1 to 64 chars  |
-| `client_phone`                    | `string`   | Yes      | International format, `+` and 9 to 15 digits |
-| `total_sum`                       | `number`   | Yes      | Hryvnia, minimum `2`                         |
-| `invoice`                         | `object`   | Yes      | `number`, `date`, `source`, `point_id`       |
-| `available_programs`              | `object[]` | Yes      | `type` and `available_parts_count`           |
-| `products`                        | `object[]` | Yes      | `name`, `count`, `sum` in hryvnia            |
-| `result_callback`                 | `string`   | No       | URL Monobank posts terminal outcomes to      |
-| `additional_params`               | `object`   | No       | `seller_phone`, `nds`, `ext_initial_sum`     |
-| `financial_company_merchant_info` | `object`   | No       | `store_name`, `edrpou_code`, `iban_account`  |
+| Field                             | Type       | Required | Meaning                                                |
+| --------------------------------- | ---------- | -------- | ------------------------------------------------------ |
+| `store_order_id`                  | `string`   | Yes      | Store's own order identifier, 1 to 64 chars            |
+| `client_phone`                    | `string`   | Yes      | International format, `+` and 9 to 15 digits           |
+| `total_sum`                       | `number`   | Yes      | Hryvnia, minimum `2`                                   |
+| `invoice`                         | `object`   | Yes      | `number`, `date`, `source`, `point_id`                 |
+| `available_programs`              | `object[]` | Yes      | At least one `type` and `available_parts_count` object |
+| `products`                        | `object[]` | Yes      | At least one `name`, `count`, `sum` object in hryvnia  |
+| `result_callback`                 | `string`   | No       | Absolute HTTP(S) URL for terminal outcomes             |
+| `additional_params`               | `object`   | No       | `seller_phone`, `nds`, `ext_initial_sum`               |
+| `financial_company_merchant_info` | `object`   | No       | `store_name`, `edrpou_code`, `iban_account`            |
 
 The nested objects are **forwarded whole**. Monobank documents their fields only
 through a request sample, so an undocumented key you send reaches the API instead
@@ -2375,17 +2394,17 @@ corporate.documents.requestSigning(
 Creates a monoКЕП request to sign one to ten documents, over the signed
 `POST /personal/signature/create` endpoint. A request is valid for **three days**.
 
-| Input         | Type                              | Contract                                                 |
-| ------------- | --------------------------------- | -------------------------------------------------------- |
-| `documents`   | `readonly SigningDocumentInput[]` | One to ten documents; each requires `name` and `hash`    |
-| `oneSigner`   | `boolean`                         | Optional; Monobank defaults it to `true`                 |
-| `callbackUrl` | `string`                          | Optional address monoКЕП notifies about signing progress |
+| Input         | Type                              | Contract                                                                         |
+| ------------- | --------------------------------- | -------------------------------------------------------------------------------- |
+| `documents`   | `readonly SigningDocumentInput[]` | One to ten documents; each requires `name` and a 64-character hexadecimal `hash` |
+| `oneSigner`   | `boolean`                         | Optional; Monobank defaults it to `true`                                         |
+| `callbackUrl` | `string`                          | Optional absolute HTTP(S) address for signing progress                           |
 
 Each document takes `name` and `hash`, plus optional `type`
 (`SigningDocumentType`) and `link`.
 
 > [!IMPORTANT]
-> `hash` is the document digest as HEX under **ГОСТ 34.311-95**. Neither Web
+> `hash` is the 64-character document digest as HEX under **ГОСТ 34.311-95**. Neither Web
 > Crypto nor `node:crypto` implements that algorithm, so the SDK never computes
 > or verifies it — you supply the value. A SHA-256 hex string is the same length
 > and yields a well-formed request that is silently wrong.
@@ -2676,48 +2695,80 @@ All schemas expose Zod Mini's standard parsing interface. Object schemas are
 loose: documented fields are validated and unknown additive fields are
 preserved.
 
-| Export                                 | Validates                             |
-| -------------------------------------- | ------------------------------------- |
-| `accountSchema`                        | One Personal account                  |
-| `acquiringCardPaymentSchema`           | Wallet or direct card-payment result  |
-| `acquiringEmployeeListSchema`          | Acquiring employee-list response      |
-| `acquiringEmployeeSchema`              | One Acquiring employee                |
-| `acquiringWalletCardSchema`            | One tokenized wallet card             |
-| `acquiringWalletSchema`                | Merchant wallet response              |
-| `acquiringQrCashierListSchema`         | Acquiring QR cashier-list response    |
-| `acquiringQrCashierSchema`             | One Acquiring QR cashier              |
-| `acquiringQrDetailsSchema`             | Acquiring QR cashier details          |
-| `acquiringStatementSchema`             | Acquiring statement response          |
-| `acquiringStatementItemSchema`         | One Acquiring transaction             |
-| `acquiringStatementCancellationSchema` | Nested Acquiring cancellation         |
-| `acquiringSubmerchantListSchema`       | Acquiring submerchant-list response   |
-| `acquiringSubmerchantSchema`           | One Acquiring submerchant             |
-| `acquiringWebhookPublicKeySchema`      | Acquiring webhook key response        |
-| `bankSyncSchema`                       | `/bank/sync` response                 |
-| `clientInfoSchema`                     | `/personal/client-info` response      |
-| `corporateRegistrationSchema`          | Corporate application acknowledgement |
-| `corporateRegistrationStatusSchema`    | Corporate application status and key  |
-| `corporateSettingsSchema`              | `/personal/corp/settings` response    |
-| `corporateTokenRequestSchema`          | Delegated access-request response     |
-| `documentSignatorySchema`              | One monoКЕП signatory                 |
-| `documentSigningRequestSchema`         | Created monoКЕП signing request       |
-| `documentSigningStatusSchema`          | monoКЕП signing progress              |
-| `signingDocumentSchema`                | One monoКЕП document with its state   |
-| `currencyRateSchema`                   | One exchange-rate item                |
-| `currencyRatesSchema`                  | `/bank/currency` response array       |
-| `jarSchema`                            | One Personal jar                      |
-| `managedAccountSchema`                 | One delegated FOP account             |
-| `managedClientSchema`                  | One delegated FOP client              |
-| `merchantDetailsSchema`                | `/api/merchant/details` response      |
-| `newInvoiceSchema`                     | Create-invoice response               |
-| `invoiceStatusSchema`                  | Invoice status or webhook payload     |
-| `cancelInvoiceResponseSchema`          | Invoice cancellation response         |
-| `finalizeInvoiceResponseSchema`        | Hold finalization response            |
-| `receiptSchema`                        | Invoice receipt response              |
-| `invoiceFiscalChecksSchema`            | Invoice fiscal checks response        |
-| `statementItemSchema`                  | One statement item                    |
-| `statementItemsSchema`                 | Statement response array              |
-| `personalWebhookEventSchema`           | Incoming Personal statement event     |
+| Export                                   | Validates                             |
+| ---------------------------------------- | ------------------------------------- |
+| `accountSchema`                          | One Personal account                  |
+| `acquiringCardPaymentSchema`             | Wallet or direct card-payment result  |
+| `acquiringEmployeeListSchema`            | Acquiring employee-list response      |
+| `acquiringEmployeeSchema`                | One Acquiring employee                |
+| `acquiringPosCancellationSchema`         | Initiated POS refund result           |
+| `acquiringSplitReceiverListSchema`       | Split-payment receiver-list response  |
+| `acquiringSplitReceiverSchema`           | One split-payment receiver            |
+| `acquiringSubscriptionListItemSchema`    | One subscription-list entry           |
+| `acquiringSubscriptionListSchema`        | Subscription-list response            |
+| `acquiringSubscriptionPaginationSchema`  | Subscription pagination metadata      |
+| `acquiringSubscriptionPaymentListSchema` | Subscription charge-list response     |
+| `acquiringSubscriptionPaymentSchema`     | One subscription charge               |
+| `acquiringSubscriptionSchema`            | One subscription status response      |
+| `acquiringSubscriptionSummarySchema`     | Subscription lifetime charge totals   |
+| `acquiringSubscriptionWalletDataSchema`  | Subscription tokenized-card state     |
+| `acquiringT2pPaymentSchema`              | Tap-to-phone payment status           |
+| `acquiringT2pTerminalListSchema`         | Tap-to-phone terminal-list response   |
+| `acquiringT2pTerminalSchema`             | One tap-to-phone terminal             |
+| `acquiringWalletCardSchema`              | One tokenized wallet card             |
+| `acquiringWalletSchema`                  | Merchant wallet response              |
+| `acquiringQrCashierListSchema`           | Acquiring QR cashier-list response    |
+| `acquiringQrCashierSchema`               | One Acquiring QR cashier              |
+| `acquiringQrDetailsSchema`               | Acquiring QR cashier details          |
+| `acquiringStatementSchema`               | Acquiring statement response          |
+| `acquiringStatementItemSchema`           | One Acquiring transaction             |
+| `acquiringStatementCancellationSchema`   | Nested Acquiring cancellation         |
+| `acquiringSubmerchantListSchema`         | Acquiring submerchant-list response   |
+| `acquiringSubmerchantSchema`             | One Acquiring submerchant             |
+| `acquiringWebhookPublicKeySchema`        | Acquiring webhook key response        |
+| `bankSyncSchema`                         | `/bank/sync` response                 |
+| `clientInfoSchema`                       | `/personal/client-info` response      |
+| `corporateRegistrationSchema`            | Corporate application acknowledgement |
+| `corporateRegistrationStatusSchema`      | Corporate application status and key  |
+| `corporateSettingsSchema`                | `/personal/corp/settings` response    |
+| `corporateTokenRequestSchema`            | Delegated access-request response     |
+| `documentSignatorySchema`                | One monoКЕП signatory                 |
+| `documentSigningRequestSchema`           | Created monoКЕП signing request       |
+| `documentSigningStatusSchema`            | monoКЕП signing progress              |
+| `signingDocumentSchema`                  | One monoКЕП document with its state   |
+| `currencyRateSchema`                     | One exchange-rate item                |
+| `currencyRatesSchema`                    | `/bank/currency` response array       |
+| `jarSchema`                              | One Personal jar                      |
+| `managedAccountSchema`                   | One delegated FOP account             |
+| `managedClientSchema`                    | One delegated FOP client              |
+| `merchantDetailsSchema`                  | `/api/merchant/details` response      |
+| `newInvoiceSchema`                       | Create-invoice response               |
+| `invoiceStatusSchema`                    | Invoice status or webhook payload     |
+| `cancelInvoiceResponseSchema`            | Invoice cancellation response         |
+| `finalizeInvoiceResponseSchema`          | Hold finalization response            |
+| `receiptSchema`                          | Invoice receipt response              |
+| `invoiceFiscalChecksSchema`              | Invoice fiscal checks response        |
+| `importedMonopaySigningKeySchema`        | Imported monopay public-key result    |
+| `installmentsCallbackEventSchema`        | Installments callback event           |
+| `installmentsClientPresenceSchema`       | Privacy-minimized client lookup       |
+| `installmentsClientValidationSchema`     | Client lookup with identity data      |
+| `installmentsGuaranteeLetterDataSchema`  | Guarantee-letter identity data        |
+| `installmentsIdentityDocumentSchema`     | One government identity document      |
+| `installmentsLetterCustomerSchema`       | Guarantee-letter customer identity    |
+| `installmentsOrderDataSchema`            | Installments order details            |
+| `installmentsOrderPaymentSchema`         | Installments payoff and refund state  |
+| `installmentsOrderReturnSchema`          | Installments return result            |
+| `installmentsOrderReverseSchema`         | One reversal attached to an order     |
+| `installmentsOrderStateSchema`           | Installments order state              |
+| `installmentsStoreReportOrderSchema`     | One store-settlement report row       |
+| `installmentsStoreReportSchema`          | Store-settlement report               |
+| `monopaySigningKeyListSchema`            | Monopay public-key list               |
+| `monopaySigningKeySchema`                | One monopay public key                |
+| `newAcquiringSubscriptionSchema`         | Created subscription and payer URL    |
+| `newInstallmentsOrderSchema`             | Created Installments order            |
+| `statementItemSchema`                    | One statement item                    |
+| `statementItemsSchema`                   | Statement response array              |
+| `personalWebhookEventSchema`             | Incoming Personal statement event     |
 
 ```ts
 import { currencyRatesSchema } from "@liaugust/monobank-sdk";
@@ -2770,7 +2821,8 @@ const cashbackType: CashbackTypeValue = CashbackType.UAH;
 
 | Export                           | Wire values                                                                  |
 | -------------------------------- | ---------------------------------------------------------------------------- |
-| `InvoicePaymentType`             | `debit`, `hold`                                                              |
+| `InvoicePaymentType`             | `debit`, `hold`, `verification`                                              |
+| `InvoiceDisplayType`             | `iframe`                                                                     |
 | `AcquiringPaymentScheme`         | `full`, `bnpl_later_30`, `bnpl_parts_4`                                      |
 | `AcquiringQrAmountType`          | `client`, `fix`, `merchant`                                                  |
 | `AcquiringCardPaymentStatus`     | `processing`, `success`, `failure`                                           |
@@ -2787,6 +2839,8 @@ const cashbackType: CashbackTypeValue = CashbackType.UAH;
 | `FiscalCheckType`                | `sale`, `return`                                                             |
 | `FiscalCheckStatus`              | `new`, `process`, `done`, `failed`                                           |
 | `FiscalizationSource`            | `checkbox`, `monopay`                                                        |
+| `AcquiringSubscriptionAction`    | `cancel`                                                                     |
+| `AcquiringSubscriptionStatus`    | `active`, `cancelled`                                                        |
 
 ### Corporate values
 
@@ -3006,64 +3060,90 @@ object containing the target `account` identifier and validated
 
 ## Supporting types
 
-| Export                                   | Purpose                                                        |
-| ---------------------------------------- | -------------------------------------------------------------- |
-| `MonobankPublicClientOptions`            | Token-free Public constructor configuration                    |
-| `MonobankPersonalClientOptions`          | Constructor configuration                                      |
-| `MonobankAcquiringClientOptions`         | Acquiring constructor configuration                            |
-| `RequestOptions`                         | Optional per-request `AbortSignal`                             |
-| `RetryOptions`                           | Safe GET retry policy                                          |
-| `GetStatementsInput`                     | Statement account and time window                              |
-| `UnixTimeInput`                          | `Date \| number` statement timestamp input                     |
-| `GetAcquiringStatementsInput`            | Acquiring time window and optional submerchant terminal        |
-| `AcquiringStatementUnixTimeInput`        | `Date \| number` Acquiring statement timestamp input           |
-| `GetAcquiringQrDetailsInput`             | QR cashier identifier for details lookup                       |
-| `ListAcquiringWalletCardsInput`          | Wallet identifier for listing tokenized cards                  |
-| `DeleteAcquiringWalletCardInput`         | Card token to remove from a wallet                             |
-| `PayWithCardTokenInput`                  | Stored-token charge amount, currency, and initiation           |
-| `PayInvoiceDirectInput`                  | Raw card charge; PCI DSS material                              |
-| `DirectPaymentCardData`                  | Raw PAN, expiry, and CVV; PCI DSS material                     |
-| `SyncInvoicePaymentInput`                | Synchronous payment with exactly one container                 |
-| `SyncPaymentCardData`                    | Card and 3-D Secure values; PCI DSS material                   |
-| `SyncPaymentWalletContainer`             | Decrypted Apple Pay or Google Pay container                    |
-| `SyncPaymentMerchantInfo`                | Order details for a synchronous payment                        |
-| `ResetAcquiringQrAmountInput`            | QR cashier identifier for clearing a set amount                |
-| `SetWebhookInput`                        | Webhook URL request body                                       |
-| `VerifyAcquiringWebhookSignatureInput`   | Raw body, public key, and signature verification inputs        |
-| `CreateInvoiceInput`                     | Invoice amount, order, redirect, webhook, and payment controls |
-| `CreateInvoiceOptions`                   | Cancellation and optional CMS attribution headers              |
-| `GetInvoiceStatusInput`                  | Invoice identifier for status lookup                           |
-| `CancelInvoiceInput`                     | Full or partial cancellation request                           |
-| `RemoveInvoiceInput`                     | Unpaid invoice identifier                                      |
-| `FinalizeInvoiceInput`                   | Hold capture request                                           |
-| `GetInvoiceReceiptInput`                 | Receipt lookup and optional delivery email                     |
-| `GetInvoiceFiscalChecksInput`            | Fiscal-check lookup                                            |
-| `MerchantPaymentInfo`                    | Merchant order metadata and basket                             |
-| `InvoiceBasketItem`                      | Itemized invoice product or service                            |
-| `InvoiceDiscount`                        | Basket or order adjustment                                     |
-| `FiscalizationItem`                      | Item sent for cancellation/finalization fiscalization          |
-| `FetchLike`                              | Injectable Fetch-compatible function                           |
-| `CorporateSigner`                        | Injectable Corporate signing function returning `X-Sign`       |
-| `CorporateSignatureInput`                | Payload and components handed to a Corporate signer            |
-| `GetCorporateSettingsInput`              | Request identifier for a corporate settings read               |
-| `RegisterCorporateCompanyInput`          | Company authorization application fields                       |
-| `GetCorporateRegistrationStatusInput`    | Public key identifying an application to poll                  |
-| `SetCorporateWebhookInput`               | Request identifier and Corporate webhook address               |
-| `RequestCorporateAccessInput`            | Optional callback address for a delegated access request       |
-| `CheckCorporateAccessInput`              | Request identifier for a delegated access check                |
-| `GetCorporateClientInfoInput`            | Grant identifier for a delegated identity read                 |
-| `GetCorporateClientStatementsInput`      | Grant identifier, account, and window for delegated statements |
-| `StatementWindowInput`                   | Account and time window shared by both statement families      |
-| `RequestDocumentSigningInput`            | Documents, signer policy, and callback for monoКЕП signing     |
-| `SigningDocumentInput`                   | One document submitted for monoКЕП signing                     |
-| `GetDocumentSigningStatusInput`          | Signing request identifier for a status read                   |
-| `CancelDocumentSigningInput`             | Signing request identifier for a cancellation                  |
-| `ResponseValidationIssue`                | Safe schema issue retained by validation errors                |
-| `MonobankApiErrorOptions`                | Public API-error constructor data                              |
-| `MonobankNetworkErrorOptions`            | Public network-error constructor data                          |
-| `MonobankNetworkErrorReason`             | `"aborted" \| "network" \| "timeout"`                          |
-| `MonobankResponseValidationErrorOptions` | Public response-validation constructor data                    |
-| `MonobankValidationErrorOptions`         | Public input-validation constructor data                       |
+| Export                                     | Purpose                                                        |
+| ------------------------------------------ | -------------------------------------------------------------- |
+| `MonobankPublicClientOptions`              | Token-free Public constructor configuration                    |
+| `MonobankPersonalClientOptions`            | Constructor configuration                                      |
+| `MonobankAcquiringClientOptions`           | Acquiring constructor configuration                            |
+| `MonobankCorporateClientOptions`           | Corporate signer and transport configuration                   |
+| `MonobankInstallmentsClientOptions`        | Installments store credential and transport configuration      |
+| `RequestOptions`                           | Optional per-request `AbortSignal`                             |
+| `RetryOptions`                             | Safe GET retry policy                                          |
+| `GetStatementsInput`                       | Statement account and time window                              |
+| `UnixTimeInput`                            | `Date \| number` statement timestamp input                     |
+| `GetAcquiringStatementsInput`              | Acquiring time window and optional submerchant terminal        |
+| `AcquiringStatementUnixTimeInput`          | `Date \| number` Acquiring statement timestamp input           |
+| `Rfc3339TimeInput`                         | `Date \| string` RFC-3339 timestamp input                      |
+| `GetAcquiringQrDetailsInput`               | QR cashier identifier for details lookup                       |
+| `ListAcquiringWalletCardsInput`            | Wallet identifier for listing tokenized cards                  |
+| `DeleteAcquiringWalletCardInput`           | Card token to remove from a wallet                             |
+| `PayWithCardTokenInput`                    | Stored-token charge amount, currency, and initiation           |
+| `PayInvoiceDirectInput`                    | Raw card charge; PCI DSS material                              |
+| `DirectPaymentCardData`                    | Raw PAN, expiry, and CVV; PCI DSS material                     |
+| `SyncInvoicePaymentInput`                  | Synchronous payment with exactly one container                 |
+| `SyncPaymentCardData`                      | Card and 3-D Secure values; PCI DSS material                   |
+| `SyncPaymentWalletContainer`               | Decrypted Apple Pay or Google Pay container                    |
+| `SyncPaymentMerchantInfo`                  | Order details for a synchronous payment                        |
+| `ResetAcquiringQrAmountInput`              | QR cashier identifier for clearing a set amount                |
+| `SetWebhookInput`                          | Webhook URL request body                                       |
+| `VerifyAcquiringWebhookSignatureInput`     | Raw body, public key, and signature verification inputs        |
+| `CreateInvoiceInput`                       | Invoice amount, order, redirect, webhook, and payment controls |
+| `CreateInvoiceOptions`                     | Cancellation and optional CMS attribution headers              |
+| `GetInvoiceStatusInput`                    | Invoice identifier for status lookup                           |
+| `CancelInvoiceInput`                       | Full or partial cancellation request                           |
+| `RemoveInvoiceInput`                       | Unpaid invoice identifier                                      |
+| `FinalizeInvoiceInput`                     | Hold capture request                                           |
+| `GetInvoiceReceiptInput`                   | Receipt lookup and optional delivery email                     |
+| `GetInvoiceFiscalChecksInput`              | Fiscal-check lookup                                            |
+| `CreateAcquiringSubscriptionInput`         | Recurring-payment creation fields                              |
+| `GetAcquiringSubscriptionStatusInput`      | Subscription identifier for a status read                      |
+| `ListAcquiringSubscriptionsInput`          | RFC-3339 window, page, and status filter                       |
+| `GetAcquiringSubscriptionPaymentsInput`    | Subscription identifier and RFC-3339 charge window             |
+| `EditAcquiringSubscriptionInput`           | Cancellation action and optional refund                        |
+| `RemoveAcquiringSubscriptionInput`         | Subscription identifier to deactivate                          |
+| `AcquiringSubscriptionDateInput`           | Shared RFC-3339 subscription window                            |
+| `AcquiringSubscriptionPageInput`           | Shared subscription page controls                              |
+| `ImportMonopaySigningKeyInput`             | Base64 public key, optional name, and expiry                   |
+| `DeleteMonopaySigningKeyInput`             | Monopay key identifier to invalidate                           |
+| `GetAcquiringT2pPaymentStatusInput`        | External tap-to-phone payment identifier                       |
+| `CancelAcquiringPosTransactionInput`       | POS transaction RRN and refund amount                          |
+| `MerchantPaymentInfo`                      | Merchant order metadata and basket                             |
+| `InvoiceBasketItem`                        | Itemized invoice product or service                            |
+| `InvoiceDiscount`                          | Basket or order adjustment                                     |
+| `FiscalizationItem`                        | Item sent for cancellation/finalization fiscalization          |
+| `FetchLike`                                | Injectable Fetch-compatible function                           |
+| `CorporateSigner`                          | Injectable Corporate signing function returning `X-Sign`       |
+| `CorporateSignatureInput`                  | Payload and components handed to a Corporate signer            |
+| `GetCorporateSettingsInput`                | Request identifier for a corporate settings read               |
+| `RegisterCorporateCompanyInput`            | Company authorization application fields                       |
+| `GetCorporateRegistrationStatusInput`      | Public key identifying an application to poll                  |
+| `SetCorporateWebhookInput`                 | Request identifier and Corporate webhook address               |
+| `RequestCorporateAccessInput`              | Optional callback address for a delegated access request       |
+| `CheckCorporateAccessInput`                | Request identifier for a delegated access check                |
+| `GetCorporateClientInfoInput`              | Grant identifier for a delegated identity read                 |
+| `GetCorporateClientStatementsInput`        | Grant identifier, account, and window for delegated statements |
+| `StatementWindowInput`                     | Account and time window shared by both statement families      |
+| `RequestDocumentSigningInput`              | Documents, signer policy, and callback for monoКЕП signing     |
+| `SigningDocumentInput`                     | One document submitted for monoКЕП signing                     |
+| `GetDocumentSigningStatusInput`            | Signing request identifier for a status read                   |
+| `CancelDocumentSigningInput`               | Signing request identifier for a cancellation                  |
+| `ValidateInstallmentsClientInput`          | International phone number for eligibility lookup              |
+| `CreateInstallmentsOrderInput`             | Store order, client, invoice, programs, and products           |
+| `InstallmentsOrderInvoiceInput`            | Invoice metadata attached to a new Installments order          |
+| `InstallmentsProgramInput`                 | One offered Installments program                               |
+| `InstallmentsProductInput`                 | One product and hryvnia sum                                    |
+| `InstallmentsOrderIdentifierInput`         | Shared Installments order UUID                                 |
+| `ReturnInstallmentsOrderInput`             | Return amount, store idempotency handle, and destination       |
+| `InstallmentsLetterInput`                  | Order identifier for guarantee-letter operations               |
+| `GetInstallmentsStoreReportInput`          | `YYYY-MM-DD` store settlement date                             |
+| `VerifyInstallmentsCallbackSignatureInput` | Raw callback bytes, signature, and store secret                |
+| `ResponseValidationIssue`                  | Safe schema issue retained by validation errors                |
+| `MonobankBinaryPayload`                    | Non-empty response bytes and declared content type             |
+| `MonobankApiErrorOptions`                  | Public API-error constructor data                              |
+| `MonobankNetworkErrorOptions`              | Public network-error constructor data                          |
+| `MonobankNetworkErrorReason`               | `"aborted" \| "network" \| "timeout"`                          |
+| `MonobankResponseValidationErrorOptions`   | Public response-validation constructor data                    |
+| `MonobankValidationErrorOptions`           | Public input-validation constructor data                       |
 
 Response types are inferred from their runtime schemas and exported from the
 package root, including the Personal models plus `MerchantDetails`,
@@ -3074,7 +3154,20 @@ package root, including the Personal models plus `MerchantDetails`,
 `AcquiringWebhookPublicKey`, `AcquiringStatement`, `AcquiringStatementItem`,
 `AcquiringStatementCancellation`, `NewInvoice`, `Invoice`,
 `InvoiceCancellation`, `InvoiceFinalization`, `InvoiceReceipt`,
-`InvoiceFiscalChecks`, `CorporateSettings`, `CorporateRegistration`, and
-`CorporateRegistrationStatusResult`, `CorporateTokenRequest`,
-`DocumentSigningRequest`, `DocumentSigningStatus`, `SigningDocument`, and
-`DocumentSignatory`.
+`InvoiceFiscalChecks`, `NewAcquiringSubscription`, `AcquiringSubscription`,
+`AcquiringSubscriptionList`, `AcquiringSubscriptionListItem`,
+`AcquiringSubscriptionPayment`, `AcquiringSubscriptionPaymentList`,
+`AcquiringSubscriptionPagination`, `AcquiringSubscriptionSummary`,
+`AcquiringSubscriptionWalletData`, `MonopaySigningKey`,
+`MonopaySigningKeyList`, `ImportedMonopaySigningKey`, `AcquiringT2pTerminal`,
+`AcquiringT2pTerminalList`, `AcquiringT2pPayment`, `AcquiringSplitReceiver`,
+`AcquiringSplitReceiverList`, `AcquiringPosCancellation`, `CorporateSettings`,
+`CorporateRegistration`, `CorporateRegistrationStatusResult`,
+`CorporateTokenRequest`, `DocumentSigningRequest`, `DocumentSigningStatus`,
+`SigningDocument`, `DocumentSignatory`, `InstallmentsCallbackEvent`,
+`InstallmentsClientPresence`, `InstallmentsClientValidation`,
+`InstallmentsGuaranteeLetterData`, `InstallmentsIdentityDocument`,
+`InstallmentsLetterCustomer`, `NewInstallmentsOrder`, `InstallmentsOrderData`,
+`InstallmentsOrderPayment`, `InstallmentsOrderReturn`,
+`InstallmentsOrderReverse`, `InstallmentsOrderState`,
+`InstallmentsStoreReport`, and `InstallmentsStoreReportOrder`.
