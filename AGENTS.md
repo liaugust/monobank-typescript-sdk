@@ -352,10 +352,9 @@ tests/consumers/                ESM, CJS, browser, declaration, and tarball chec
 - **Add a public export:** update `src/index.ts`, declaration/type assertions,
   consumer smoke checks, the runtime-schema or supporting-type inventory in
   `docs/API.md`, and the compact runtime inventory in `llms.txt`.
-- **Change documentation only:** run
-  `pnpm exec vitest run tests/documentation-consistency.test.ts`, then
-  `pnpm verify`; do not rely on conceptual review alone for inventories or
-  version pins.
+- **Change documentation only:** cross-check inventories against `src/index.ts`
+  and the current client resource properties, confirm version pins against
+  `package.json` and CI, then run `pnpm verify`.
 
 ## Change Workflow
 
