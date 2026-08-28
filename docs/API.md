@@ -2799,15 +2799,19 @@ const cashbackType: CashbackTypeValue = CashbackType.UAH;
 
 ### AccountType values
 
-| Property   | Wire value   |
-| ---------- | ------------ |
-| `Black`    | `"black"`    |
-| `EAid`     | `"eAid"`     |
-| `Fop`      | `"fop"`      |
-| `Iron`     | `"iron"`     |
-| `Platinum` | `"platinum"` |
-| `White`    | `"white"`    |
-| `Yellow`   | `"yellow"`   |
+| Property        | Wire value        |
+| --------------- | ----------------- |
+| `Black`         | `"black"`         |
+| `EAid`          | `"eAid"`          |
+| `Fop`           | `"fop"`           |
+| `Iron`          | `"iron"`          |
+| `MadeInUkraine` | `"madeInUkraine"` |
+| `Platinum`      | `"platinum"`      |
+| `White`         | `"white"`         |
+| `Yellow`        | `"yellow"`        |
+
+`MadeInUkraine` is returned by the live API for the "Зроблено в Україні" card
+even though the published documentation does not list it.
 
 ### CashbackType values
 
@@ -2859,17 +2863,17 @@ this const rather than relying on the response type to narrow.
 
 ### Account
 
-| Field          | Type           | Notes                         |
-| -------------- | -------------- | ----------------------------- |
-| `id`           | `string`       | Account identifier            |
-| `sendId`       | `string`       | Public send identifier        |
-| `balance`      | `number`       | Integer minor units           |
-| `creditLimit`  | `number`       | Integer minor units           |
-| `type`         | `AccountType`  | Documented account wire value |
-| `currencyCode` | `number`       | Numeric ISO 4217 code         |
-| `cashbackType` | `CashbackType` | Cashback mode                 |
-| `maskedPan`    | `string[]`     | Masked payment-card numbers   |
-| `iban`         | `string`       | Account IBAN                  |
+| Field          | Type                        | Notes                                                |
+| -------------- | --------------------------- | ---------------------------------------------------- |
+| `id`           | `string`                    | Account identifier                                   |
+| `sendId`       | `string`                    | Public send identifier                               |
+| `balance`      | `number`                    | Integer minor units                                  |
+| `creditLimit`  | `number`                    | Integer minor units                                  |
+| `type`         | `AccountType`               | Accepted account wire value                          |
+| `currencyCode` | `number`                    | Numeric ISO 4217 code                                |
+| `cashbackType` | `CashbackType \| undefined` | Cashback mode; the live API omits it on FOP accounts |
+| `maskedPan`    | `string[]`                  | Masked payment-card numbers                          |
+| `iban`         | `string`                    | Account IBAN                                         |
 
 ### BankSync
 
@@ -3010,15 +3014,15 @@ Each `cancelList` entry has the following documented fields:
 
 ### Jar
 
-| Field          | Type     | Notes                  |
-| -------------- | -------- | ---------------------- |
-| `id`           | `string` | Jar identifier         |
-| `sendId`       | `string` | Public send identifier |
-| `title`        | `string` | Jar title              |
-| `description`  | `string` | Jar description        |
-| `currencyCode` | `number` | Numeric ISO 4217 code  |
-| `balance`      | `number` | Integer minor units    |
-| `goal`         | `number` | Integer minor units    |
+| Field          | Type             | Notes                                                 |
+| -------------- | ---------------- | ----------------------------------------------------- |
+| `id`           | `string`         | Jar identifier                                        |
+| `sendId`       | `string`         | Public send identifier                                |
+| `title`        | `string`         | Jar title                                             |
+| `description`  | `string`         | Jar description                                       |
+| `currencyCode` | `number`         | Numeric ISO 4217 code                                 |
+| `balance`      | `number`         | Integer minor units                                   |
+| `goal`         | `number \| null` | Integer minor units; `null` for jars without a target |
 
 ### ManagedClient and ManagedAccount
 

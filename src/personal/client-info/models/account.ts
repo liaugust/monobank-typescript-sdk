@@ -1,17 +1,23 @@
 import * as z from "zod/mini";
 
-/** Importable values accepted by Monobank's Personal account `type` field. */
+/**
+ * Importable values accepted by Monobank's Personal account `type` field.
+ *
+ * `madeInUkraine` is returned by the live API for the "Зроблено в Україні"
+ * card even though the published documentation does not list it.
+ */
 export const AccountType = {
   Black: "black",
   EAid: "eAid",
   Fop: "fop",
   Iron: "iron",
+  MadeInUkraine: "madeInUkraine",
   Platinum: "platinum",
   White: "white",
   Yellow: "yellow",
 } as const;
 
-/** A documented value from Monobank's Personal account `type` field. */
+/** A value accepted for Monobank's Personal account `type` field. */
 export type AccountType = (typeof AccountType)[keyof typeof AccountType];
 
 /** Importable values accepted by Monobank's Personal account `cashbackType` field. */
@@ -32,7 +38,8 @@ export type CashbackType = (typeof CashbackType)[keyof typeof CashbackType];
  */
 export const accountSchema = z.looseObject({
   balance: z.int(),
-  cashbackType: z.enum(CashbackType),
+  // The live API omits `cashbackType` on FOP accounts, so absence is valid.
+  cashbackType: z.optional(z.enum(CashbackType)),
   creditLimit: z.int(),
   currencyCode: z.int(),
   iban: z.string(),
