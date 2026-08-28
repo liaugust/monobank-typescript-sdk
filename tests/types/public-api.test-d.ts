@@ -264,6 +264,7 @@ const accountTypesAreExact = {
   eAid: true,
   fop: true,
   iron: true,
+  madeInUkraine: true,
   platinum: true,
   white: true,
   yellow: true,

@@ -6,12 +6,13 @@ import { accountSchema, AccountType, CashbackType } from "./account.js";
 const accountFixture = clientInfoFixture.accounts[0];
 
 describe("account schema", () => {
-  it("exports the exact documented account and cashback values", () => {
+  it("exports the exact supported account and cashback values", () => {
     expect(AccountType).toStrictEqual({
       Black: "black",
       EAid: "eAid",
       Fop: "fop",
       Iron: "iron",
+      MadeInUkraine: "madeInUkraine",
       Platinum: "platinum",
       White: "white",
       Yellow: "yellow",
@@ -27,7 +28,7 @@ describe("account schema", () => {
     expect(accountSchema.parse(accountFixture)).toEqual(accountFixture);
   });
 
-  it("accepts every documented account type", () => {
+  it("accepts every supported account type", () => {
     const accountTypes = Object.values(AccountType);
 
     expect(
@@ -50,6 +51,14 @@ describe("account schema", () => {
         cashbackType,
       })),
     );
+  });
+
+  it("accepts an account without a cashback type, as the live API returns for FOP accounts", () => {
+    const { cashbackType, ...fopAccount } = accountFixture;
+
+    expect(cashbackType).toBeDefined();
+    expect(accountSchema.parse(fopAccount)).toStrictEqual(fopAccount);
+    expect("cashbackType" in accountSchema.parse(fopAccount)).toBe(false);
   });
 
   it("rejects malformed account fields", () => {

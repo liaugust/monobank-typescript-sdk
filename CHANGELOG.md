@@ -4,6 +4,32 @@ All notable changes to this package are documented here.
 
 ## Unreleased
 
+## 0.7.0 - 2026-08-28
+
+Schema corrections for `/personal/client-info` behaviors observed only against
+the live API, which the documented contract does not mention. Before this
+release, `MonobankPersonalClientInfo.getInfo()` threw
+`MonobankResponseValidationError` for real clients with any of these accounts
+or jars. As with 0.3.0's `jars` correction, the previous types promised values
+the live API does not deliver, so this ships as a minor rather than a patch.
+
+### Added
+
+- `AccountType.MadeInUkraine` (`"madeInUkraine"`), returned by the live API
+  for the "Зроблено в Україні" card. An exhaustive `switch` or
+  `Record<AccountType, …>` map over `AccountType` needs a new `madeInUkraine`
+  case.
+
+### Changed
+
+- `accountSchema` now accepts an absent `cashbackType`, which the live API
+  omits on FOP accounts, so `Account["cashbackType"]` is
+  `CashbackType | undefined`. Code that reads `account.cashbackType` as a
+  required field will need a guard.
+- `jarSchema` now accepts `goal: null`, which the live API returns for jars
+  created without a target, so `Jar["goal"]` is `number | null`. Code that
+  does arithmetic on `jar.goal` will need a null guard.
+
 ## 0.6.0 - 2026-08-20
 
 Findings from an internal security, performance, and code-quality review of

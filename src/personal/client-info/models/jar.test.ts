@@ -10,6 +10,12 @@ describe("jar schema", () => {
     expect(jarSchema.parse(jarFixture)).toEqual(jarFixture);
   });
 
+  it("accepts a null goal, as the live API returns for jars without a target", () => {
+    const goallessJar = { ...jarFixture, goal: null };
+
+    expect(jarSchema.parse(goallessJar)).toEqual(goallessJar);
+  });
+
   it("rejects malformed jar fields", () => {
     const result = jarSchema.safeParse({
       ...jarFixture,

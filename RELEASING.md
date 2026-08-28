@@ -47,10 +47,13 @@ tarball, then publishes the public scoped package through npm OIDC.
 ## Manual live check
 
 The automated suite validates every response against synthetic fixtures, so it
-cannot catch a schema that disagrees with production. Two documented behaviors
-were found only by calling the live API, so a short manual probe against a
-sandbox Acquiring token is worth running before a release that changes schemas
-or adds endpoints.
+cannot catch a schema that disagrees with production. Five behaviors were
+found only by calling the live API — two on Acquiring endpoints and three on
+`/personal/client-info` (the `madeInUkraine` account type, the absent
+`cashbackType` on FOP accounts, and `goal: null` on jars) — so a short manual
+probe is worth running before a release that changes schemas or adds
+endpoints. Probe `personal.client.getInfo()` with a Personal token in addition
+to the Acquiring checks below.
 
 Probe the read-only Acquiring endpoints, plus a created-then-removed test
 invoice, and compare the outcome classes:
