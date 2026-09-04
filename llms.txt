@@ -158,10 +158,13 @@ the signer as well as the request: a signer that never settles fails with reason
   `Promise<readonly StatementItem[]>`; safe GET.
 - `corporate.documents.requestSigning(input, options?)`: signed monoКЕП
   request for 1-10 documents; each needs `name` and a 64-character hexadecimal
-  ГОСТ 34.311-95 `hash` the caller computes, since no JS runtime implements that
-  algorithm; optional `callbackUrl` must be absolute HTTP(S); returns
+  `hash` the caller computes; optional `hashType` is `Gost` (ГОСТ 34.311-95) or
+  `Dstu256` (ДСТУ 7564 Купина-256) and defaults upstream to `Gost`; optional
+  `callbackUrl` must be absolute HTTP(S); returns
   `Promise<DocumentSigningRequest>` with `requestId` and `deeplink`; valid three
-  days; never retried.
+  days; never infer `hashType` from certificate algorithm metadata (including a
+  ДСТУ 7564/512 identifier), because it describes a separate operation; never
+  retried.
 - `corporate.documents.getSigningStatus(input, options?)`: signed status read;
   returns `Promise<DocumentSigningStatus>` with per-document state and
   signatories; safe GET.
@@ -359,7 +362,8 @@ objects, or raw API payloads.
   `InvoiceStatus`, `InvoiceCancellationStatus`, `InvoicePaymentSystem`,
   `InvoicePaymentMethod`, `InvoiceWalletStatus`, `DiscountType`, `DiscountMode`,
   `FiscalCheckType`, `FiscalCheckStatus`, `FiscalizationSource`,
-  `CorporateRegistrationStatus`, `DocumentSigningState`, `SigningDocumentType`.
+  `CorporateRegistrationStatus`, `DocumentSigningState`,
+  `SigningDocumentHashType`, `SigningDocumentType`.
 - Public, Personal, and Corporate schemas: `accountSchema`, `bankSyncSchema`,
   `clientInfoSchema`,
   `corporateRegistrationSchema`, `corporateRegistrationStatusSchema`,

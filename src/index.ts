@@ -264,6 +264,7 @@ export type {
 export {
   documentSignatorySchema,
   DocumentSigningState,
+  SigningDocumentHashType,
   signingDocumentSchema,
   SigningDocumentType,
 } from "./corporate/documents/models/signing-document.js";

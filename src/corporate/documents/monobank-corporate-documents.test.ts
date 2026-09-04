@@ -60,6 +60,31 @@ describe("documents.requestSigning", () => {
     });
   });
 
+  it("preserves the upstream Gost default when hashType is omitted", async () => {
+    const fetch = createFetchSequence([
+      jsonResponse(documentSigningRequestFixture),
+    ]);
+    const client = createCorporateTestClient(fetch);
+
+    await client.documents.requestSigning({
+      documents: [
+        {
+          hash: "A421FD4D4AB19BE76EC02A0F84AC2379822943FE85EB6ED7F22B30F73CB9CAF9",
+          name: "Договір",
+        },
+      ],
+    });
+
+    expect(firstRequestBody(fetch)).toEqual({
+      documents: [
+        {
+          hash: "A421FD4D4AB19BE76EC02A0F84AC2379822943FE85EB6ED7F22B30F73CB9CAF9",
+          name: "Договір",
+        },
+      ],
+    });
+  });
+
   it("rejects a callbackUrl that is not an absolute HTTP(S) URL", async () => {
     const fetch = createFetchSequence([
       jsonResponse(documentSigningRequestFixture),
@@ -106,6 +131,18 @@ describe("documents.requestSigning", () => {
       "an undocumented document type",
       {
         documents: [{ hash: "A421FD", name: "Договір", type: "rtf" }],
+      },
+    ],
+    [
+      "an undocumented hash algorithm",
+      {
+        documents: [
+          {
+            hash: "A421FD4D4AB19BE76EC02A0F84AC2379822943FE85EB6ED7F22B30F73CB9CAF9",
+            hashType: "Sha256",
+            name: "Договір",
+          },
+        ],
       },
     ],
   ])("rejects %s before Fetch", async (_label, input) => {
@@ -160,6 +197,25 @@ describe("documents.getSigningStatus", () => {
     const fetch = createFetchSequence([
       jsonResponse({
         documents: [{ hash: "A4", name: "D", status: "review" }],
+      }),
+    ]);
+    const client = createCorporateTestClient(fetch);
+
+    await expect(
+      client.documents.getSigningStatus({ requestId: "req-1" }),
+    ).rejects.toMatchObject({ name: "MonobankResponseValidationError" });
+  });
+
+  it("rejects an undocumented document hash algorithm", async () => {
+    const fetch = createFetchSequence([
+      jsonResponse({
+        documents: [
+          {
+            hash: "A4",
+            hashType: "Sha256",
+            name: "D",
+          },
+        ],
       }),
     ]);
     const client = createCorporateTestClient(fetch);

@@ -6,7 +6,8 @@ export const documentSigningRequestFixture = {
 export const documentSigningInputFixture = {
   documents: [
     {
-      hash: "A421FD4D4AB19BE76EC02A0F84AC2379822943FE85EB6ED7F22B30F73CB9CAF9",
+      hash: "DE50349D679C55142B182DF0145D0B6EF6EF9879FB79B23D5D598CEB2E50643A",
+      hashType: "Dstu256",
       name: "Договір на поставку товарів",
       type: "pdf",
     },
@@ -16,7 +17,8 @@ export const documentSigningInputFixture = {
 export const documentSigningStatusFixture = {
   documents: [
     {
-      hash: "A421FD4D4AB19BE76EC02A0F84AC2379822943FE85EB6ED7F22B30F73CB9CAF9",
+      hash: "DE50349D679C55142B182DF0145D0B6EF6EF9879FB79B23D5D598CEB2E50643A",
+      hashType: "Dstu256",
       link: "https://example.com/agreement.pdf",
       name: "Договір на поставку товарів",
       signers: [

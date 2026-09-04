@@ -40,11 +40,16 @@ a currently documented operation missing here is a bug.
 - Reuse `clientInfoSchema` and `statementItemsSchema` for the delegated
   Corporate reads. They are the same wire contracts as the Personal endpoints;
   only the credential and the data's owner differ, so never fork the schemas.
-- Never compute or verify a monoКЕП document hash. It uses ГОСТ 34.311-95, which
-  no JavaScript runtime implements and which cannot be added without breaking the
-  single-runtime-dependency rule, so the caller supplies the hex value and the
-  SDK only carries it. Say so wherever the field is documented: a SHA-256 hash is
-  the same length and fails silently.
+- Never compute or verify a monoКЕП document hash. `hashType` selects `Gost`
+  (ГОСТ 34.311-95) or `Dstu256` (ДСТУ 7564 Купина-256), and omission defaults
+  upstream to `Gost`. Neither algorithm is exposed by Web Crypto or `node:crypto`
+  and adding one would break the single-runtime-dependency rule, so the caller
+  supplies the hex value and the SDK only carries it. Say so wherever the field
+  is documented: a digest made with the wrong algorithm has the same length and
+  fails silently. `hashType` selects the digest of the document bytes; never
+  derive it from a certificate's hash or signature algorithm metadata. A
+  certificate may identify ДСТУ 7564/512 while the API still accepts only
+  `Gost` and `Dstu256`, because these describe separate cryptographic operations.
 - Treat `corporate.access.*` and the delegated reads as third-party data access.
   A client grants it, it covers only the registered permissions, and the client
   can revoke it. Never widen what a grant is used for beyond the caller's stated
@@ -200,7 +205,7 @@ The root entry point exports:
 - enum-like const values, including `AccountType`, `CashbackType`,
   `AcquiringPaymentScheme`, `AcquiringQrAmountType`, `AcquiringStatementStatus`,
   `InvoicePaymentType`, `InvoiceStatus`, `CorporateRegistrationStatus`,
-  `DocumentSigningState`, and `SigningDocumentType`
+  `DocumentSigningState`, `SigningDocumentHashType`, and `SigningDocumentType`
 - response schemas for accounts, bank sync, client info, currency rates, jars,
   managed clients, merchant details, submerchants, QR cashiers, QR cashier
   details, invoices, receipts, fiscal checks, statements, Personal webhook

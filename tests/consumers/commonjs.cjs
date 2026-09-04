@@ -8,6 +8,7 @@ const {
   MonobankPublicClient,
   MonobankResponseValidationError,
   MonobankValidationError,
+  SigningDocumentHashType,
   verifyAcquiringWebhookSignature,
 } = require("../../dist/index.cjs");
 
@@ -30,6 +31,7 @@ assert.equal(typeof MonobankPublicClient, "function");
 assert.equal(typeof MonobankResponseValidationError, "function");
 assert.equal(typeof MonobankValidationError, "function");
 assert.equal(typeof verifyAcquiringWebhookSignature, "function");
+assert.equal(SigningDocumentHashType.Dstu256, "Dstu256");
 assert.ok(client instanceof MonobankPersonalClient);
 assert.ok(publicApi instanceof MonobankPublicClient);
 assert.ok(acquiringClient instanceof MonobankAcquiringClient);

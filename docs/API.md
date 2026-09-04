@@ -2400,14 +2400,28 @@ Creates a monoКЕП request to sign one to ten documents, over the signed
 | `oneSigner`   | `boolean`                         | Optional; Monobank defaults it to `true`                                         |
 | `callbackUrl` | `string`                          | Optional absolute HTTP(S) address for signing progress                           |
 
-Each document takes `name` and `hash`, plus optional `type`
-(`SigningDocumentType`) and `link`.
+Each document takes `name` and `hash`, plus optional `hashType`
+(`SigningDocumentHashType`), `type` (`SigningDocumentType`), and `link`.
+`SigningDocumentHashType.Gost` selects ГОСТ 34.311-95 and
+`.Dstu256` selects ДСТУ 7564 Купина-256. Monobank defaults an omitted
+`hashType` to `Gost`.
 
 > [!IMPORTANT]
-> `hash` is the 64-character document digest as HEX under **ГОСТ 34.311-95**. Neither Web
-> Crypto nor `node:crypto` implements that algorithm, so the SDK never computes
-> or verifies it — you supply the value. A SHA-256 hex string is the same length
-> and yields a well-formed request that is silently wrong.
+> `hash` is the 64-character document digest as HEX under the selected
+> algorithm. Neither Web Crypto nor `node:crypto` exposes ГОСТ 34.311-95 or ДСТУ
+> 7564 Купина-256, so the SDK never computes or verifies it — you supply the
+> value. A digest made with the wrong algorithm has the same shape and cannot be
+> detected by SDK validation.
+
+Monobank's linked
+[Java example](https://github.com/kolja24/java-example-hash-34311/commit/89b6d81f04b9b5432f8f8c5fb437767aaa10efc4)
+uses Bouncy Castle to demonstrate both algorithms.
+
+`hashType` selects the digest algorithm for the document bytes. It is separate
+from the hash or signature algorithm recorded in a signatory certificate, so a
+certificate that identifies ДСТУ 7564/512 does not authorize or require a
+`Dstu512` value here. Do not infer this request field from certificate metadata;
+the API currently accepts only `Gost` and `Dstu256`.
 
 Returns `requestId`, used by the two calls below, and `deeplink`, which the
 signatory opens in the Monobank app. Both are marked required upstream. Mutating
@@ -2427,9 +2441,9 @@ with `requestId` carried as a query parameter and therefore covered by the signe
 payload.
 
 Each document reports an optional `status` — one of `DocumentSigningState.Pending`,
-`.Signed`, `.Canceled`, `.Expired` — and an optional `signers` array of up to 20
-signatories, each with `name`, `tin`, `certSerial`, a Base64 `signature`, `date`,
-and optional `edrpou`, `company`, and `post`.
+`.Signed`, `.Canceled`, `.Expired` — its optional `hashType`, and an optional
+`signers` array of up to 20 signatories, each with `name`, `tin`, `certSerial`, a
+Base64 `signature`, `date`, and optional `edrpou`, `company`, and `post`.
 
 Monobank's top-level `required` array lists `status`, `name`, and `hash`, but those
 properties are defined on the document items rather than the response, so nothing
@@ -2852,6 +2866,7 @@ even though the published documentation does not list it.
 | ----------------------------- | --------------------------------------------------------------------------------- |
 | `CorporateRegistrationStatus` | `New`, `Declined`, `Approved`                                                     |
 | `DocumentSigningState`        | `pending`, `signed`, `canceled`, `expired`                                        |
+| `SigningDocumentHashType`     | `Gost`, `Dstu256`                                                                 |
 | `SigningDocumentType`         | `pdf`, `doc`, `docx`, `odt`, `json`, `xml`, `html`, `png`, `jpg`, `jpeg`, `other` |
 
 Monobank declares no `enum` for the registration `status` field and lists these

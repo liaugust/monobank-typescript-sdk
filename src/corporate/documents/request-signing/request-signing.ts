@@ -2,24 +2,36 @@ import * as z from "zod/mini";
 
 import { requireAbsoluteHttpUrl } from "../../../shared/http-url.js";
 import { parseMonobankRequest } from "../../../shared/request-validation.js";
-import type { SigningDocumentType } from "../models/signing-document.js";
-import { SigningDocumentType as documentTypes } from "../models/signing-document.js";
+import type {
+  SigningDocumentHashType,
+  SigningDocumentType,
+} from "../models/signing-document.js";
+import {
+  SigningDocumentHashType as documentHashTypes,
+  SigningDocumentType as documentTypes,
+} from "../models/signing-document.js";
 
-const gostHashPattern = /^[0-9a-f]{64}$/iu;
+const documentHashPattern = /^[0-9a-f]{64}$/iu;
 
 /** One document submitted for monoКЕП signing. */
 export interface SigningDocumentInput {
   /**
-   * Document hash as 64 hex characters, using **ГОСТ 34.311-95**.
+   * Document hash as 64 hex characters, using the algorithm in `hashType`.
    *
-   * Neither Web Crypto nor `node:crypto` implements that algorithm, so the SDK
-   * never computes or verifies the digest itself: only the hex shape (64
-   * characters, `0-9a-f`) is checked, which catches an obviously wrong value
-   * such as a truncated string but not a same-length SHA-256 digest computed
-   * by mistake instead of ГОСТ 34.311-95 — that produces a well-formed but
-   * silently wrong request.
+   * Neither Web Crypto nor `node:crypto` exposes ГОСТ 34.311-95 or ДСТУ 7564
+   * Купина-256, so the SDK never computes or verifies the digest itself. It
+   * checks only the hex shape, which cannot detect a digest made with the wrong
+   * algorithm.
    */
   readonly hash: string;
+  /**
+   * Document digest algorithm; omission preserves Monobank's `Gost` default.
+   *
+   * Do not derive this from a signatory certificate's algorithm metadata: that
+   * describes a separate cryptographic operation and may name ДСТУ 7564/512
+   * even though monoКЕП accepts only `Gost` and `Dstu256` here.
+   */
+  readonly hashType?: SigningDocumentHashType;
   /** Link to the document shown to the signatory. */
   readonly link?: string;
   /** Document name shown to the signatory. */
@@ -51,7 +63,8 @@ const requestDocumentSigningSchema = z.object({
       z.object({
         hash: z
           .string()
-          .check(z.refine((value) => gostHashPattern.test(value))),
+          .check(z.refine((value) => documentHashPattern.test(value))),
+        hashType: z.optional(z.enum(documentHashTypes)),
         link: z.optional(z.string()),
         name: nonempty(),
         type: z.optional(z.enum(documentTypes)),

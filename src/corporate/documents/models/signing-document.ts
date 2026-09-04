@@ -12,6 +12,21 @@ export const DocumentSigningState = {
 export type DocumentSigningState =
   (typeof DocumentSigningState)[keyof typeof DocumentSigningState];
 
+/**
+ * Importable algorithms monoКЕП accepts for document digests.
+ *
+ * This selects the hash of the document bytes, independently of the hash or
+ * signature algorithm identified by a signatory's certificate.
+ */
+export const SigningDocumentHashType = {
+  Dstu256: "Dstu256",
+  Gost: "Gost",
+} as const;
+
+/** A documented monoКЕП document hash algorithm. */
+export type SigningDocumentHashType =
+  (typeof SigningDocumentHashType)[keyof typeof SigningDocumentHashType];
+
 /** Importable document types monoКЕП accepts. */
 export const SigningDocumentType = {
   Doc: "doc",
@@ -54,6 +69,7 @@ export type DocumentSignatory = z.infer<typeof documentSignatorySchema>;
  */
 export const signingDocumentSchema = z.looseObject({
   hash: z.string(),
+  hashType: z.optional(z.enum(SigningDocumentHashType)),
   link: z.optional(z.string()),
   name: z.string(),
   signers: z.optional(z.array(documentSignatorySchema)),

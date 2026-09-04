@@ -748,10 +748,20 @@ rather than a Personal token. Response shapes are shared, so `ClientInfo` and
 `deeplink` the signatory opens in the Monobank app, plus a `requestId` for
 `getSigningStatus()` and `cancelSigning()`. A request is valid for three days.
 
-Document hashes use **ГОСТ 34.311-95**, which neither Web Crypto nor
-`node:crypto` implements. The SDK never computes or verifies the hash — you
-supply the hex string. A SHA-256 hash is the same length and will produce a
-well-formed request that is silently wrong.
+Each document may set `hashType` to `SigningDocumentHashType.Gost` for **ГОСТ
+34.311-95** or `SigningDocumentHashType.Dstu256` for **ДСТУ 7564 Купина-256**.
+Omitting it preserves Monobank's `Gost` default. Neither Web Crypto nor
+`node:crypto` exposes these algorithms, so the SDK never computes or verifies
+the digest — it validates and carries the 64-character hex string supplied by
+the caller. A digest produced with the wrong algorithm has the same shape and
+can therefore make a well-formed but invalid signing request.
+[Monobank's Java example](https://github.com/kolja24/java-example-hash-34311/commit/89b6d81f04b9b5432f8f8c5fb437767aaa10efc4)
+demonstrates both algorithms with Bouncy Castle.
+
+`hashType` selects the digest of the **document bytes**, not the algorithm
+identifier carried by a signatory certificate. In particular, ДСТУ 7564/512 in
+a certificate does not imply a `Dstu512` API value: monoКЕП currently documents
+only `Gost` and `Dstu256`. Do not derive this field from certificate metadata.
 
 `keyId` is optional only for the registration flow, which is what issues it:
 `register()` and `getRegistrationStatus()` sign with `X-Time` and the URL alone
