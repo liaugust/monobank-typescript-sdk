@@ -24,8 +24,9 @@ import {
 /**
  * monoКЕП document signing operations for an approved Corporate provider.
  *
- * Document hashes use ГОСТ 34.311-95, which no JavaScript runtime implements, so
- * the caller computes them and the SDK only carries the hex value.
+ * Document hashes use ГОСТ 34.311-95 or ДСТУ 7564 Купина-256. Neither Web Crypto
+ * nor `node:crypto` exposes those algorithms, so the caller computes the digest
+ * and the SDK only validates and carries its hex value.
  */
 export class MonobankCorporateDocuments {
   private readonly transport: MonobankTransport;
@@ -44,7 +45,7 @@ export class MonobankCorporateDocuments {
    * The request is valid for three days. Give the returned `deeplink` to the
    * signatory to open in the Monobank app, and keep `requestId` for status and
    * cancellation. Mutating request; never retried.
-   * @param input Documents with ГОСТ 34.311-95 hex hashes, signer policy, and optional callback.
+   * @param input Documents with algorithm-tagged hex hashes, signer policy, and optional callback.
    * @param options Optional cancellation controls for this request.
    * @returns Validated signing request identifier and signatory deeplink.
    * @throws {MonobankApiError} When Monobank returns a non-success HTTP status.

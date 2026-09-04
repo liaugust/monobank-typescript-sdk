@@ -79,6 +79,7 @@ import {
   MonobankPersonalClient,
   MonobankPublicClient,
   parsePersonalWebhookEvent,
+  SigningDocumentHashType,
   SigningDocumentType,
   verifyAcquiringWebhookSignature,
 } from "@liaugust/monobank-sdk";
@@ -158,6 +159,7 @@ const delegatedStatements: Promise<readonly StatementItem[]> =
 const statementWindow: StatementWindowInput = { from: 0 };
 const signingDocumentInput: SigningDocumentInput = {
   hash: "A421FD",
+  hashType: SigningDocumentHashType.Dstu256,
   name: "Agreement",
   type: SigningDocumentType.Pdf,
 };
@@ -172,6 +174,8 @@ const signingStatus: Promise<DocumentSigningStatus> =
 const signingCancellation: Promise<void> =
   corporateClient.documents.cancelSigning({ requestId: "req-1" });
 const signedState: SigningDocument["status"] = DocumentSigningState.Signed;
+const signedHashType: SigningDocument["hashType"] =
+  SigningDocumentHashType.Dstu256;
 const signatoryName: DocumentSignatory["name"] = "Signatory";
 const input: GetStatementsInput = { from: new Date(0) };
 const bankSync: Promise<BankSync> = publicClient.bank.getSync();
@@ -486,11 +490,15 @@ void signingRequest;
 void signingStatus;
 void signingCancellation;
 void signedState;
+void signedHashType;
 void signatoryName;
 
 // @ts-expect-error -- monoKEP document types are limited to documented wire values.
 const invalidSigningType: SigningDocumentType = "rtf";
+// @ts-expect-error -- monoKEP hash algorithms are limited to documented wire values.
+const invalidSigningHashType: SigningDocumentHashType = "Sha256";
 void invalidSigningType;
+void invalidSigningHashType;
 
 // @ts-expect-error -- A monoKEP signing request requires the document list.
 void corporateClient.documents.requestSigning({ oneSigner: true });

@@ -37,6 +37,7 @@ describe("public package surface", () => {
       "MonobankPublicClient",
       "MonobankResponseValidationError",
       "MonobankValidationError",
+      "SigningDocumentHashType",
       "SigningDocumentType",
       "SyncPaymentPanType",
       "accountSchema",

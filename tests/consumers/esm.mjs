@@ -35,6 +35,7 @@ assert.equal(sdk.MonobankAcquiringQr, undefined);
 assert.equal(sdk.MonobankAcquiringWallet, undefined);
 assert.equal(sdk.MonobankAcquiringEmployees, undefined);
 assert.equal(sdk.AcquiringQrAmountType.Merchant, "merchant");
+assert.equal(sdk.SigningDocumentHashType.Dstu256, "Dstu256");
 assert.equal(typeof publicApi.bank.getSync, "function");
 assert.equal(typeof publicApi.currency.getRates, "function");
 assert.equal(typeof client.client.getInfo, "function");

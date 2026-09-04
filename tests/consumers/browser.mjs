@@ -2,6 +2,7 @@ import {
   MonobankAcquiringClient,
   MonobankPersonalClient,
   MonobankPublicClient,
+  SigningDocumentHashType,
   verifyAcquiringWebhookSignature,
 } from "@liaugust/monobank-sdk";
 
@@ -30,4 +31,5 @@ void acquiringClient.wallet;
 void acquiringClient.statements;
 void acquiringClient.submerchants;
 void acquiringClient.webhooks;
+void SigningDocumentHashType.Dstu256;
 void verifyAcquiringWebhookSignature;
