@@ -4,6 +4,27 @@ All notable changes to this package are documented here.
 
 ## Unreleased
 
+## 0.8.0 - 2026-09-04
+
+Support for Monobank's transition of monoКЕП document digests from ГОСТ
+34.311-95 to Купина (ДСТУ 7564:2014). This is backward compatible: callers
+that omit the new selector continue to use Monobank's `Gost` default.
+
+### Added
+
+- `SigningDocumentHashType`, with the documented `Gost` and `Dstu256` values.
+- Optional `hashType` support on each document passed to
+  `corporate.documents.requestSigning()` and on validated signing-document
+  responses.
+
+### Changed
+
+- monoКЕП documentation now distinguishes the document digest selected by
+  `hashType` from the hashing algorithm recorded in a signatory certificate.
+  Certificate metadata such as ДСТУ 7564/512 does not imply a `Dstu512` API
+  option; Monobank currently documents only `Gost` and `Dstu256`.
+- Updated the development toolchain and refreshed Zod to 4.5.4.
+
 ## 0.7.0 - 2026-08-28
 
 Schema corrections for `/personal/client-info` behaviors observed only against
