@@ -270,7 +270,7 @@ src/transport/response/         successful and failed response normalization
 src/shared/                     request options, validation, URL, webhook body, statement path, unix time
 src/errors/                     public credential-safe error classes
 tests/fixtures/{public,personal,acquiring,corporate}/ synthetic contract fixtures
-tests/types/                    compile-time public API assertions
+tests/types/                    vitest type tests against the built declarations
 tests/consumers/                ESM, CJS, browser, declaration, and tarball checks
 .github/workflows/ci.yml        Node 22/24 verification matrix
 .github/workflows/release.yml   npm trusted-publishing workflow
