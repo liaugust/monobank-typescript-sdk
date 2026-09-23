@@ -83,436 +83,469 @@ import {
   SigningDocumentType,
   verifyAcquiringWebhookSignature,
 } from "@liaugust/monobank-sdk";
+import { describe, expectTypeOf, test } from "vitest";
 
-const client = new MonobankPersonalClient({ token: "token" });
 const publicClient = new MonobankPublicClient();
+const personalClient = new MonobankPersonalClient({ token: "token" });
 const acquiringClient = new MonobankAcquiringClient({ token: "token" });
+const corporateSigner: CorporateSigner = () => Promise.resolve("c2ln");
 const corporateClient = new MonobankCorporateClient({
   keyId: "28a75537175a018645e6f8b14be7681791e701e0",
   sign: ({ payload }: CorporateSignatureInput) => payload,
 });
-const corporateSettingsInput: GetCorporateSettingsInput = {
-  requestId: "corp-request-id",
-};
-const corporateSettings: Promise<CorporateSettings> =
-  corporateClient.company.getSettings(corporateSettingsInput);
-const parsedCorporateSettings: CorporateSettings =
-  corporateSettingsSchema.parse({
-    logo: "logo",
-    name: "company",
-    permission: "psf",
-    pubkey: "pubkey",
+
+describe("client constructors", () => {
+  test("accept the documented credentials", () => {
+    expectTypeOf(
+      new MonobankCorporateClient({ sign: corporateSigner }),
+    ).toEqualTypeOf<MonobankCorporateClient>();
   });
-const corporateSigner: CorporateSigner = () => Promise.resolve("c2ln");
-const preRegistrationClient = new MonobankCorporateClient({
-  sign: corporateSigner,
-});
-const registrationInput: RegisterCorporateCompanyInput = {
-  contactPerson: "Contact Person",
-  description: "Service description",
-  email: "etc@example.com",
-  logo: "bG9nbw==",
-  name: "Company",
-  phone: "380671234567",
-  pubkey: "cHVia2V5",
-};
-const registration: Promise<CorporateRegistration> =
-  preRegistrationClient.company.register(registrationInput);
-const registrationStatusInput: GetCorporateRegistrationStatusInput = {
-  pubkey: "cHVia2V5",
-};
-const registrationStatus: Promise<CorporateRegistrationStatusResult> =
-  preRegistrationClient.company.getRegistrationStatus(registrationStatusInput);
-const approvedStatus: CorporateRegistrationStatusResult["status"] =
-  CorporateRegistrationStatus.Approved;
-const corporateWebhookInput: SetCorporateWebhookInput = {
-  requestId: "corp-request-id",
-  webHookUrl: "https://example.com/webhook",
-};
-const corporateWebhook: Promise<void> = corporateClient.company.setWebhook(
-  corporateWebhookInput,
-);
-const accessRequestInput: RequestCorporateAccessInput = {
-  callbackUrl: "https://example.com/granted",
-};
-const accessRequest: Promise<CorporateTokenRequest> =
-  corporateClient.access.request(accessRequestInput);
-const accessRequestWithoutInput: Promise<CorporateTokenRequest> =
-  corporateClient.access.request();
-const accessCheckInput: CheckCorporateAccessInput = { requestId: "req-1" };
-const accessCheck: Promise<void> =
-  corporateClient.access.check(accessCheckInput);
-const parsedTokenRequest: CorporateTokenRequest =
-  corporateTokenRequestSchema.parse({});
-const delegatedInfoInput: GetCorporateClientInfoInput = {
-  requestId: "grant-1",
-};
-const delegatedInfo: Promise<ClientInfo> =
-  corporateClient.clients.getInfo(delegatedInfoInput);
-const delegatedStatementsInput: GetCorporateClientStatementsInput = {
-  account: "acc-1",
-  from: new Date(0),
-  requestId: "grant-1",
-};
-const delegatedStatements: Promise<readonly StatementItem[]> =
-  corporateClient.clients.getStatements(delegatedStatementsInput);
-const statementWindow: StatementWindowInput = { from: 0 };
-const signingDocumentInput: SigningDocumentInput = {
-  hash: "A421FD",
-  hashType: SigningDocumentHashType.Dstu256,
-  name: "Agreement",
-  type: SigningDocumentType.Pdf,
-};
-const signingInput: RequestDocumentSigningInput = {
-  documents: [signingDocumentInput],
-  oneSigner: true,
-};
-const signingRequest: Promise<DocumentSigningRequest> =
-  corporateClient.documents.requestSigning(signingInput);
-const signingStatus: Promise<DocumentSigningStatus> =
-  corporateClient.documents.getSigningStatus({ requestId: "req-1" });
-const signingCancellation: Promise<void> =
-  corporateClient.documents.cancelSigning({ requestId: "req-1" });
-const signedState: SigningDocument["status"] = DocumentSigningState.Signed;
-const signedHashType: SigningDocument["hashType"] =
-  SigningDocumentHashType.Dstu256;
-const signatoryName: DocumentSignatory["name"] = "Signatory";
-const input: GetStatementsInput = { from: new Date(0) };
-const bankSync: Promise<BankSync> = publicClient.bank.getSync();
-const statements = client.statements.get(input);
-const clientInfo: Promise<ClientInfo> = client.client.getInfo();
-const rates: Promise<readonly CurrencyRate[]> =
-  publicClient.currency.getRates();
-const merchantDetails: Promise<MerchantDetails> =
-  acquiringClient.merchant.getDetails();
-const acquiringStatementInput: GetAcquiringStatementsInput = {
-  code: "terminal-42",
-  from: new Date(0),
-};
-const acquiringStatements: Promise<AcquiringStatement> =
-  acquiringClient.statements.get(acquiringStatementInput);
-const acquiringSubmerchants: Promise<AcquiringSubmerchantList> =
-  acquiringClient.submerchants.list();
-const parsedSubmerchants: AcquiringSubmerchantList =
-  acquiringSubmerchantListSchema.parse({ list: [] });
-const acquiringQrCashiers: Promise<AcquiringQrCashierList> =
-  acquiringClient.qr.list();
-const parsedQrCashiers: AcquiringQrCashierList =
-  acquiringQrCashierListSchema.parse({ list: [] });
-const acquiringQrDetailsInput: GetAcquiringQrDetailsInput = {
-  qrId: "XJ_DiM4rTd5V",
-};
-const acquiringQrDetails: Promise<AcquiringQrDetails> =
-  acquiringClient.qr.getDetails(acquiringQrDetailsInput);
-const acquiringQrAmountType: AcquiringQrAmountType =
-  AcquiringQrAmountType.Merchant;
-const minimalQrDetails: AcquiringQrDetails = { shortQrId: "OBJE" };
-const acquiringQrResetInput: ResetAcquiringQrAmountInput = {
-  qrId: "XJ_DiM4rTd5V",
-};
-const acquiringQrReset: Promise<void> = acquiringClient.qr.resetAmount(
-  acquiringQrResetInput,
-);
-const acquiringQrAmountTypesAreExact = {
-  client: true,
-  fix: true,
-  merchant: true,
-} satisfies Record<AcquiringQrAmountType, true>;
-const webhookPublicKey: Promise<AcquiringWebhookPublicKey> =
-  acquiringClient.webhooks.getPublicKey();
-const signatureInput: VerifyAcquiringWebhookSignatureInput = {
-  body: new Uint8Array(),
-  publicKey: "base64-key",
-  signature: "base64-signature",
-};
-const signatureMatches: Promise<boolean> =
-  verifyAcquiringWebhookSignature(signatureInput);
-const createInvoiceInput: CreateInvoiceInput = {
-  amount: 4_200,
-  paymentType: InvoicePaymentType.Hold,
-};
-const createInvoiceOptions: CreateInvoiceOptions = {
-  cms: "Synthetic Shop",
-  cmsVersion: "1.2.3",
-};
-const newInvoice: Promise<NewInvoice> = acquiringClient.invoices.create(
-  createInvoiceInput,
-  createInvoiceOptions,
-);
-const invoice: Promise<Invoice> = acquiringClient.invoices.getStatus({
-  invoiceId: "invoice-42",
-});
-const cancelInput: CancelInvoiceInput = { invoiceId: "invoice-42" };
-const cancellation: Promise<InvoiceCancellation> =
-  acquiringClient.invoices.cancel(cancelInput);
-const finalization: Promise<InvoiceFinalization> =
-  acquiringClient.invoices.finalize({ invoiceId: "invoice-42" });
-const receipt: Promise<InvoiceReceipt> = acquiringClient.invoices.getReceipt({
-  invoiceId: "invoice-42",
-});
-const fiscalChecks: Promise<InvoiceFiscalChecks> =
-  acquiringClient.invoices.getFiscalChecks({ invoiceId: "invoice-42" });
-const removal: Promise<void> = acquiringClient.invoices.remove({
-  invoiceId: "invoice-42",
-});
-const invoiceStatus: InvoiceStatus = InvoiceStatus.Success;
-const acquiringStatementStatus: AcquiringStatementStatus =
-  AcquiringStatementStatus.Success;
-const acquiringPaymentScheme: AcquiringPaymentScheme =
-  AcquiringPaymentScheme.Full;
-const webhookUpdate: Promise<void> = client.webhooks.set({ webHookUrl: "" });
-const accountType: AccountType = AccountType.Black;
-const cashbackType: CashbackType = CashbackType.UAH;
-const accountTypesAreExact = {
-  black: true,
-  eAid: true,
-  fop: true,
-  iron: true,
-  madeInUkraine: true,
-  platinum: true,
-  white: true,
-  yellow: true,
-} satisfies Record<AccountType, true>;
-const cashbackTypesAreExact = {
-  Miles: true,
-  None: true,
-  UAH: true,
-} satisfies Record<CashbackType, true>;
-const acquiringEmployees: Promise<AcquiringEmployeeList> =
-  acquiringClient.employees.list();
-const acquiringWalletCards: Promise<AcquiringWallet> =
-  acquiringClient.wallet.list({
-    walletId: "wallet-42",
+
+  test("reject missing or foreign credentials", () => {
+    // @ts-expect-error -- Personal token is required by the public constructor.
+    new MonobankPersonalClient({});
+    // @ts-expect-error -- Acquiring token is required by the public constructor.
+    new MonobankAcquiringClient({});
+    // @ts-expect-error -- A Corporate signer is always required.
+    new MonobankCorporateClient({
+      keyId: "28a75537175a018645e6f8b14be7681791e701e0",
+    });
+    // @ts-expect-error -- A Corporate token is not an accepted credential.
+    new MonobankCorporateClient({ token: "token" });
   });
-const walletPaymentInput: PayWithCardTokenInput = {
-  amount: 4_200,
-  cardToken: "card-token-42",
-  ccy: 980,
-  initiationKind: AcquiringPaymentInitiationKind.Client,
-};
-const walletPayment: Promise<AcquiringCardPayment> =
-  acquiringClient.wallet.pay(walletPaymentInput);
-const walletCardRemoval: Promise<void> = acquiringClient.wallet.deleteCard({
-  cardToken: "card-token-42",
-});
-const directPaymentInput: PayInvoiceDirectInput = {
-  amount: 4_200,
-  cardData: { cvv: "123", exp: "0642", pan: "4242424242424242" },
-};
-const directPayment: Promise<AcquiringCardPayment> =
-  acquiringClient.invoices.payDirect(directPaymentInput);
-const syncPaymentInput: SyncInvoicePaymentInput = {
-  amount: 4_200,
-  ccy: 980,
-  googlePay: { eciIndicator: "02", exp: "0642", token: "token-42" },
-};
-const syncPayment: Promise<Invoice> =
-  acquiringClient.invoices.syncPayment(syncPaymentInput);
-declare const acquiringEmployee: AcquiringEmployee;
-declare const acquiringWalletCard: AcquiringWalletCard;
-declare const account: Account;
-declare const acquiringSubmerchant: AcquiringSubmerchant;
-declare const untrustedWebhookPayload: unknown;
-const webhookEvent: PersonalWebhookEvent = parsePersonalWebhookEvent(
-  untrustedWebhookPayload,
-);
 
-void bankSync;
-void statements;
-void clientInfo;
-void rates;
-void merchantDetails;
-void acquiringStatements;
-void acquiringSubmerchants;
-void parsedSubmerchants;
-void acquiringQrCashiers;
-void parsedQrCashiers;
-void acquiringQrDetails;
-void acquiringQrAmountType;
-void acquiringQrAmountTypesAreExact;
-void minimalQrDetails;
-void acquiringQrReset;
-void webhookPublicKey;
-void signatureMatches;
-void newInvoice;
-void invoice;
-void cancellation;
-void finalization;
-void receipt;
-void fiscalChecks;
-void removal;
-void invoiceStatus;
-void acquiringStatementStatus;
-void acquiringPaymentScheme;
-void webhookUpdate;
-void accountType;
-void accountTypesAreExact;
-void cashbackType;
-void cashbackTypesAreExact;
-void account;
-void acquiringSubmerchant;
-void webhookEvent;
-void acquiringEmployees;
-void acquiringWalletCards;
-void walletPayment;
-void walletCardRemoval;
-void directPayment;
-void syncPayment;
-void acquiringEmployee;
-void acquiringWalletCard;
-
-const removedPersonalPublicMethod: Exclude<
-  "getBankSync" | "getCurrencyRates",
-  keyof MonobankPersonalClient
-> = "getCurrencyRates";
-void removedPersonalPublicMethod;
-const removedFlatMerchantMethod: Exclude<
-  "getMerchantDetails",
-  keyof MonobankAcquiringClient
-> = "getMerchantDetails";
-void removedFlatMerchantMethod;
-const removedFlatInvoiceMethod: Exclude<
-  | "cancelInvoice"
-  | "createInvoice"
-  | "finalizeInvoice"
-  | "getInvoiceFiscalChecks"
-  | "getInvoiceReceipt"
-  | "getInvoiceStatus"
-  | "removeInvoice",
-  keyof MonobankAcquiringClient
-> = "createInvoice";
-void removedFlatInvoiceMethod;
-
-// @ts-expect-error -- Personal token is required by the public constructor.
-new MonobankPersonalClient({});
-
-// @ts-expect-error -- Acquiring token is required by the public constructor.
-new MonobankAcquiringClient({});
-
-// @ts-expect-error -- Statement start time must be a Date or Unix number.
-void client.statements.get({ account: "0", from: "2026-08-01" });
-
-// @ts-expect-error -- Acquiring statement start time must be a Date or Unix number.
-void acquiringClient.statements.get({ from: "2026-08-01" });
-
-// @ts-expect-error -- The validated submerchant list is not assignable to a mutable array.
-const mutableSubmerchantList: AcquiringSubmerchant[] = parsedSubmerchants.list;
-void mutableSubmerchantList;
-
-// @ts-expect-error -- The validated QR cashier list is not assignable to a mutable array.
-const mutableQrCashierList: AcquiringQrCashier[] = parsedQrCashiers.list;
-void mutableQrCashierList;
-
-// @ts-expect-error -- QR details require a cashier identifier.
-void acquiringClient.qr.getDetails({});
-
-// @ts-expect-error -- Clearing a QR amount requires a cashier identifier.
-void acquiringClient.qr.resetAmount({});
-
-// @ts-expect-error -- Validated QR details always carry the short identifier.
-const qrDetailsWithoutShortId: AcquiringQrDetails = {};
-void qrDetailsWithoutShortId;
-
-// @ts-expect-error -- QR cashier amount types are limited to documented wire values.
-const invalidQrAmountType: AcquiringQrAmountType = "operator";
-void invalidQrAmountType;
-
-void acquiringClient.invoices.payDirect({
-  amount: 4_200,
-  // @ts-expect-error -- Direct payments require full raw card details.
-  cardData: { pan: "4242424242424242" },
+  test("do not bring back removed flat methods", () => {
+    expectTypeOf<MonobankPersonalClient>().not.toHaveProperty("getBankSync");
+    expectTypeOf<MonobankPersonalClient>().not.toHaveProperty(
+      "getCurrencyRates",
+    );
+    expectTypeOf<MonobankAcquiringClient>().not.toHaveProperty(
+      "getMerchantDetails",
+    );
+    expectTypeOf<MonobankAcquiringClient>().not.toHaveProperty("cancelInvoice");
+    expectTypeOf<MonobankAcquiringClient>().not.toHaveProperty("createInvoice");
+    expectTypeOf<MonobankAcquiringClient>().not.toHaveProperty(
+      "finalizeInvoice",
+    );
+    expectTypeOf<MonobankAcquiringClient>().not.toHaveProperty(
+      "getInvoiceFiscalChecks",
+    );
+    expectTypeOf<MonobankAcquiringClient>().not.toHaveProperty(
+      "getInvoiceReceipt",
+    );
+    expectTypeOf<MonobankAcquiringClient>().not.toHaveProperty(
+      "getInvoiceStatus",
+    );
+    expectTypeOf<MonobankAcquiringClient>().not.toHaveProperty("removeInvoice");
+  });
 });
 
-// @ts-expect-error -- Wallet card removal requires a card token.
-void acquiringClient.wallet.deleteCard({});
-
-// @ts-expect-error -- Account types are limited to documented wire values.
-const invalidAccountType: AccountType = "gold";
-
-// @ts-expect-error -- Cashback types are limited to documented wire values.
-const invalidCashbackType: CashbackType = "Cash";
-
-void invalidAccountType;
-void invalidCashbackType;
-
-void corporateSettings;
-void parsedCorporateSettings;
-void corporateSigner;
-
-// @ts-expect-error -- A Corporate signer is always required.
-new MonobankCorporateClient({
-  keyId: "28a75537175a018645e6f8b14be7681791e701e0",
+describe("public client", () => {
+  test("reads bank sync and currency rates", () => {
+    expectTypeOf(publicClient.bank.getSync()).toEqualTypeOf<
+      Promise<BankSync>
+    >();
+    expectTypeOf(publicClient.currency.getRates()).toEqualTypeOf<
+      Promise<readonly CurrencyRate[]>
+    >();
+  });
 });
 
-// @ts-expect-error -- A Corporate token is not an accepted credential.
-new MonobankCorporateClient({ token: "token" });
+describe("personal client", () => {
+  test("reads client info", () => {
+    expectTypeOf(personalClient.client.getInfo()).toEqualTypeOf<
+      Promise<ClientInfo>
+    >();
+  });
 
-// @ts-expect-error -- Corporate settings require a request identifier.
-void corporateClient.company.getSettings({});
+  test("reads statements", () => {
+    const input: GetStatementsInput = { from: new Date(0) };
 
-void registration;
-void registrationStatus;
-void approvedStatus;
-void corporateWebhook;
+    expectTypeOf(personalClient.statements.get(input)).toEqualTypeOf<
+      Promise<readonly StatementItem[]>
+    >();
+    // @ts-expect-error -- Statement start time must be a Date or Unix number.
+    void personalClient.statements.get({ account: "0", from: "2026-08-01" });
+  });
 
-const undocumentedRegistrationStatus: CorporateRegistrationStatusResult["status"] =
-  "Pending";
-const pendingRegistrationKey: string | undefined = (await registrationStatus)
-  .keyId;
-void undocumentedRegistrationStatus;
-void pendingRegistrationKey;
+  test("sets the webhook", () => {
+    expectTypeOf(personalClient.webhooks.set({ webHookUrl: "" })).toEqualTypeOf<
+      Promise<void>
+    >();
+  });
 
-// @ts-expect-error -- The Corporate webhook mutation requires a request identifier.
-void corporateClient.company.setWebhook({ webHookUrl: "https://example.com" });
+  test("parses webhook events from untrusted input", () => {
+    expectTypeOf(parsePersonalWebhookEvent).parameter(0).toBeUnknown();
+    expectTypeOf(
+      parsePersonalWebhookEvent,
+    ).returns.toEqualTypeOf<PersonalWebhookEvent>();
+  });
 
-void accessRequest;
-void accessRequestWithoutInput;
-void accessCheck;
-void parsedTokenRequest;
-
-// @ts-expect-error -- A delegated access check requires the request identifier.
-void corporateClient.access.check({});
-
-void delegatedInfo;
-void delegatedStatements;
-void statementWindow;
-
-// @ts-expect-error -- A delegated statement read requires the grant identifier.
-void corporateClient.clients.getStatements({ from: 0 });
-
-void corporateClient.clients.getStatements({
-  // @ts-expect-error -- A delegated statement start time must be a Date or Unix number.
-  from: "2026-08-01",
-  requestId: "grant-1",
+  test("limits account and cashback types to documented wire values", () => {
+    expectTypeOf(AccountType.Black).toExtend<AccountType>();
+    expectTypeOf(CashbackType.UAH).toExtend<CashbackType>();
+    expectTypeOf<AccountType>().toEqualTypeOf<
+      | "black"
+      | "eAid"
+      | "fop"
+      | "iron"
+      | "madeInUkraine"
+      | "platinum"
+      | "white"
+      | "yellow"
+    >();
+    expectTypeOf<CashbackType>().toEqualTypeOf<"Miles" | "None" | "UAH">();
+    expectTypeOf<Account["type"]>().toEqualTypeOf<AccountType>();
+    expectTypeOf<Account["cashbackType"]>().toExtend<
+      CashbackType | undefined
+    >();
+  });
 });
 
-void signingRequest;
-void signingStatus;
-void signingCancellation;
-void signedState;
-void signedHashType;
-void signatoryName;
+describe("acquiring client", () => {
+  test("reads merchant details and statements", () => {
+    const input: GetAcquiringStatementsInput = {
+      code: "terminal-42",
+      from: new Date(0),
+    };
 
-// @ts-expect-error -- monoKEP document types are limited to documented wire values.
-const invalidSigningType: SigningDocumentType = "rtf";
-// @ts-expect-error -- monoKEP hash algorithms are limited to documented wire values.
-const invalidSigningHashType: SigningDocumentHashType = "Sha256";
-void invalidSigningType;
-void invalidSigningHashType;
+    expectTypeOf(acquiringClient.merchant.getDetails()).toEqualTypeOf<
+      Promise<MerchantDetails>
+    >();
+    expectTypeOf(acquiringClient.statements.get(input)).toEqualTypeOf<
+      Promise<AcquiringStatement>
+    >();
+    expectTypeOf(
+      AcquiringStatementStatus.Success,
+    ).toExtend<AcquiringStatementStatus>();
+    expectTypeOf(
+      AcquiringPaymentScheme.Full,
+    ).toExtend<AcquiringPaymentScheme>();
+    // @ts-expect-error -- Acquiring statement start time must be a Date or Unix number.
+    void acquiringClient.statements.get({ from: "2026-08-01" });
+  });
 
-// @ts-expect-error -- A monoKEP signing request requires the document list.
-void corporateClient.documents.requestSigning({ oneSigner: true });
+  test("lists submerchants as read-only data", () => {
+    expectTypeOf(acquiringClient.submerchants.list()).toEqualTypeOf<
+      Promise<AcquiringSubmerchantList>
+    >();
+    expectTypeOf(
+      acquiringSubmerchantListSchema.parse({ list: [] }),
+    ).toExtend<AcquiringSubmerchantList>();
+    expectTypeOf<
+      AcquiringSubmerchantList["list"]
+    >().items.toEqualTypeOf<AcquiringSubmerchant>();
+    expectTypeOf<AcquiringSubmerchantList["list"]>().not.toExtend<
+      AcquiringSubmerchant[]
+    >();
+  });
 
-const narrowedRetry: RetryOptions = {
-  baseDelayMs: 1_000,
-  maxAttempts: 3,
-  maxDelayMs: 8_000,
-  retryableStatusCodes: [500, 502, 503, 504],
-};
-const defaultStatuses: readonly number[] = defaultRetryableStatusCodes;
-void narrowedRetry;
-void defaultStatuses;
+  test("manages QR cashiers", () => {
+    const detailsInput: GetAcquiringQrDetailsInput = { qrId: "XJ_DiM4rTd5V" };
+    const resetInput: ResetAcquiringQrAmountInput = { qrId: "XJ_DiM4rTd5V" };
 
-// @ts-expect-error -- The default retryable status list is not assignable to a mutable array.
-const mutableStatuses: number[] = defaultRetryableStatusCodes;
-void mutableStatuses;
+    expectTypeOf(acquiringClient.qr.list()).toEqualTypeOf<
+      Promise<AcquiringQrCashierList>
+    >();
+    expectTypeOf(
+      acquiringQrCashierListSchema.parse({ list: [] }),
+    ).toExtend<AcquiringQrCashierList>();
+    expectTypeOf<AcquiringQrCashierList["list"]>().not.toExtend<
+      AcquiringQrCashier[]
+    >();
+    expectTypeOf(acquiringClient.qr.getDetails(detailsInput)).toEqualTypeOf<
+      Promise<AcquiringQrDetails>
+    >();
+    expectTypeOf(acquiringClient.qr.resetAmount(resetInput)).toEqualTypeOf<
+      Promise<void>
+    >();
+    expectTypeOf({
+      shortQrId: "OBJE",
+    } as const).toExtend<AcquiringQrDetails>();
+    expectTypeOf({}).not.toExtend<AcquiringQrDetails>();
+    expectTypeOf(
+      AcquiringQrAmountType.Merchant,
+    ).toExtend<AcquiringQrAmountType>();
+    expectTypeOf<AcquiringQrAmountType>().toEqualTypeOf<
+      "client" | "fix" | "merchant"
+    >();
+    // @ts-expect-error -- QR details require a cashier identifier.
+    void acquiringClient.qr.getDetails({});
+    // @ts-expect-error -- Clearing a QR amount requires a cashier identifier.
+    void acquiringClient.qr.resetAmount({});
+  });
+
+  test("verifies webhook signatures", () => {
+    const input: VerifyAcquiringWebhookSignatureInput = {
+      body: new Uint8Array(),
+      publicKey: "base64-key",
+      signature: "base64-signature",
+    };
+
+    expectTypeOf(acquiringClient.webhooks.getPublicKey()).toEqualTypeOf<
+      Promise<AcquiringWebhookPublicKey>
+    >();
+    expectTypeOf(verifyAcquiringWebhookSignature(input)).toEqualTypeOf<
+      Promise<boolean>
+    >();
+  });
+
+  test("manages invoices", () => {
+    const createInput: CreateInvoiceInput = {
+      amount: 4_200,
+      paymentType: InvoicePaymentType.Hold,
+    };
+    const createOptions: CreateInvoiceOptions = {
+      cms: "Synthetic Shop",
+      cmsVersion: "1.2.3",
+    };
+    const cancelInput: CancelInvoiceInput = { invoiceId: "invoice-42" };
+    const reference = { invoiceId: "invoice-42" };
+
+    expectTypeOf(
+      acquiringClient.invoices.create(createInput, createOptions),
+    ).toEqualTypeOf<Promise<NewInvoice>>();
+    expectTypeOf(acquiringClient.invoices.getStatus(reference)).toEqualTypeOf<
+      Promise<Invoice>
+    >();
+    expectTypeOf(acquiringClient.invoices.cancel(cancelInput)).toEqualTypeOf<
+      Promise<InvoiceCancellation>
+    >();
+    expectTypeOf(acquiringClient.invoices.finalize(reference)).toEqualTypeOf<
+      Promise<InvoiceFinalization>
+    >();
+    expectTypeOf(acquiringClient.invoices.getReceipt(reference)).toEqualTypeOf<
+      Promise<InvoiceReceipt>
+    >();
+    expectTypeOf(
+      acquiringClient.invoices.getFiscalChecks(reference),
+    ).toEqualTypeOf<Promise<InvoiceFiscalChecks>>();
+    expectTypeOf(acquiringClient.invoices.remove(reference)).toEqualTypeOf<
+      Promise<void>
+    >();
+    expectTypeOf(InvoiceStatus.Success).toExtend<InvoiceStatus>();
+  });
+
+  test("charges invoices directly and syncs wallet payments", () => {
+    const directInput: PayInvoiceDirectInput = {
+      amount: 4_200,
+      cardData: { cvv: "123", exp: "0642", pan: "4242424242424242" },
+    };
+    const syncInput: SyncInvoicePaymentInput = {
+      amount: 4_200,
+      ccy: 980,
+      googlePay: { eciIndicator: "02", exp: "0642", token: "token-42" },
+    };
+
+    expectTypeOf(acquiringClient.invoices.payDirect(directInput)).toEqualTypeOf<
+      Promise<AcquiringCardPayment>
+    >();
+    expectTypeOf(acquiringClient.invoices.syncPayment(syncInput)).toEqualTypeOf<
+      Promise<Invoice>
+    >();
+    void acquiringClient.invoices.payDirect({
+      amount: 4_200,
+      // @ts-expect-error -- Direct payments require full raw card details.
+      cardData: { pan: "4242424242424242" },
+    });
+  });
+
+  test("lists employees", () => {
+    expectTypeOf(acquiringClient.employees.list()).toEqualTypeOf<
+      Promise<AcquiringEmployeeList>
+    >();
+    expectTypeOf<
+      AcquiringEmployeeList["list"][number]
+    >().toEqualTypeOf<AcquiringEmployee>();
+  });
+
+  test("manages wallet cards", () => {
+    const payInput: PayWithCardTokenInput = {
+      amount: 4_200,
+      cardToken: "card-token-42",
+      ccy: 980,
+      initiationKind: AcquiringPaymentInitiationKind.Client,
+    };
+
+    expectTypeOf(
+      acquiringClient.wallet.list({ walletId: "wallet-42" }),
+    ).toEqualTypeOf<Promise<AcquiringWallet>>();
+    expectTypeOf<
+      AcquiringWallet["wallet"][number]
+    >().toEqualTypeOf<AcquiringWalletCard>();
+    expectTypeOf(acquiringClient.wallet.pay(payInput)).toEqualTypeOf<
+      Promise<AcquiringCardPayment>
+    >();
+    expectTypeOf(
+      acquiringClient.wallet.deleteCard({ cardToken: "card-token-42" }),
+    ).toEqualTypeOf<Promise<void>>();
+    // @ts-expect-error -- Wallet card removal requires a card token.
+    void acquiringClient.wallet.deleteCard({});
+  });
+});
+
+describe("corporate client", () => {
+  test("reads and parses company settings", () => {
+    const input: GetCorporateSettingsInput = { requestId: "corp-request-id" };
+
+    expectTypeOf(corporateClient.company.getSettings(input)).toEqualTypeOf<
+      Promise<CorporateSettings>
+    >();
+    expectTypeOf(
+      corporateSettingsSchema.parse({
+        logo: "logo",
+        name: "company",
+        permission: "psf",
+        pubkey: "pubkey",
+      }),
+    ).toEqualTypeOf<CorporateSettings>();
+    // @ts-expect-error -- Corporate settings require a request identifier.
+    void corporateClient.company.getSettings({});
+  });
+
+  test("registers a company before a key identifier exists", () => {
+    const preRegistrationClient = new MonobankCorporateClient({
+      sign: corporateSigner,
+    });
+    const registrationInput: RegisterCorporateCompanyInput = {
+      contactPerson: "Contact Person",
+      description: "Service description",
+      email: "etc@example.com",
+      logo: "bG9nbw==",
+      name: "Company",
+      phone: "380671234567",
+      pubkey: "cHVia2V5",
+    };
+    const statusInput: GetCorporateRegistrationStatusInput = {
+      pubkey: "cHVia2V5",
+    };
+
+    expectTypeOf(
+      preRegistrationClient.company.register(registrationInput),
+    ).toEqualTypeOf<Promise<CorporateRegistration>>();
+    expectTypeOf(
+      preRegistrationClient.company.getRegistrationStatus(statusInput),
+    ).toEqualTypeOf<Promise<CorporateRegistrationStatusResult>>();
+    expectTypeOf(CorporateRegistrationStatus.Approved).toExtend<
+      CorporateRegistrationStatusResult["status"]
+    >();
+    expectTypeOf<"Pending">().toExtend<
+      CorporateRegistrationStatusResult["status"]
+    >();
+    expectTypeOf<CorporateRegistrationStatusResult["keyId"]>().toEqualTypeOf<
+      string | undefined
+    >();
+  });
+
+  test("sets the company webhook", () => {
+    const input: SetCorporateWebhookInput = {
+      requestId: "corp-request-id",
+      webHookUrl: "https://example.com/webhook",
+    };
+
+    expectTypeOf(corporateClient.company.setWebhook(input)).toEqualTypeOf<
+      Promise<void>
+    >();
+    // @ts-expect-error -- The Corporate webhook mutation requires a request identifier.
+    void corporateClient.company.setWebhook({
+      webHookUrl: "https://example.com",
+    });
+  });
+
+  test("requests and checks delegated access", () => {
+    const requestInput: RequestCorporateAccessInput = {
+      callbackUrl: "https://example.com/granted",
+    };
+    const checkInput: CheckCorporateAccessInput = { requestId: "req-1" };
+
+    expectTypeOf(corporateClient.access.request(requestInput)).toEqualTypeOf<
+      Promise<CorporateTokenRequest>
+    >();
+    expectTypeOf(corporateClient.access.request()).toEqualTypeOf<
+      Promise<CorporateTokenRequest>
+    >();
+    expectTypeOf(corporateClient.access.check(checkInput)).toEqualTypeOf<
+      Promise<void>
+    >();
+    expectTypeOf(
+      corporateTokenRequestSchema.parse({}),
+    ).toEqualTypeOf<CorporateTokenRequest>();
+    // @ts-expect-error -- A delegated access check requires the request identifier.
+    void corporateClient.access.check({});
+  });
+
+  test("reads delegated client data", () => {
+    const infoInput: GetCorporateClientInfoInput = { requestId: "grant-1" };
+    const statementsInput: GetCorporateClientStatementsInput = {
+      account: "acc-1",
+      from: new Date(0),
+      requestId: "grant-1",
+    };
+    const window: StatementWindowInput = { from: 0 };
+
+    expectTypeOf(corporateClient.clients.getInfo(infoInput)).toEqualTypeOf<
+      Promise<ClientInfo>
+    >();
+    expectTypeOf(
+      corporateClient.clients.getStatements(statementsInput),
+    ).toEqualTypeOf<Promise<readonly StatementItem[]>>();
+    expectTypeOf(window).toExtend<StatementWindowInput>();
+    // @ts-expect-error -- A delegated statement read requires the grant identifier.
+    void corporateClient.clients.getStatements({ from: 0 });
+    void corporateClient.clients.getStatements({
+      // @ts-expect-error -- A delegated statement start time must be a Date or Unix number.
+      from: "2026-08-01",
+      requestId: "grant-1",
+    });
+  });
+
+  test("manages monoKEP document signing", () => {
+    const document: SigningDocumentInput = {
+      hash: "A421FD",
+      hashType: SigningDocumentHashType.Dstu256,
+      name: "Agreement",
+      type: SigningDocumentType.Pdf,
+    };
+    const input: RequestDocumentSigningInput = {
+      documents: [document],
+      oneSigner: true,
+    };
+
+    expectTypeOf(corporateClient.documents.requestSigning(input)).toEqualTypeOf<
+      Promise<DocumentSigningRequest>
+    >();
+    expectTypeOf(
+      corporateClient.documents.getSigningStatus({ requestId: "req-1" }),
+    ).toEqualTypeOf<Promise<DocumentSigningStatus>>();
+    expectTypeOf(
+      corporateClient.documents.cancelSigning({ requestId: "req-1" }),
+    ).toEqualTypeOf<Promise<void>>();
+    expectTypeOf(DocumentSigningState.Signed).toExtend<
+      SigningDocument["status"]
+    >();
+    expectTypeOf(SigningDocumentHashType.Dstu256).toExtend<
+      SigningDocument["hashType"]
+    >();
+    expectTypeOf<DocumentSignatory["name"]>().toEqualTypeOf<string>();
+    expectTypeOf<"rtf">().not.toExtend<SigningDocumentType>();
+    expectTypeOf<"Sha256">().not.toExtend<SigningDocumentHashType>();
+    // @ts-expect-error -- A monoKEP signing request requires the document list.
+    void corporateClient.documents.requestSigning({ oneSigner: true });
+  });
+});
+
+describe("retry options", () => {
+  test("accept a narrowed policy", () => {
+    expectTypeOf({
+      baseDelayMs: 1_000,
+      maxAttempts: 3,
+      maxDelayMs: 8_000,
+      retryableStatusCodes: [500, 502, 503, 504],
+    }).toExtend<RetryOptions>();
+  });
+
+  test("expose the default statuses as read-only", () => {
+    expectTypeOf(defaultRetryableStatusCodes).toExtend<readonly number[]>();
+    expectTypeOf(defaultRetryableStatusCodes).not.toExtend<number[]>();
+  });
+});

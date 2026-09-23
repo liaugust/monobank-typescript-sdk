@@ -145,11 +145,6 @@ export default defineConfig([
     },
   },
   { files: defaultExportFiles, rules: { "import-x/no-default-export": "off" } },
-  {
-    // Type tests use `void value;` to mark compile-only fixtures as used.
-    files: ["tests/types/*.test-d.ts"],
-    rules: { "@typescript-eslint/no-meaningless-void-operator": "off" },
-  },
   globalIgnores([
     ".husky/**",
     ".tmp/**",

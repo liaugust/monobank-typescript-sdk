@@ -15,5 +15,9 @@ export default defineConfig({
     },
     environment: "node",
     include: ["src/**/*.test.ts", "tests/**/*.test.ts"],
+    typecheck: {
+      include: ["tests/types/**/*.test-d.ts"],
+      tsconfig: "tests/types/tsconfig.dist.json",
+    },
   },
 });
