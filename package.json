@@ -59,24 +59,24 @@
     "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm test:types && pnpm check:dead-code && pnpm check:duplication && pnpm build && pnpm check:package"
   },
   "dependencies": {
-    "zod": "^4.4.3"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "0.18.5",
-    "@types/node": "22.20.1",
-    "@vitest/coverage-v8": "4.1.11",
-    "eslint": "10.8.1",
+    "@types/node": "22.20.4",
+    "@vitest/coverage-v8": "5.0.1",
+    "eslint": "10.11.0",
     "eslint-plugin-import-x": "4.17.1",
-    "eslint-plugin-jsdoc": "64.2.1",
+    "eslint-plugin-jsdoc": "64.5.4",
     "eslint-plugin-simple-import-sort": "14.0.0",
     "husky": "9.1.7",
-    "jscpd": "5.0.16",
-    "knip": "6.33.0",
-    "prettier": "3.9.6",
+    "jscpd": "5.3.2",
+    "knip": "6.38.0",
+    "prettier": "3.9.9",
     "publint": "0.3.24",
     "tsup": "8.5.1",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.68.0",
-    "vitest": "4.1.11"
+    "typescript-eslint": "8.70.1",
+    "vitest": "5.0.1"
   }
 }
