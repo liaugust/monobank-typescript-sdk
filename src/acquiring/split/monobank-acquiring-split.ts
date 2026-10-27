@@ -20,7 +20,7 @@ export class MonobankAcquiringSplit {
   /**
    * Lists the receivers a split payment can pay out to.
    *
-   * A returned `splitReceiverId` is what
+   * A returned `id` is what
    * `CreateInvoiceInput.merchantPaymInfo.basketOrder[].splitReceiverId` expects.
    * Each entry carries the receiver's `edrpou` state registry code, which
    * identifies a real business, so treat the list as counterparty data rather

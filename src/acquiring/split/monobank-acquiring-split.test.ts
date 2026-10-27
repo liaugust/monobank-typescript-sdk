@@ -29,16 +29,13 @@ describe("MonobankAcquiringSplit", () => {
     expect(firstRequestHeaders(fetch).get("X-Token")).toBe("acquiring-token");
   });
 
-  it("accepts a receiver carrying only its identifier", async () => {
+  it("rejects the former undocumented receiver-only shape", async () => {
     const fetch = createFetchSequence([
-      jsonResponse({ list: [{ splitReceiverId: "sr_aB3dC5eF7g" }] }),
+      jsonResponse({ list: [{ splitReceiverId: "receiver-42" }] }),
     ]);
-
     await expect(
       createAcquiringTestClient(fetch).split.listReceivers(),
-    ).resolves.toEqual({
-      list: [{ splitReceiverId: "sr_aB3dC5eF7g" }],
-    });
+    ).rejects.toBeInstanceOf(MonobankResponseValidationError);
   });
 
   it("rejects a receiver without an identifier", async () => {
@@ -56,4 +53,21 @@ describe("MonobankAcquiringSplit", () => {
       client.split.listReceivers({ signal }),
     );
   });
+});
+
+it("accepts documented receiver identifiers", async () => {
+  const response = {
+    list: [
+      {
+        id: "receiver-42",
+        name: "Synthetic store",
+        edrpou: "00000000",
+        extra: true,
+      },
+    ],
+  };
+  const fetch = createFetchSequence([jsonResponse(response)]);
+  await expect(
+    createAcquiringTestClient(fetch).split.listReceivers(),
+  ).resolves.toEqual(response);
 });

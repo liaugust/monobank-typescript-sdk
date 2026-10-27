@@ -1,5 +1,7 @@
 import * as z from "zod/mini";
 
+import { acquiringStatementAllocationSchema } from "./acquiring-statement-allocation.js";
+
 /** Importable values returned by Acquiring statement `paymentScheme` fields. */
 export const AcquiringPaymentScheme = {
   BnplLater30: "bnpl_later_30",
@@ -40,6 +42,7 @@ export type AcquiringStatementCancellation = z.infer<
 
 /** Runtime validator for one Acquiring statement transaction. */
 export const acquiringStatementItemSchema = z.looseObject({
+  agentFee: z.optional(z.int()),
   amount: z.int(),
   approvalCode: z.optional(z.string()),
   cancelList: z.optional(z.array(acquiringStatementCancellationSchema)),
@@ -48,11 +51,13 @@ export const acquiringStatementItemSchema = z.looseObject({
   destination: z.optional(z.string()),
   invoiceId: z.string(),
   maskedPan: z.string(),
+  metadata: z.optional(z.record(z.string(), z.unknown())),
   paymentScheme: z.enum(AcquiringPaymentScheme),
   profitAmount: z.optional(z.int()),
   reference: z.optional(z.string()),
   rrn: z.optional(z.string()),
   shortQrId: z.optional(z.nullable(z.string())),
+  splitReceiverList: z.optional(z.array(acquiringStatementAllocationSchema)),
   status: z.enum(AcquiringStatementStatus),
 });
 

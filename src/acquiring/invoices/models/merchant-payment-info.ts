@@ -10,7 +10,6 @@ const invoiceBasketItemSchema = z.object({
   ...fiscalizationItemShape,
   discounts: z.optional(z.array(invoiceDiscountSchema)),
   icon: z.optional(z.string()),
-  splitReceiverId: z.optional(z.string()),
   total: z.optional(z.int()),
   unit: z.optional(z.string()),
 });
@@ -41,13 +40,6 @@ export interface InvoiceBasketItem extends FiscalizationItem {
   readonly discounts?: readonly InvoiceDiscount[];
   /** Optional product image URL. */
   readonly icon?: string;
-  /**
-   * Optional split-payment receiver for this item.
-   *
-   * Monobank documents it only through the request sample, so the identifier is
-   * forwarded as an opaque string.
-   */
-  readonly splitReceiverId?: string;
   /** Optional total amount for all item units in minor units. */
   readonly total?: number;
   /** Optional unit-of-measure label. */

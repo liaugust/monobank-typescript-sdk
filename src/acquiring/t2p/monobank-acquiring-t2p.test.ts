@@ -110,3 +110,23 @@ describe("MonobankAcquiringT2p", () => {
     );
   });
 });
+
+it.each([{}, { list: null }, { list: [] }])(
+  "preserves no-terminal response %j",
+  async (response) => {
+    const fetch = createFetchSequence([jsonResponse(response)]);
+    await expect(
+      createAcquiringTestClient(fetch).t2p.listTerminals(),
+    ).resolves.toEqual(response);
+  },
+);
+
+it.each([{ list: {} }, { list: [null] }, { list: [{}] }])(
+  "rejects malformed terminal lists %j",
+  async (response) => {
+    const fetch = createFetchSequence([jsonResponse(response)]);
+    await expect(
+      createAcquiringTestClient(fetch).t2p.listTerminals(),
+    ).rejects.toBeInstanceOf(MonobankResponseValidationError);
+  },
+);

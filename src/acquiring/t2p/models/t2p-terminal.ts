@@ -17,13 +17,13 @@ export type AcquiringT2pTerminal = z.infer<typeof acquiringT2pTerminalSchema>;
 
 /** Runtime validator for `GET /api/merchant/t2p/terminal/list` responses. */
 export const acquiringT2pTerminalListSchema = z.looseObject({
-  list: z.array(acquiringT2pTerminalSchema),
+  list: z.optional(z.nullable(z.array(acquiringT2pTerminalSchema))),
 });
 
 /** Validated list of the merchant's tap-to-phone terminals. */
 export interface AcquiringT2pTerminalList {
-  /** Tap-to-phone terminals registered to the merchant. */
-  readonly list: readonly AcquiringT2pTerminal[];
+  /** Tap-to-phone terminals; absent, null, and an empty array all mean none. */
+  readonly list?: readonly AcquiringT2pTerminal[] | null | undefined;
   /** Additive response fields preserved by the loose runtime schema. */
   readonly [key: string]: unknown;
 }

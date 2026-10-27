@@ -10,7 +10,15 @@ describe("cancel invoice contract", () => {
       amount: 2_100,
       extRef: "refund-42",
       invoiceId: "invoice-42",
-      items: [{ code: "chair-1", name: "Chair", qty: 1, sum: 2_100 }],
+      items: [
+        {
+          code: "chair-1",
+          name: "Chair",
+          qty: 1,
+          splitReceiverId: "receiver-42",
+          sum: 2_100,
+        },
+      ],
     } as const;
 
     expect(createCancelInvoiceBody(input)).toEqual(input);
