@@ -6,13 +6,18 @@ The package has one root entry point. Import public clients, values, schemas,
 errors, and types from `@liaugust/monobank-sdk`; internal file paths are not a
 supported contract.
 
+The 2026-10-27 audit covers 66 operations across both official documentation
+sites: Public 2, Personal 3, Corporate 11, Acquiring 34, and Installments 16.
+It excludes unpublished Checkout/payroll routes. Individual discrepancy
+publication dates are unknown.
+
 | Client                       | Credential boundary               | Default origin               | Resources                                                                                                                                        |
 | ---------------------------- | --------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `MonobankPublicClient`       | None                              | `https://api.monobank.ua`    | `bank`, `currency`                                                                                                                               |
 | `MonobankPersonalClient`     | Personal `X-Token`                | `https://api.monobank.ua`    | `client`, `statements`, `webhooks`                                                                                                               |
 | `MonobankAcquiringClient`    | Acquiring `X-Token`               | `https://api.monobank.ua`    | `employees`, `invoices`, `merchant`, `monopay`, `pos`, `qr`, `split`, `statements`, `submerchants`, `subscriptions`, `t2p`, `wallet`, `webhooks` |
 | `MonobankCorporateClient`    | `X-Key-Id` plus injected signer   | `https://api.monobank.ua`    | `access`, `clients`, `company`, `documents`                                                                                                      |
-| `MonobankInstallmentsClient` | `store-id` plus HMAC body signing | `https://u2.monobank.com.ua` | `clients`, `letters`, `orders`, `reports`                                                                                                        |
+| `MonobankInstallmentsClient` | `store-id` plus HMAC body signing | `https://u2.monobank.com.ua` | `clients`, `letters`, `orders`, `qr`, `reports`                                                                                                  |
 
 ## Contents
 
@@ -57,6 +62,9 @@ supported contract.
 - [acquiring.t2p.getPaymentStatus](#acquiringt2pgetpaymentstatus)
 - [acquiring.split.listReceivers](#acquiringsplitlistreceivers)
 - [acquiring.pos.cancelTransaction](#acquiringposcanceltransaction)
+- [acquiring.pos.getCancellationStatus](#acquiringposgetcancellationstatus)
+- [installments.qr.createCart](#installmentsqrcreatecart)
+- [installments.qr.cancelCart](#installmentsqrcancelcart)
 - [bank.getSync](#bankgetsync)
 - [currency.getRates](#currencygetrates)
 - [client.getInfo](#clientgetinfo)
@@ -377,7 +385,8 @@ const installments = new MonobankInstallmentsClient({
 ```
 
 The client groups operations into `installments.clients`,
-`installments.letters`, `installments.orders`, and `installments.reports`.
+`installments.letters`, `installments.orders`, `installments.qr`, and
+`installments.reports`.
 
 ## acquiring.webhooks.getPublicKey
 
@@ -879,6 +888,11 @@ Requests a full or partial cancellation through
 `extRef`, and fiscalization `items` are optional. The result contains a
 documented cancellation status plus creation and modification timestamps.
 
+For partial split refunds, Monobank requires `name`, `qty`, `sum`, `code`, and
+`splitReceiverId` on every returned item. The reusable `FiscalizationItem` carries
+optional `splitReceiverId`, inherited by `InvoiceBasketItem`; cancellation JSON
+preserves it. Use the receiver list's `id` as this request field's value.
+
 This mutating request is never retried. Throws the four standard SDK error
 classes.
 
@@ -1351,7 +1365,9 @@ acquiring.t2p.listTerminals(
 ```
 
 Loads `GET /api/merchant/t2p/terminal/list`, the tap-to-phone terminals
-registered to the merchant. Only `terminal` is required on an entry.
+registered to the merchant. Only `terminal` is required on an entry. The `list`
+property may be absent, `null`, or an empty array; narrow it before iterating.
+These variants are preserved without normalization.
 
 | Property       | Value                                                      |
 | -------------- | ---------------------------------------------------------- |
@@ -1427,11 +1443,12 @@ acquiring.split.listReceivers(
 ): Promise<AcquiringSplitReceiverList>
 ```
 
-Loads `GET /api/merchant/split-receiver/list`. A returned `splitReceiverId` is
+Loads `GET /api/merchant/split-receiver/list`. A returned `id` is
 what `merchantPaymInfo.basketOrder[].splitReceiverId` expects on
 `acquiring.invoices.create()`. Each entry carries the receiver's `edrpou` state
 registry code, which identifies a real business, so treat the list as counterparty
-data rather than public reference data. Only `splitReceiverId` is required.
+data rather than public reference data. `id`, `name`, and `edrpou` are required strings. Migrate consumers of the former
+`splitReceiverId` response field to `id`; no alias or normalization is added.
 
 | Property       | Value                                                      |
 | -------------- | ---------------------------------------------------------- |
@@ -1489,6 +1506,32 @@ const refund = await acquiring.pos.cancelTransaction({
 
 console.log(refund.status, refund.tranId);
 ```
+
+## acquiring.pos.getCancellationStatus
+
+```ts
+acquiring.pos.getCancellationStatus(
+  input: GetAcquiringPosCancellationStatusInput,
+  options?: RequestOptions,
+): Promise<AcquiringPosCancellationDetails>
+```
+
+[Official endpoint](https://monobank.ua/api-docs/acquiring/methods/pos/get--api--merchant--pos-transaction-cancel--status).
+Authenticated GET `/api/merchant/pos-transaction-cancel/status` requires string
+`cancelRef`, validated as nonempty and URL-encoded before Fetch. It uses Acquiring
+`X-Token`, supports configured safe GET retries, a 10,000 ms default attempt
+timeout, and `options.signal` cancellation of attempts and backoff. No numeric
+rate limit or refund lookup window is documented. Monobank searches this merchant's
+refunds within its unspecified `PosRefundMaxDays` window. Do not infer `cancelRef`
+from initiation `tranId`. Use this lookup after a missed `pos_refund` webhook.
+
+The loose response has only optional fields: integer `amount` in minor units,
+string `cancelRef`, RFC-3339 `createTime` and `modifyTime`, string `originalTranId`
+and `rrn`, and `status` from `AcquiringPosCancellationStatus` (`new`, `processing`,
+`success`, `rejected`, `reversed`). `{}` is valid. Additive fields survive.
+Throws `MonobankValidationError` for invalid input, `MonobankApiError` for rejected
+requests (including unknown references), `MonobankNetworkError` for network,
+timeout or abort, and `MonobankResponseValidationError` for malformed success JSON.
 
 ## bank.getSync
 
@@ -2276,6 +2319,57 @@ for (const order of report.orders) {
 }
 ```
 
+## installments.qr.createCart
+
+```ts
+installments.qr.createCart(
+  input: CreateInstallmentsQrCartInput,
+  options?: RequestOptions,
+): Promise<InstallmentsQrCart>
+```
+
+[Official endpoint](https://monobank.ua/api-docs/chast/servisy/qr-koshyk/post--api--v1--qr--cart).
+POST `/api/v1/qr/cart` on `https://u2.monobank.com.ua` uses `store-id` and the
+existing HMAC signature over exact JSON bytes. Required request fields:
+
+| Field              | Contract                                                   |
+| ------------------ | ---------------------------------------------------------- |
+| `qr_id`            | Nonempty string; QR must belong to the authenticated store |
+| `store_order_id`   | Store order UUID                                           |
+| `products`         | Nonempty array of `InstallmentsQrCartProduct`              |
+| `products[].name`  | String of 1–500 characters                                 |
+| `products[].count` | Integer >= 1                                               |
+| `products[].sum`   | Unit price >= 0.01 in hryvnia, including decimals          |
+| `result_callback`  | HTTP or HTTPS callback URL                                 |
+
+Preserves snake_case and hryvnia without multiplying by 100. Input is validated
+before Fetch. The 201 loose JSON response has optional UUID `id`; `{}` is valid.
+No endpoint-specific rate limit is documented. This mutation is never retried;
+`timeoutMs` defaults to 10,000 ms and `options.signal` cancels the active attempt.
+Authenticate callback delivery separately. Throws `MonobankValidationError` for
+invalid input, `MonobankApiError` for upstream errors, `MonobankNetworkError` for
+network, timeout or abort, and `MonobankResponseValidationError` for invalid JSON
+or response shape.
+
+## installments.qr.cancelCart
+
+```ts
+installments.qr.cancelCart(
+  input: CancelInstallmentsQrCartInput,
+  options?: RequestOptions,
+): Promise<void>
+```
+
+[Official endpoint](https://monobank.ua/api-docs/chast/servisy/qr-koshyk/post--api--v1--qr--cart--cancel).
+POST `/api/v1/qr/cart/cancel` on `https://u2.monobank.com.ua` uses `store-id` and
+HMAC. Required `qr_id` is a nonempty string belonging to the store and is
+validated before Fetch. HTTP 200 has no response schema or body contract and
+resolves void. This mutation is never retried. No endpoint-specific rate limit
+is documented. The default timeout is 10,000 ms and `options.signal` cancels the
+active attempt. Throws `MonobankValidationError` for invalid input,
+`MonobankApiError` for upstream errors, and `MonobankNetworkError` for network,
+timeout or abort.
+
 ## corporate.access.request
 
 ```ts
@@ -2709,80 +2803,83 @@ All schemas expose Zod Mini's standard parsing interface. Object schemas are
 loose: documented fields are validated and unknown additive fields are
 preserved.
 
-| Export                                   | Validates                             |
-| ---------------------------------------- | ------------------------------------- |
-| `accountSchema`                          | One Personal account                  |
-| `acquiringCardPaymentSchema`             | Wallet or direct card-payment result  |
-| `acquiringEmployeeListSchema`            | Acquiring employee-list response      |
-| `acquiringEmployeeSchema`                | One Acquiring employee                |
-| `acquiringPosCancellationSchema`         | Initiated POS refund result           |
-| `acquiringSplitReceiverListSchema`       | Split-payment receiver-list response  |
-| `acquiringSplitReceiverSchema`           | One split-payment receiver            |
-| `acquiringSubscriptionListItemSchema`    | One subscription-list entry           |
-| `acquiringSubscriptionListSchema`        | Subscription-list response            |
-| `acquiringSubscriptionPaginationSchema`  | Subscription pagination metadata      |
-| `acquiringSubscriptionPaymentListSchema` | Subscription charge-list response     |
-| `acquiringSubscriptionPaymentSchema`     | One subscription charge               |
-| `acquiringSubscriptionSchema`            | One subscription status response      |
-| `acquiringSubscriptionSummarySchema`     | Subscription lifetime charge totals   |
-| `acquiringSubscriptionWalletDataSchema`  | Subscription tokenized-card state     |
-| `acquiringT2pPaymentSchema`              | Tap-to-phone payment status           |
-| `acquiringT2pTerminalListSchema`         | Tap-to-phone terminal-list response   |
-| `acquiringT2pTerminalSchema`             | One tap-to-phone terminal             |
-| `acquiringWalletCardSchema`              | One tokenized wallet card             |
-| `acquiringWalletSchema`                  | Merchant wallet response              |
-| `acquiringQrCashierListSchema`           | Acquiring QR cashier-list response    |
-| `acquiringQrCashierSchema`               | One Acquiring QR cashier              |
-| `acquiringQrDetailsSchema`               | Acquiring QR cashier details          |
-| `acquiringStatementSchema`               | Acquiring statement response          |
-| `acquiringStatementItemSchema`           | One Acquiring transaction             |
-| `acquiringStatementCancellationSchema`   | Nested Acquiring cancellation         |
-| `acquiringSubmerchantListSchema`         | Acquiring submerchant-list response   |
-| `acquiringSubmerchantSchema`             | One Acquiring submerchant             |
-| `acquiringWebhookPublicKeySchema`        | Acquiring webhook key response        |
-| `bankSyncSchema`                         | `/bank/sync` response                 |
-| `clientInfoSchema`                       | `/personal/client-info` response      |
-| `corporateRegistrationSchema`            | Corporate application acknowledgement |
-| `corporateRegistrationStatusSchema`      | Corporate application status and key  |
-| `corporateSettingsSchema`                | `/personal/corp/settings` response    |
-| `corporateTokenRequestSchema`            | Delegated access-request response     |
-| `documentSignatorySchema`                | One monoКЕП signatory                 |
-| `documentSigningRequestSchema`           | Created monoКЕП signing request       |
-| `documentSigningStatusSchema`            | monoКЕП signing progress              |
-| `signingDocumentSchema`                  | One monoКЕП document with its state   |
-| `currencyRateSchema`                     | One exchange-rate item                |
-| `currencyRatesSchema`                    | `/bank/currency` response array       |
-| `jarSchema`                              | One Personal jar                      |
-| `managedAccountSchema`                   | One delegated FOP account             |
-| `managedClientSchema`                    | One delegated FOP client              |
-| `merchantDetailsSchema`                  | `/api/merchant/details` response      |
-| `newInvoiceSchema`                       | Create-invoice response               |
-| `invoiceStatusSchema`                    | Invoice status or webhook payload     |
-| `cancelInvoiceResponseSchema`            | Invoice cancellation response         |
-| `finalizeInvoiceResponseSchema`          | Hold finalization response            |
-| `receiptSchema`                          | Invoice receipt response              |
-| `invoiceFiscalChecksSchema`              | Invoice fiscal checks response        |
-| `importedMonopaySigningKeySchema`        | Imported monopay public-key result    |
-| `installmentsCallbackEventSchema`        | Installments callback event           |
-| `installmentsClientPresenceSchema`       | Privacy-minimized client lookup       |
-| `installmentsClientValidationSchema`     | Client lookup with identity data      |
-| `installmentsGuaranteeLetterDataSchema`  | Guarantee-letter identity data        |
-| `installmentsIdentityDocumentSchema`     | One government identity document      |
-| `installmentsLetterCustomerSchema`       | Guarantee-letter customer identity    |
-| `installmentsOrderDataSchema`            | Installments order details            |
-| `installmentsOrderPaymentSchema`         | Installments payoff and refund state  |
-| `installmentsOrderReturnSchema`          | Installments return result            |
-| `installmentsOrderReverseSchema`         | One reversal attached to an order     |
-| `installmentsOrderStateSchema`           | Installments order state              |
-| `installmentsStoreReportOrderSchema`     | One store-settlement report row       |
-| `installmentsStoreReportSchema`          | Store-settlement report               |
-| `monopaySigningKeyListSchema`            | Monopay public-key list               |
-| `monopaySigningKeySchema`                | One monopay public key                |
-| `newAcquiringSubscriptionSchema`         | Created subscription and payer URL    |
-| `newInstallmentsOrderSchema`             | Created Installments order            |
-| `statementItemSchema`                    | One statement item                    |
-| `statementItemsSchema`                   | Statement response array              |
-| `personalWebhookEventSchema`             | Incoming Personal statement event     |
+| Export                                   | Validates                              |
+| ---------------------------------------- | -------------------------------------- |
+| `accountSchema`                          | One Personal account                   |
+| `acquiringCardPaymentSchema`             | Wallet or direct card-payment result   |
+| `acquiringEmployeeListSchema`            | Acquiring employee-list response       |
+| `acquiringEmployeeSchema`                | One Acquiring employee                 |
+| `acquiringPosCancellationSchema`         | Initiated POS refund result            |
+| `acquiringSplitReceiverListSchema`       | Split-payment receiver-list response   |
+| `acquiringSplitReceiverSchema`           | One split-payment receiver             |
+| `acquiringSubscriptionListItemSchema`    | One subscription-list entry            |
+| `acquiringSubscriptionListSchema`        | Subscription-list response             |
+| `acquiringSubscriptionPaginationSchema`  | Subscription pagination metadata       |
+| `acquiringSubscriptionPaymentListSchema` | Subscription charge-list response      |
+| `acquiringSubscriptionPaymentSchema`     | One subscription charge                |
+| `acquiringSubscriptionSchema`            | One subscription status response       |
+| `acquiringSubscriptionSummarySchema`     | Subscription lifetime charge totals    |
+| `acquiringSubscriptionWalletDataSchema`  | Subscription tokenized-card state      |
+| `acquiringT2pPaymentSchema`              | Tap-to-phone payment status            |
+| `acquiringT2pTerminalListSchema`         | Tap-to-phone terminal-list response    |
+| `acquiringT2pTerminalSchema`             | One tap-to-phone terminal              |
+| `acquiringWalletCardSchema`              | One tokenized wallet card              |
+| `acquiringWalletSchema`                  | Merchant wallet response               |
+| `acquiringQrCashierListSchema`           | Acquiring QR cashier-list response     |
+| `acquiringQrCashierSchema`               | One Acquiring QR cashier               |
+| `acquiringQrDetailsSchema`               | Acquiring QR cashier details           |
+| `acquiringPosCancellationStatusSchema`   | POS refund status, all fields optional |
+| `acquiringStatementAllocationSchema`     | One split receiver allocation          |
+| `installmentsQrCartSchema`               | QR cart creation, optional UUID id     |
+| `acquiringStatementSchema`               | Acquiring statement response           |
+| `acquiringStatementItemSchema`           | One Acquiring transaction              |
+| `acquiringStatementCancellationSchema`   | Nested Acquiring cancellation          |
+| `acquiringSubmerchantListSchema`         | Acquiring submerchant-list response    |
+| `acquiringSubmerchantSchema`             | One Acquiring submerchant              |
+| `acquiringWebhookPublicKeySchema`        | Acquiring webhook key response         |
+| `bankSyncSchema`                         | `/bank/sync` response                  |
+| `clientInfoSchema`                       | `/personal/client-info` response       |
+| `corporateRegistrationSchema`            | Corporate application acknowledgement  |
+| `corporateRegistrationStatusSchema`      | Corporate application status and key   |
+| `corporateSettingsSchema`                | `/personal/corp/settings` response     |
+| `corporateTokenRequestSchema`            | Delegated access-request response      |
+| `documentSignatorySchema`                | One monoКЕП signatory                  |
+| `documentSigningRequestSchema`           | Created monoКЕП signing request        |
+| `documentSigningStatusSchema`            | monoКЕП signing progress               |
+| `signingDocumentSchema`                  | One monoКЕП document with its state    |
+| `currencyRateSchema`                     | One exchange-rate item                 |
+| `currencyRatesSchema`                    | `/bank/currency` response array        |
+| `jarSchema`                              | One Personal jar                       |
+| `managedAccountSchema`                   | One delegated FOP account              |
+| `managedClientSchema`                    | One delegated FOP client               |
+| `merchantDetailsSchema`                  | `/api/merchant/details` response       |
+| `newInvoiceSchema`                       | Create-invoice response                |
+| `invoiceStatusSchema`                    | Invoice status or webhook payload      |
+| `cancelInvoiceResponseSchema`            | Invoice cancellation response          |
+| `finalizeInvoiceResponseSchema`          | Hold finalization response             |
+| `receiptSchema`                          | Invoice receipt response               |
+| `invoiceFiscalChecksSchema`              | Invoice fiscal checks response         |
+| `importedMonopaySigningKeySchema`        | Imported monopay public-key result     |
+| `installmentsCallbackEventSchema`        | Installments callback event            |
+| `installmentsClientPresenceSchema`       | Privacy-minimized client lookup        |
+| `installmentsClientValidationSchema`     | Client lookup with identity data       |
+| `installmentsGuaranteeLetterDataSchema`  | Guarantee-letter identity data         |
+| `installmentsIdentityDocumentSchema`     | One government identity document       |
+| `installmentsLetterCustomerSchema`       | Guarantee-letter customer identity     |
+| `installmentsOrderDataSchema`            | Installments order details             |
+| `installmentsOrderPaymentSchema`         | Installments payoff and refund state   |
+| `installmentsOrderReturnSchema`          | Installments return result             |
+| `installmentsOrderReverseSchema`         | One reversal attached to an order      |
+| `installmentsOrderStateSchema`           | Installments order state               |
+| `installmentsStoreReportOrderSchema`     | One store-settlement report row        |
+| `installmentsStoreReportSchema`          | Store-settlement report                |
+| `monopaySigningKeyListSchema`            | Monopay public-key list                |
+| `monopaySigningKeySchema`                | One monopay public key                 |
+| `newAcquiringSubscriptionSchema`         | Created subscription and payer URL     |
+| `newInstallmentsOrderSchema`             | Created Installments order             |
+| `statementItemSchema`                    | One statement item                     |
+| `statementItemsSchema`                   | Statement response array               |
+| `personalWebhookEventSchema`             | Incoming Personal statement event      |
 
 ```ts
 import { currencyRatesSchema } from "@liaugust/monobank-sdk";
@@ -2846,6 +2943,7 @@ even though the published documentation does not list it.
 | `AcquiringCardPaymentStatus`     | `processing`, `success`, `failure`                                           |
 | `AcquiringPaymentInitiationKind` | `client`, `merchant`                                                         |
 | `SyncPaymentPanType`             | `FPAN`, `DPAN`                                                               |
+| `AcquiringPosCancellationStatus` | `new`, `processing`, `success`, `rejected`, `reversed`                       |
 | `AcquiringStatementStatus`       | `hold`, `processing`, `success`, `failure`                                   |
 | `InvoiceStatus`                  | `created`, `processing`, `hold`, `success`, `failure`, `reversed`, `expired` |
 | `InvoiceCancellationStatus`      | `processing`, `success`, `failure`                                           |
@@ -2856,7 +2954,7 @@ even though the published documentation does not list it.
 | `DiscountMode`                   | `PERCENT`, `VALUE`                                                           |
 | `FiscalCheckType`                | `sale`, `return`                                                             |
 | `FiscalCheckStatus`              | `new`, `process`, `done`, `failed`                                           |
-| `FiscalizationSource`            | `checkbox`, `monopay`                                                        |
+| `FiscalizationSource`            | `checkbox`, `monopay`, `vchasnokasa`                                         |
 | `AcquiringSubscriptionAction`    | `cancel`                                                                     |
 | `AcquiringSubscriptionStatus`    | `active`, `cancelled`                                                        |
 
@@ -2999,22 +3097,29 @@ integer `amount`, and numeric ISO 4217 `ccy`. Optional fields include merchant
 profit, reference, destination, authorization data, QR identifier, and nested
 cancellations. Loose schemas preserve additive upstream fields.
 
-| Item field      | Type                               | Required | Notes                                       |
-| --------------- | ---------------------------------- | -------- | ------------------------------------------- |
-| `invoiceId`     | `string`                           | Yes      | Acquiring invoice identifier                |
-| `status`        | `AcquiringStatementStatus`         | Yes      | Transaction processing status               |
-| `maskedPan`     | `string`                           | Yes      | Masked payment-card number                  |
-| `date`          | `string`                           | Yes      | RFC-3339 transaction timestamp              |
-| `amount`        | `number`                           | Yes      | Integer amount in minor currency units      |
-| `ccy`           | `number`                           | Yes      | Numeric ISO 4217 currency code              |
-| `paymentScheme` | `AcquiringPaymentScheme`           | Yes      | Full payment or documented installment plan |
-| `profitAmount`  | `number`                           | No       | Integer merchant proceeds in minor units    |
-| `reference`     | `string`                           | No       | Merchant payment reference                  |
-| `destination`   | `string`                           | No       | Payment destination                         |
-| `approvalCode`  | `string`                           | No       | Authorization approval code                 |
-| `rrn`           | `string`                           | No       | Retrieval reference number                  |
-| `shortQrId`     | `string \| null`                   | No       | Short QR identifier when supplied           |
-| `cancelList`    | `AcquiringStatementCancellation[]` | No       | Cancellation records for the transaction    |
+| Item field          | Type                               | Required | Notes                                       |
+| ------------------- | ---------------------------------- | -------- | ------------------------------------------- |
+| `invoiceId`         | `string`                           | Yes      | Acquiring invoice identifier                |
+| `status`            | `AcquiringStatementStatus`         | Yes      | Transaction processing status               |
+| `maskedPan`         | `string`                           | Yes      | Masked payment-card number                  |
+| `date`              | `string`                           | Yes      | RFC-3339 transaction timestamp              |
+| `amount`            | `number`                           | Yes      | Integer amount in minor currency units      |
+| `ccy`               | `number`                           | Yes      | Numeric ISO 4217 currency code              |
+| `paymentScheme`     | `AcquiringPaymentScheme`           | Yes      | Full payment or documented installment plan |
+| `agentFee`          | `number`                           | No       | Integer agent fee in minor units            |
+| `metadata`          | `Record<string, unknown>`          | No       | Merchant-defined order data                 |
+| `splitReceiverList` | `AcquiringStatementAllocation[]`   | No       | Receiver allocations                        |
+| `profitAmount`      | `number`                           | No       | Integer merchant proceeds in minor units    |
+| `reference`         | `string`                           | No       | Merchant payment reference                  |
+| `destination`       | `string`                           | No       | Payment destination                         |
+| `approvalCode`      | `string`                           | No       | Authorization approval code                 |
+| `rrn`               | `string`                           | No       | Retrieval reference number                  |
+| `shortQrId`         | `string \| null`                   | No       | Short QR identifier when supplied           |
+| `cancelList`        | `AcquiringStatementCancellation[]` | No       | Cancellation records for the transaction    |
+
+Each split allocation requires string `splitReceiverId` and integer `amount` and
+`profit` in minor units; integer `agentFee` is optional. Additive allocation fields
+survive validation. Item `profitAmount` remains optional.
 
 Each `cancelList` entry has the following documented fields:
 
@@ -3086,6 +3191,10 @@ object containing the target `account` identifier and validated
 | `MonobankAcquiringClientOptions`           | Acquiring constructor configuration                            |
 | `MonobankCorporateClientOptions`           | Corporate signer and transport configuration                   |
 | `MonobankInstallmentsClientOptions`        | Installments store credential and transport configuration      |
+| `GetAcquiringPosCancellationStatusInput`   | POS refund reference query                                     |
+| `CreateInstallmentsQrCartInput`            | Store QR, UUID order, products, and callback URL               |
+| `CancelInstallmentsQrCartInput`            | Store-owned QR identifier                                      |
+| `InstallmentsQrCartProduct`                | Product name, integer quantity, and hryvnia unit price         |
 | `RequestOptions`                           | Optional per-request `AbortSignal`                             |
 | `RetryOptions`                             | Safe GET retry policy                                          |
 | `GetStatementsInput`                       | Statement account and time window                              |
@@ -3171,7 +3280,7 @@ package root, including the Personal models plus `MerchantDetails`,
 `AcquiringCardPayment`, `AcquiringQrCashier`,
 `AcquiringQrCashierList`, `AcquiringQrDetails`,
 `AcquiringWebhookPublicKey`, `AcquiringStatement`, `AcquiringStatementItem`,
-`AcquiringStatementCancellation`, `NewInvoice`, `Invoice`,
+`AcquiringStatementCancellation`, `AcquiringStatementAllocation`, `NewInvoice`, `Invoice`,
 `InvoiceCancellation`, `InvoiceFinalization`, `InvoiceReceipt`,
 `InvoiceFiscalChecks`, `NewAcquiringSubscription`, `AcquiringSubscription`,
 `AcquiringSubscriptionList`, `AcquiringSubscriptionListItem`,
@@ -3180,13 +3289,14 @@ package root, including the Personal models plus `MerchantDetails`,
 `AcquiringSubscriptionWalletData`, `MonopaySigningKey`,
 `MonopaySigningKeyList`, `ImportedMonopaySigningKey`, `AcquiringT2pTerminal`,
 `AcquiringT2pTerminalList`, `AcquiringT2pPayment`, `AcquiringSplitReceiver`,
-`AcquiringSplitReceiverList`, `AcquiringPosCancellation`, `CorporateSettings`,
+`AcquiringSplitReceiverList`, `AcquiringPosCancellation`,
+`AcquiringPosCancellationDetails`, `CorporateSettings`,
 `CorporateRegistration`, `CorporateRegistrationStatusResult`,
 `CorporateTokenRequest`, `DocumentSigningRequest`, `DocumentSigningStatus`,
 `SigningDocument`, `DocumentSignatory`, `InstallmentsCallbackEvent`,
 `InstallmentsClientPresence`, `InstallmentsClientValidation`,
 `InstallmentsGuaranteeLetterData`, `InstallmentsIdentityDocument`,
-`InstallmentsLetterCustomer`, `NewInstallmentsOrder`, `InstallmentsOrderData`,
+`InstallmentsLetterCustomer`, `InstallmentsQrCart`, `NewInstallmentsOrder`, `InstallmentsOrderData`,
 `InstallmentsOrderPayment`, `InstallmentsOrderReturn`,
 `InstallmentsOrderReverse`, `InstallmentsOrderState`,
 `InstallmentsStoreReport`, and `InstallmentsStoreReportOrder`.

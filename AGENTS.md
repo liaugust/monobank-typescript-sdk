@@ -26,10 +26,11 @@ both before concluding that an endpoint exists or does not:
   Corporate, plus `/bank/sync`, `/api/merchant/employee/list`, and
   `/api/merchant/invoice/sync-payment`.
 
-Implements all 63 operations found across Monobank's two documentation sites as
-last audited on 2026-08-20. This does not establish completeness against
-undocumented or future operations. The inventory is maintained under issue #59;
-a currently documented operation missing here is a bug.
+Implements all 66 operations found across Monobank's two documentation sites as
+last audited on 2026-10-27. This does not establish completeness against
+undocumented or future operations. Issue #59 records the prior 63-operation
+inventory; issues #85–#92 track this audit's corrections. A currently documented
+operation missing here is a bug.
 
 ## Rules for Consumer Code
 
@@ -148,6 +149,19 @@ a currently documented operation missing here is a bug.
   scheme. Do not normalize any of them.
 - Treat `acquiring.split.listReceivers()` results as counterparty data. Each
   entry's `edrpou` identifies a real business.
+- Use the `id` from `acquiring.split.listReceivers()` as an invoice item's
+  `splitReceiverId`; the response requires `id`, `name`, and `edrpou`. Include
+  `splitReceiverId` on each item of a partial split refund.
+- Use `installments.qr.createCart()` and `cancelCart()` with store-owned `qr_id`.
+  Creation requires a UUID `store_order_id`, products with hryvnia unit prices,
+  and an HTTP callback URL. Both POSTs are never retried; cancellation is bodyless.
+- Use `acquiring.pos.getCancellationStatus({ cancelRef })` after a missed refund
+  webhook. Its fields are all optional, its amount is minor units, and its dates
+  are RFC-3339. Do not infer `cancelRef` from initiation `tranId` or invent a
+  numeric `PosRefundMaxDays` window. The safe GET supports retries and abort.
+- Read typed optional statement `agentFee`, `metadata`, and `splitReceiverList`;
+  allocations require `splitReceiverId`, integer `amount` and `profit` with optional
+  integer `agentFee`. Keep the item's `profitAmount` optional.
 - Never retry `acquiring.pos.cancelTransaction()`. It moves money, and its success
   response means the refund was initiated rather than settled.
 - Treat `acquiring.invoices.payDirect()` and `acquiring.invoices.syncPayment()`
@@ -196,12 +210,12 @@ The root entry point exports:
 - `MonobankAcquiringClient`
 - `MonobankCorporateClient`
 - `MonobankInstallmentsClient`
-- twenty-six resource properties exposed through the five parent clients:
+- twenty-seven resource properties exposed through the five parent clients:
   Public `bank` and `currency`; Personal `client`, `statements`, and `webhooks`;
   Acquiring `employees`, `invoices`, `merchant`, `monopay`, `pos`, `qr`, `split`,
   `statements`, `submerchants`, `subscriptions`, `t2p`, `wallet`, and `webhooks`;
   Corporate `access`, `clients`, `company`, and `documents`; and Installments
-  `clients`, `letters`, `orders`, and `reports`
+  `clients`, `letters`, `orders`, `qr`, and `reports`
 - enum-like const values, including `AccountType`, `CashbackType`,
   `AcquiringPaymentScheme`, `AcquiringQrAmountType`, `AcquiringStatementStatus`,
   `InvoicePaymentType`, `InvoiceStatus`, `CorporateRegistrationStatus`,
@@ -236,7 +250,7 @@ src/acquiring/merchant/         merchant resource and endpoint slice
 src/acquiring/employees/        employee resource and endpoint slice
 src/acquiring/invoices/         invoice endpoints, models, and request helpers
 src/acquiring/monopay/          monopay public-key lifecycle
-src/acquiring/pos/              POS refund initiation
+src/acquiring/pos/              POS refund initiation and status
 src/acquiring/qr/               QR cashier resource, endpoints, and models
 src/acquiring/split/            split-payment receiver discovery
 src/acquiring/statements/       statement resource, endpoint, and models
@@ -256,6 +270,7 @@ src/installments/client/        Installments parent client and options
 src/installments/clients/       client eligibility endpoints
 src/installments/letters/       guarantee-letter data and downloads
 src/installments/orders/        order lifecycle endpoints and models
+src/installments/qr/            QR cart creation and cancellation
 src/installments/reports/       store settlement reporting
 src/public/client/              token-free Public parent client and options
 src/public/bank/                bank resource and sync endpoint
@@ -313,7 +328,8 @@ tests/consumers/                ESM, CJS, browser, declaration, and tarball chec
 - Model the `list` wrapper as required across Acquiring list endpoints even
   where Monobank's OpenAPI `required` array omits it, matching the statement,
   submerchant, and QR schemas. Revisit all three together if an account with no
-  records is observed to return a bare `{}`.
+  records is observed to return a bare `{}`. T2P terminal lists are the documented
+  exception: preserve absent `list`, `null`, and an empty array without normalization.
 - Model the Corporate registration status response looser than its `required`
   array: `keyId` is optional because no key exists while an application is
   `New`, and `status` is a plain string because the specification declares no

@@ -1,5 +1,11 @@
 import {
+  AcquiringPosCancellationStatus,
+  acquiringPosCancellationStatusSchema,
+  acquiringStatementAllocationSchema,
+  FiscalizationSource,
+  installmentsQrCartSchema,
   MonobankAcquiringClient,
+  MonobankInstallmentsClient,
   MonobankPersonalClient,
   MonobankPublicClient,
   SigningDocumentHashType,
@@ -33,3 +39,17 @@ void acquiringClient.submerchants;
 void acquiringClient.webhooks;
 void SigningDocumentHashType.Dstu256;
 void verifyAcquiringWebhookSignature;
+
+const installments = new MonobankInstallmentsClient({
+  fetch: browserFetch,
+  storeId: "synthetic-store",
+  storeSecret: "synthetic-secret",
+});
+void installments.qr.createCart;
+void installments.qr.cancelCart;
+void acquiringClient.pos.getCancellationStatus;
+void AcquiringPosCancellationStatus.Success;
+void FiscalizationSource.Vchasnokasa;
+void acquiringPosCancellationStatusSchema;
+void acquiringStatementAllocationSchema;
+void installmentsQrCartSchema;

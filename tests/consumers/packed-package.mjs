@@ -83,16 +83,20 @@ symlinkSync(extractedPackage, installedPackage, "junction");
 
 writeFileSync(
   join(consumerDirectory, "esm.mjs"),
-  'import { AccountType, MonobankAcquiringClient, MonobankPersonalClient, MonobankPublicClient, verifyAcquiringWebhookSignature } from "@liaugust/monobank-sdk";\n' +
+  'import { AccountType, MonobankAcquiringClient, MonobankInstallmentsClient, AcquiringPosCancellationStatus, FiscalizationSource, acquiringStatementAllocationSchema, acquiringPosCancellationStatusSchema, installmentsQrCartSchema, MonobankPersonalClient, MonobankPublicClient, verifyAcquiringWebhookSignature } from "@liaugust/monobank-sdk";\n' +
     'const acquiring = new MonobankAcquiringClient({ token: "acquiring" });\n' +
+    'const installments = new MonobankInstallmentsClient({ storeId: "synthetic-store", storeSecret: "synthetic-secret" });\n' +
+    'if (typeof installments.qr.createCart !== "function" || typeof installments.qr.cancelCart !== "function" || typeof acquiring.pos.getCancellationStatus !== "function" || AcquiringPosCancellationStatus.Success !== "success" || FiscalizationSource.Vchasnokasa !== "vchasnokasa" || !acquiringStatementAllocationSchema || !acquiringPosCancellationStatusSchema || !installmentsQrCartSchema) process.exitCode = 1;\n' +
     'const personal = new MonobankPersonalClient({ token: "personal" });\n' +
     "const publicApi = new MonobankPublicClient();\n" +
     'if (AccountType.Black !== "black" || !publicApi.bank || !publicApi.currency || !personal.client || !personal.statements || !personal.webhooks || !acquiring.invoices || !acquiring.merchant || !acquiring.employees || !acquiring.qr || !acquiring.wallet || !acquiring.statements || !acquiring.submerchants || !acquiring.webhooks || typeof verifyAcquiringWebhookSignature !== "function") process.exitCode = 1;\n',
 );
 writeFileSync(
   join(consumerDirectory, "commonjs.cjs"),
-  'const { CashbackType, MonobankAcquiringClient, MonobankPersonalClient, MonobankPublicClient, verifyAcquiringWebhookSignature } = require("@liaugust/monobank-sdk");\n' +
+  'const { CashbackType, MonobankAcquiringClient, MonobankInstallmentsClient, AcquiringPosCancellationStatus, FiscalizationSource, acquiringStatementAllocationSchema, acquiringPosCancellationStatusSchema, installmentsQrCartSchema, MonobankPersonalClient, MonobankPublicClient, verifyAcquiringWebhookSignature } = require("@liaugust/monobank-sdk");\n' +
     'const acquiring = new MonobankAcquiringClient({ token: "acquiring" });\n' +
+    'const installments = new MonobankInstallmentsClient({ storeId: "synthetic-store", storeSecret: "synthetic-secret" });\n' +
+    'if (typeof installments.qr.createCart !== "function" || typeof installments.qr.cancelCart !== "function" || typeof acquiring.pos.getCancellationStatus !== "function" || AcquiringPosCancellationStatus.Success !== "success" || FiscalizationSource.Vchasnokasa !== "vchasnokasa" || !acquiringStatementAllocationSchema || !acquiringPosCancellationStatusSchema || !installmentsQrCartSchema) process.exitCode = 1;\n' +
     'const personal = new MonobankPersonalClient({ token: "personal" });\n' +
     "const publicApi = new MonobankPublicClient();\n" +
     'if (CashbackType.UAH !== "UAH" || !publicApi.bank || !publicApi.currency || !personal.client || !personal.statements || !personal.webhooks || !acquiring.invoices || !acquiring.merchant || !acquiring.employees || !acquiring.qr || !acquiring.wallet || !acquiring.statements || !acquiring.submerchants || !acquiring.webhooks || typeof verifyAcquiringWebhookSignature !== "function") process.exitCode = 1;\n',

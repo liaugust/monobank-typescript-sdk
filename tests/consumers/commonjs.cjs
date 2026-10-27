@@ -2,6 +2,12 @@ const assert = require("node:assert/strict");
 
 const {
   MonobankAcquiringClient,
+  MonobankInstallmentsClient,
+  AcquiringPosCancellationStatus,
+  FiscalizationSource,
+  acquiringPosCancellationStatusSchema,
+  acquiringStatementAllocationSchema,
+  installmentsQrCartSchema,
   MonobankApiError,
   MonobankNetworkError,
   MonobankPersonalClient,
@@ -61,3 +67,24 @@ const resourceMethods = [
 for (const method of resourceMethods) {
   assert.equal(typeof method, "function");
 }
+
+const installmentsClient = new MonobankInstallmentsClient({
+  fetch: fetchStub,
+  storeId: "synthetic-store",
+  storeSecret: "synthetic-secret",
+});
+assert.equal(typeof installmentsClient.qr.createCart, "function");
+assert.equal(typeof installmentsClient.qr.cancelCart, "function");
+assert.equal(typeof acquiringClient.pos.getCancellationStatus, "function");
+assert.equal(AcquiringPosCancellationStatus.Success, "success");
+assert.equal(FiscalizationSource.Vchasnokasa, "vchasnokasa");
+assert.deepEqual(acquiringPosCancellationStatusSchema.parse({}), {});
+assert.deepEqual(installmentsQrCartSchema.parse({}), {});
+assert.deepEqual(
+  acquiringStatementAllocationSchema.parse({
+    splitReceiverId: "receiver-42",
+    amount: 100,
+    profit: 90,
+  }),
+  { splitReceiverId: "receiver-42", amount: 100, profit: 90 },
+);

@@ -55,3 +55,24 @@ assert.equal(typeof acquiringClient.qr.resetAmount, "function");
 assert.equal(typeof acquiringClient.statements.get, "function");
 assert.equal(typeof acquiringClient.submerchants.list, "function");
 assert.equal(typeof acquiringClient.webhooks.getPublicKey, "function");
+
+const installmentsClient = new sdk.MonobankInstallmentsClient({
+  fetch: fetchStub,
+  storeId: "synthetic-store",
+  storeSecret: "synthetic-secret",
+});
+assert.equal(typeof installmentsClient.qr.createCart, "function");
+assert.equal(typeof installmentsClient.qr.cancelCart, "function");
+assert.equal(typeof acquiringClient.pos.getCancellationStatus, "function");
+assert.equal(sdk.AcquiringPosCancellationStatus.Success, "success");
+assert.equal(sdk.FiscalizationSource.Vchasnokasa, "vchasnokasa");
+assert.deepEqual(sdk.acquiringPosCancellationStatusSchema.parse({}), {});
+assert.deepEqual(sdk.installmentsQrCartSchema.parse({}), {});
+assert.deepEqual(
+  sdk.acquiringStatementAllocationSchema.parse({
+    splitReceiverId: "receiver-42",
+    amount: 100,
+    profit: 90,
+  }),
+  { splitReceiverId: "receiver-42", amount: 100, profit: 90 },
+);

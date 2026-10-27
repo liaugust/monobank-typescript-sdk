@@ -3,8 +3,8 @@
 > Unofficial, strict, runtime-validated TypeScript SDK for the Monobank API,
 > spanning the Public, Personal, Acquiring, Corporate, and Покупка Частинами
 > credential families.
-> Implements all 63 operations found across Monobank's two documentation sites as
-> last audited on 2026-08-20. This is a dated audit, not a claim about
+> Implements all 66 operations found across Monobank's two documentation sites as
+> last audited on 2026-10-27. This is a dated audit, not a claim about
 > undocumented or future operations. Supports
 > Node.js 22.12.0+, ESM, CommonJS, and modern browser bundlers. Zod Mini
 > validates every successful JSON response.
@@ -13,7 +13,8 @@ Package: https://www.npmjs.com/package/@liaugust/monobank-sdk
 Repository: https://github.com/liaugust/monobank-typescript-sdk
 API reference: https://github.com/liaugust/monobank-typescript-sdk/blob/main/docs/API.md
 Upstream docs: https://monobank.ua/api-docs and https://api.monobank.ua/docs/
-Operation inventory: https://github.com/liaugust/monobank-typescript-sdk/issues/59
+Prior 63-operation inventory (closed): https://github.com/liaugust/monobank-typescript-sdk/issues/59
+2026-10-27 audit corrections: issues #85–#92 in the repository
 License: MIT
 
 ## Use the package
@@ -275,7 +276,7 @@ the signer as well as the request: a signer that never settles fails with reason
   mutating, never retried.
 - `acquiring.t2p.listTerminals(options?)`: authenticated
   `/api/merchant/t2p/terminal/list`; returns
-  `Promise<AcquiringT2pTerminalList>`; safe GET eligible for configured retries.
+  `Promise<AcquiringT2pTerminalList>`; `list` may be absent, null, or []; safe GET eligible for configured retries.
 - `acquiring.t2p.getPaymentStatus(input, options?)`: authenticated
   `/api/merchant/t2p/terminal/payment/external/status`; takes
   `externalPaymentId`; returns `Promise<AcquiringT2pPayment>`; Monobank keeps
@@ -283,9 +284,9 @@ the signer as well as the request: a signer that never settles fails with reason
   configured retries.
 - `acquiring.split.listReceivers(options?)`: authenticated
   `/api/merchant/split-receiver/list`; returns
-  `Promise<AcquiringSplitReceiverList>` whose `splitReceiverId` values feed
+  `Promise<AcquiringSplitReceiverList>` whose required `id` values feed
   `merchantPaymInfo.basketOrder[].splitReceiverId`; each entry's `edrpou`
-  identifies a real business; safe GET eligible for configured retries.
+  identifies a real business; `name` is also required; safe GET eligible for configured retries.
 - `acquiring.pos.cancelTransaction(input, options?)`: authenticated
   `/api/merchant/pos-transaction-cancel`; POSTs `{ rrn, amount }` to refund a POS
   transaction; returns `Promise<AcquiringPosCancellation>` acknowledging the
@@ -483,3 +484,35 @@ See `src/index.ts` for the complete authoritative export list, including types.
 - `CONTRIBUTING.md`: contributor workflow.
 - `SECURITY.md`: vulnerability reporting and sensitive-data rules.
 - `RELEASING.md`: release procedure.
+
+## 2026-10-27 audit contracts
+
+- Inventory: Public 2, Personal 3, Corporate 11, Acquiring 34, Installments 16.
+  Individual discrepancy dates are unknown; unpublished Checkout/payroll excluded.
+- `acquiring.pos.getCancellationStatus({ cancelRef }, options?)`: authenticated
+  GET `/api/merchant/pos-transaction-cancel/status`; safe retries and abort;
+  returns `AcquiringPosCancellationDetails`. All fields optional: integer amount
+  in minor units, cancelRef, RFC-3339 createTime/modifyTime, originalTranId, rrn,
+  and status new/processing/success/rejected/reversed. Do not equate cancelRef
+  with initiation tranId or invent a numeric PosRefundMaxDays window.
+- `installments.qr.createCart(input, options?)`: store-id/HMAC POST
+  `/api/v1/qr/cart` on u2.monobank.com.ua; required nonempty qr_id, UUID
+  store_order_id, nonempty products (name 1–500 chars, integer count >=1,
+  sum >=0.01 hryvnia per unit), HTTP result_callback. Returns InstallmentsQrCart
+  with optional UUID id; 201. Never retried; supports abort.
+- `installments.qr.cancelCart({ qr_id }, options?)`: store-id/HMAC POST
+  `/api/v1/qr/cart/cancel`; nonempty store-owned qr_id; bodyless 200 resolves void.
+  Never retried; supports abort. Preserve snake_case and secure callback delivery.
+- `FiscalizationItem.splitReceiverId` is optional in the reusable schema but
+  required upstream for partial split refunds alongside name/qty/sum/code.
+- `FiscalizationSource.Vchasnokasa` is `vchasnokasa`.
+- Statement optional agentFee: integer minor units; metadata: Record<string, unknown>;
+  splitReceiverList: AcquiringStatementAllocation[] with required splitReceiverId
+  string, integer amount/profit, optional integer agentFee, and additive fields.
+  profitAmount remains optional.
+- New runtime exports: AcquiringPosCancellationStatus,
+  acquiringPosCancellationStatusSchema, acquiringStatementAllocationSchema,
+  installmentsQrCartSchema. Supporting types: AcquiringPosCancellationDetails,
+  GetAcquiringPosCancellationStatusInput, AcquiringStatementAllocation,
+  CreateInstallmentsQrCartInput, CancelInstallmentsQrCartInput,
+  InstallmentsQrCartProduct, InstallmentsQrCart.

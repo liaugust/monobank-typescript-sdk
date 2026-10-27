@@ -3,16 +3,23 @@ import type {
   AcquiringCardPayment,
   AcquiringEmployee,
   AcquiringEmployeeList,
+  AcquiringPosCancellationDetails,
   AcquiringQrCashier,
   AcquiringQrCashierList,
   AcquiringQrDetails,
+  AcquiringSplitReceiver,
   AcquiringStatement,
+  AcquiringStatementAllocation,
+  AcquiringStatementItem,
   AcquiringSubmerchant,
   AcquiringSubmerchantList,
+  AcquiringT2pTerminal,
+  AcquiringT2pTerminalList,
   AcquiringWallet,
   AcquiringWalletCard,
   AcquiringWebhookPublicKey,
   BankSync,
+  CancelInstallmentsQrCartInput,
   CancelInvoiceInput,
   CheckCorporateAccessInput,
   ClientInfo,
@@ -22,12 +29,14 @@ import type {
   CorporateSignatureInput,
   CorporateSigner,
   CorporateTokenRequest,
+  CreateInstallmentsQrCartInput,
   CreateInvoiceInput,
   CreateInvoiceOptions,
   CurrencyRate,
   DocumentSignatory,
   DocumentSigningRequest,
   DocumentSigningStatus,
+  FiscalizationItem,
   GetAcquiringQrDetailsInput,
   GetAcquiringStatementsInput,
   GetCorporateClientInfoInput,
@@ -35,6 +44,7 @@ import type {
   GetCorporateRegistrationStatusInput,
   GetCorporateSettingsInput,
   GetStatementsInput,
+  InstallmentsQrCart,
   Invoice,
   InvoiceCancellation,
   InvoiceFinalization,
@@ -62,6 +72,7 @@ import {
   AccountType,
   AcquiringPaymentInitiationKind,
   AcquiringPaymentScheme,
+  AcquiringPosCancellationStatus,
   AcquiringQrAmountType,
   acquiringQrCashierListSchema,
   AcquiringStatementStatus,
@@ -72,10 +83,12 @@ import {
   corporateTokenRequestSchema,
   defaultRetryableStatusCodes,
   DocumentSigningState,
+  FiscalizationSource,
   InvoicePaymentType,
   InvoiceStatus,
   MonobankAcquiringClient,
   MonobankCorporateClient,
+  MonobankInstallmentsClient,
   MonobankPersonalClient,
   MonobankPublicClient,
   parsePersonalWebhookEvent,
@@ -547,5 +560,67 @@ describe("retry options", () => {
   test("expose the default statuses as read-only", () => {
     expectTypeOf(defaultRetryableStatusCodes).toExtend<readonly number[]>();
     expectTypeOf(defaultRetryableStatusCodes).not.toExtend<number[]>();
+  });
+});
+
+describe("October audit public contracts", () => {
+  test("exposes POS refund status and documented fiscal source", () => {
+    expectTypeOf(
+      acquiringClient.pos.getCancellationStatus({ cancelRef: "refund-42" }),
+    ).toEqualTypeOf<Promise<AcquiringPosCancellationDetails>>();
+    expectTypeOf<AcquiringPosCancellationDetails["amount"]>().toEqualTypeOf<
+      number | undefined
+    >();
+    expectTypeOf(
+      AcquiringPosCancellationStatus.Reversed,
+    ).toExtend<AcquiringPosCancellationStatus>();
+    expectTypeOf(
+      FiscalizationSource.Vchasnokasa,
+    ).toEqualTypeOf<"vchasnokasa">();
+  });
+  test("exposes store QR cart operations", () => {
+    const client = new MonobankInstallmentsClient({
+      storeId: "store-42",
+      storeSecret: "secret-42",
+    });
+    const input: CreateInstallmentsQrCartInput = {
+      qr_id: "qr-42",
+      store_order_id: "fa4a8249-336e-4e6d-9b85-79bc8be62377",
+      products: [{ name: "Chair", count: 1, sum: 2499.99 }],
+      result_callback: "https://example.com/callback",
+    };
+    const cancel: CancelInstallmentsQrCartInput = { qr_id: input.qr_id };
+    expectTypeOf(client.qr.createCart(input)).toEqualTypeOf<
+      Promise<InstallmentsQrCart>
+    >();
+    expectTypeOf(client.qr.cancelCart(cancel)).toEqualTypeOf<Promise<void>>();
+    expectTypeOf<InstallmentsQrCart["id"]>().toEqualTypeOf<
+      string | undefined
+    >();
+  });
+  test("types receiver ids, optional terminal lists and split allocations", () => {
+    expectTypeOf<AcquiringSplitReceiver["id"]>().toEqualTypeOf<string>();
+    expectTypeOf<AcquiringSplitReceiver["name"]>().toEqualTypeOf<string>();
+    expectTypeOf<AcquiringT2pTerminalList["list"]>().toEqualTypeOf<
+      readonly AcquiringT2pTerminal[] | null | undefined
+    >();
+    expectTypeOf<FiscalizationItem["splitReceiverId"]>().toEqualTypeOf<
+      string | undefined
+    >();
+    expectTypeOf<AcquiringStatementItem["agentFee"]>().toEqualTypeOf<
+      number | undefined
+    >();
+    expectTypeOf<AcquiringStatementItem["metadata"]>().toEqualTypeOf<
+      Record<string, unknown> | undefined
+    >();
+    expectTypeOf<AcquiringStatementItem["splitReceiverList"]>().toEqualTypeOf<
+      AcquiringStatementAllocation[] | undefined
+    >();
+    expectTypeOf<
+      AcquiringStatementAllocation["profit"]
+    >().toEqualTypeOf<number>();
+    expectTypeOf<AcquiringStatementAllocation["agentFee"]>().toEqualTypeOf<
+      number | undefined
+    >();
   });
 });
