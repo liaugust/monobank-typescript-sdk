@@ -284,3 +284,29 @@ describe("MonobankAcquiringInvoices", () => {
     ).rejects.toBeInstanceOf(MonobankResponseValidationError);
   });
 });
+
+it("sends the receiver identifier in exact partial split refund JSON", async () => {
+  const fetch = createFetchSequence([jsonResponse(cancellationFixture)]);
+  const client = new MonobankAcquiringClient({
+    fetch,
+    token: "synthetic-token",
+  });
+  const input = {
+    invoiceId: "invoice-42",
+    amount: 2100,
+    items: [
+      {
+        name: "Chair",
+        qty: 1,
+        sum: 2100,
+        code: "chair-42",
+        splitReceiverId: "receiver-42",
+      },
+    ],
+  };
+  await client.invoices.cancel(input);
+  expect(firstRequestBody(fetch)).toEqual(input);
+  expect(fetch.mock.calls[0]?.[1]?.body).toBe(
+    '{"amount":2100,"invoiceId":"invoice-42","items":[{"code":"chair-42","name":"Chair","qty":1,"splitReceiverId":"receiver-42","sum":2100}]}',
+  );
+});

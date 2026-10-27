@@ -2,6 +2,7 @@ import { MonobankTransport } from "../../transport/transport.js";
 import { MonobankInstallmentsClients } from "../clients/monobank-installments-clients.js";
 import { MonobankInstallmentsLetters } from "../letters/monobank-installments-letters.js";
 import { MonobankInstallmentsOrders } from "../orders/monobank-installments-orders.js";
+import { MonobankInstallmentsQr } from "../qr/monobank-installments-qr.js";
 import { MonobankInstallmentsReports } from "../reports/monobank-installments-reports.js";
 import type { MonobankInstallmentsClientOptions } from "./monobank-installments-client-options.js";
 
@@ -38,6 +39,9 @@ export class MonobankInstallmentsClient {
   /** Order lifecycle operations sharing this client's credentials and transport settings. */
   public readonly orders: MonobankInstallmentsOrders;
 
+  /** QR cart operations sharing this client's store credentials and HMAC transport. */
+  public readonly qr: MonobankInstallmentsQr;
+
   /** Store reporting sharing this client's credentials and transport settings. */
   public readonly reports: MonobankInstallmentsReports;
 
@@ -64,6 +68,7 @@ export class MonobankInstallmentsClient {
     this.clients = new MonobankInstallmentsClients(transport);
     this.letters = new MonobankInstallmentsLetters(transport);
     this.orders = new MonobankInstallmentsOrders(transport);
+    this.qr = new MonobankInstallmentsQr(transport);
     this.reports = new MonobankInstallmentsReports(transport);
   }
 }

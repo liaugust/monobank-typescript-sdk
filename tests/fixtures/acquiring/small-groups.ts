@@ -50,7 +50,7 @@ export const acquiringSplitReceiverListFixture = {
     {
       edrpou: "1234567890",
       name: "FOP Ivanov Ivan Ivanovych",
-      splitReceiverId: "sr_aB3dC5eF7g",
+      id: "sr_aB3dC5eF7g",
     },
   ],
 } as const;

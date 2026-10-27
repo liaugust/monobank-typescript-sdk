@@ -98,6 +98,12 @@ export type {
   CancelAcquiringPosTransactionInput,
 } from "./acquiring/pos/cancel-pos-transaction/cancel-pos-transaction.js";
 export { acquiringPosCancellationSchema } from "./acquiring/pos/cancel-pos-transaction/cancel-pos-transaction.js";
+export type { GetAcquiringPosCancellationStatusInput } from "./acquiring/pos/get-cancellation-status/get-cancellation-status.js";
+export type { AcquiringPosCancellationDetails } from "./acquiring/pos/models/pos-cancellation-status.js";
+export {
+  AcquiringPosCancellationStatus,
+  acquiringPosCancellationStatusSchema,
+} from "./acquiring/pos/models/pos-cancellation-status.js";
 export type { GetAcquiringQrDetailsInput } from "./acquiring/qr/get-qr-details/get-qr-details.js";
 export type {
   AcquiringQrCashier,
@@ -140,6 +146,8 @@ export {
   acquiringStatementSchema,
   AcquiringStatementStatus,
 } from "./acquiring/statements/models/acquiring-statement.js";
+export type { AcquiringStatementAllocation } from "./acquiring/statements/models/acquiring-statement-allocation.js";
+export { acquiringStatementAllocationSchema } from "./acquiring/statements/models/acquiring-statement-allocation.js";
 export type {
   AcquiringSubmerchant,
   AcquiringSubmerchantList,
@@ -340,6 +348,13 @@ export type {
 } from "./installments/orders/return-order/return-order.js";
 export { installmentsOrderReturnSchema } from "./installments/orders/return-order/return-order.js";
 export type { InstallmentsOrderIdentifierInput } from "./installments/orders/shared/order-identifier.js";
+export type { CancelInstallmentsQrCartInput } from "./installments/qr/cancel-cart/cancel-cart.js";
+export type {
+  CreateInstallmentsQrCartInput,
+  InstallmentsQrCartProduct,
+} from "./installments/qr/create-cart/create-cart.js";
+export type { InstallmentsQrCart } from "./installments/qr/models/installments-qr-cart.js";
+export { installmentsQrCartSchema } from "./installments/qr/models/installments-qr-cart.js";
 export type {
   GetInstallmentsStoreReportInput,
   InstallmentsStoreReport,

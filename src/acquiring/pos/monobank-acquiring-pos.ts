@@ -10,6 +10,10 @@ import {
   cancelAcquiringPosTransactionEndpoint,
   createCancelAcquiringPosTransactionBody,
 } from "./cancel-pos-transaction/cancel-pos-transaction.js";
+import type { GetAcquiringPosCancellationStatusInput } from "./get-cancellation-status/get-cancellation-status.js";
+import { createAcquiringPosCancellationStatusEndpoint } from "./get-cancellation-status/get-cancellation-status.js";
+import type { AcquiringPosCancellationDetails } from "./models/pos-cancellation-status.js";
+import { acquiringPosCancellationStatusSchema } from "./models/pos-cancellation-status.js";
 
 /** POS transaction refund operations. */
 export class MonobankAcquiringPos {
@@ -58,6 +62,34 @@ export class MonobankAcquiringPos {
       endpoint: cancelAcquiringPosTransactionEndpoint,
       retryable: false,
       schema: acquiringPosCancellationSchema,
+      ...requestSignal(options),
+    });
+  }
+
+  /**
+   * Retrieves a merchant's POS refund status by `cancelRef` using Acquiring authentication.
+   *
+   * Safe GET retries follow the parent policy; the signal cancels attempts and backoff.
+   * Monobank limits lookup to an unspecified `PosRefundMaxDays` window. No numeric
+   * window or rate limit is documented. Do not substitute the initiation `tranId`.
+   * Response amount is in minor units; timestamps are RFC-3339. All fields are optional.
+   * @param input Refund reference obtained from the refund flow.
+   * @param options Optional cancellation controls.
+   * @returns Validated refund details, preserving additive fields.
+   * @throws {MonobankValidationError} When the reference is invalid before Fetch.
+   * @throws {MonobankApiError} When Monobank rejects the query, including an unknown reference.
+   * @throws {MonobankNetworkError} When Fetch fails, times out, or is aborted.
+   * @throws {MonobankResponseValidationError} When the response shape is invalid.
+   */
+  public async getCancellationStatus(
+    input: GetAcquiringPosCancellationStatusInput,
+    options?: RequestOptions,
+  ): Promise<AcquiringPosCancellationDetails> {
+    return await this.transport.getJson({
+      auth: true,
+      endpoint: createAcquiringPosCancellationStatusEndpoint(input),
+      retryable: true,
+      schema: acquiringPosCancellationStatusSchema,
       ...requestSignal(options),
     });
   }

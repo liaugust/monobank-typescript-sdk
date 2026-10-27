@@ -138,6 +138,7 @@ for (const memberName of [
   "clients",
   "letters",
   "orders",
+  "qr",
   "reports",
 ]) {
   assert.ok(
@@ -192,7 +193,10 @@ const resourceContracts = [
     "MonobankAcquiringMonopay",
     ["constructor", "deleteKey", "importKey", "listKeys"],
   ],
-  ["MonobankAcquiringPos", ["constructor", "cancelTransaction"]],
+  [
+    "MonobankAcquiringPos",
+    ["constructor", "cancelTransaction", "getCancellationStatus"],
+  ],
   ["MonobankAcquiringSplit", ["constructor", "listReceivers"]],
   [
     "MonobankAcquiringT2p",
@@ -204,6 +208,7 @@ const resourceContracts = [
     "MonobankInstallmentsLetters",
     ["constructor", "download", "getData", "getDataV2"],
   ],
+  ["MonobankInstallmentsQr", ["constructor", "createCart", "cancelCart"]],
   ["MonobankInstallmentsReports", ["constructor", "getStoreReport"]],
   [
     "MonobankInstallmentsOrders",

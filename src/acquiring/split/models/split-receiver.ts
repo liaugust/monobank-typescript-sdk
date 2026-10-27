@@ -3,15 +3,13 @@ import * as z from "zod/mini";
 /**
  * Runtime validator for one split-payment receiver.
  *
- * Only `splitReceiverId` is required, because Monobank documents this response
- * with a sample rather than a schema. `edrpou` is the receiver's Ukrainian
- * state registry code and identifies a real business, so treat it as personal
- * data about that counterparty.
+ * The documented `id` is sent as `splitReceiverId` in invoice basket items.
+ * `edrpou` identifies a real business; protect counterparty data in storage.
  */
 export const acquiringSplitReceiverSchema = z.looseObject({
-  edrpou: z.optional(z.string()),
-  name: z.optional(z.string()),
-  splitReceiverId: z.string(),
+  edrpou: z.string(),
+  id: z.string(),
+  name: z.string(),
 });
 
 /** One validated split-payment receiver. */

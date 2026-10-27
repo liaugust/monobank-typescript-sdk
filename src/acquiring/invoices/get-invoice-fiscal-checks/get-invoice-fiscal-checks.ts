@@ -32,6 +32,7 @@ export type FiscalCheckStatus =
 export const FiscalizationSource = {
   Checkbox: "checkbox",
   Monopay: "monopay",
+  Vchasnokasa: "vchasnokasa",
 } as const;
 
 /** A documented service used to fiscalize an Acquiring payment. */

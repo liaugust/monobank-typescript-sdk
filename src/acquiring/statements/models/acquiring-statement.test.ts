@@ -83,7 +83,7 @@ describe("Acquiring statement schema", () => {
     });
   });
 
-  it("preserves additive statement fields without claiming their types", () => {
+  it("preserves documented split statement fields", () => {
     const payload = {
       list: [
         {
@@ -93,6 +93,7 @@ describe("Acquiring statement schema", () => {
           splitReceiverList: [
             {
               amount: 2_100,
+              profit: 2_000,
               splitReceiverId: "receiver-42",
             },
           ],
@@ -101,5 +102,41 @@ describe("Acquiring statement schema", () => {
     } as const;
 
     expect(acquiringStatementSchema.parse(payload)).toEqual(payload);
+  });
+});
+
+it.each([
+  { agentFee: 1.5 },
+  { metadata: [] },
+  { splitReceiverList: [{ splitReceiverId: "r", amount: 100 }] },
+  {
+    splitReceiverList: [
+      { splitReceiverId: "r", amount: 100, profit: 90, agentFee: "10" },
+    ],
+  },
+])("rejects malformed split statement fields %j", (fields) => {
+  expect(
+    acquiringStatementSchema.safeParse({
+      list: [{ ...acquiringStatementFixture.list[0], ...fields }],
+    }).success,
+  ).toBe(false);
+});
+it("preserves typed split allocations and arbitrary metadata", () => {
+  const item = {
+    ...acquiringStatementFixture.list[0],
+    agentFee: 10,
+    metadata: { order: { id: 42 } },
+    splitReceiverList: [
+      {
+        splitReceiverId: "r",
+        amount: 100,
+        profit: 90,
+        agentFee: 10,
+        future: true,
+      },
+    ],
+  };
+  expect(acquiringStatementSchema.parse({ list: [item] })).toEqual({
+    list: [item],
   });
 });

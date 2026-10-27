@@ -63,6 +63,8 @@ export class MonobankAcquiringT2p {
 
   /**
    * Lists the tap-to-phone terminals registered to the merchant.
+   * The `list` property may be absent, null, or empty when none exist; narrow
+   * it before iterating. Each documented wire variant is preserved.
    *
    * This safe authenticated GET is retried only when the parent client has a
    * bounded retry policy. A provided `RequestOptions.signal` cancels the active

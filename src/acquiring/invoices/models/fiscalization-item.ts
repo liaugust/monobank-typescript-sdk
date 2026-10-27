@@ -8,6 +8,7 @@ export const fiscalizationItemShape = {
   header: z.optional(z.string()),
   name: z.string().check(z.minLength(1)),
   qty: z.number(),
+  splitReceiverId: z.optional(z.string()),
   sum: z.int(),
   tax: z.optional(z.array(z.int())),
   uktzed: z.optional(z.string()),
@@ -30,6 +31,8 @@ export interface FiscalizationItem {
   readonly name: string;
   /** Item quantity. */
   readonly qty: number;
+  /** Receiver `id` from the receiver list; required upstream for partial split refunds. */
+  readonly splitReceiverId?: string;
   /** Per-item amount in the currency's minor units. */
   readonly sum: number;
   /** Optional fiscal tax-rate identifiers. */

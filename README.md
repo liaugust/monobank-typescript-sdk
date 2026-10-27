@@ -64,17 +64,22 @@ sites; see [Coverage](#coverage).
 
 ## Coverage
 
-Implements all 63 operations found across Monobank's two documentation sites as
-last audited on 2026-08-20. The sites are not supersets of one another:
+Implements all 66 operations found across Monobank's two documentation sites as
+last audited on 2026-10-27. The sites are not supersets of one another:
 
-- <https://monobank.ua/api-docs> — current; 46 operations
+- <https://monobank.ua/api-docs> — current; 49 operations
 - <https://api.monobank.ua/docs/> — older Redoc specs; 17 further operations
   appear only here, covering all of Personal and Corporate
 
 This is a dated documentation audit, not a claim that Monobank's entire or future
-API surface is complete. The operation inventory is maintained in
-[issue #59](https://github.com/liaugust/monobank-typescript-sdk/issues/59). If a
-currently documented operation is missing, report it as a bug.
+API surface is complete. The prior 63-operation inventory is recorded in
+[issue #59](https://github.com/liaugust/monobank-typescript-sdk/issues/59); this
+audit's corrections are tracked in [issues #85–#92](https://github.com/liaugust/monobank-typescript-sdk/issues/85).
+If a currently documented operation is missing, report it as a bug.
+
+The 2026-10-27 audit covers Public 2, Personal 3, Corporate 11, Acquiring 34,
+and Installments 16 operations across both official sites. Individual discrepancy
+publication dates are unknown. It excludes unpublished Checkout and payroll routes.
 
 ## Requirements
 
@@ -139,6 +144,9 @@ the complete method inventory; use the [API reference](docs/API.md) for that.
 | `personal.statements.get(input)`                 | Personal token  | `readonly StatementItem[]`          | Maximum window: 2,682,000 seconds               |
 | `personal.webhooks.set(input)`                   | Personal token  | `void`                              | Mutating request; never retried automatically   |
 | `acquiring.merchant.getDetails()`                | Acquiring token | `MerchantDetails`                   | Merchant identity for the supplied token        |
+| `acquiring.pos.getCancellationStatus(input)`     | Acquiring token | `AcquiringPosCancellationDetails`   | Looks up a refund by cancelRef                  |
+| `installments.qr.createCart(input)`              | Store HMAC      | `InstallmentsQrCart`                | Creates a QR cart with hryvnia unit prices      |
+| `installments.qr.cancelCart(input)`              | Store HMAC      | `void`                              | Cancels a cart; never retried                   |
 | `acquiring.statements.get(input)`                | Acquiring token | `AcquiringStatement`                | Transaction statement ordered newest first      |
 | `acquiring.submerchants.list()`                  | Acquiring token | `AcquiringSubmerchantList`          | Terminals available to supported merchants      |
 | `acquiring.qr.list()`                            | Acquiring token | `AcquiringQrCashierList`            | QR cashiers registered for the merchant         |
@@ -434,17 +442,25 @@ documented: `ccy` is alphabetic (`"UAH"`) rather than a numeric ISO 4217 code,
 explicitly `null` on success. `maskedPan` holds the masked card number while
 `cardMask` holds the scheme name.
 
+When no T2P terminals exist, `terminals.list` may be absent, `null`, or `[]`.
+Narrow it before iterating; the SDK preserves each documented wire shape.
+
 ### Split-payment receivers
 
 ```ts
 const receivers = await acquiring.split.listReceivers();
 ```
 
-A returned `splitReceiverId` is what
+A returned `id` is what
 `merchantPaymInfo.basketOrder[].splitReceiverId` expects on
 `acquiring.invoices.create()`. Each entry carries the receiver's `edrpou` state
 registry code, which identifies a real business — treat the list as counterparty
 data, not public reference data.
+
+Response entries require `id`, `name`, and `edrpou`. Consumers of the former
+`splitReceiverId` response field must migrate to `id`; the SDK preserves the wire
+shape without adding an alias. For partial split refunds, include that identifier
+as `items[].splitReceiverId` together with `name`, `qty`, `sum`, and `code`.
 
 ### POS refunds
 
@@ -460,6 +476,20 @@ refunds; only Monobank can evaluate that, so the SDK checks the shape and lets
 Monobank reject an over-refund. A successful response means the refund was
 _initiated_, not settled. This request moves money and is never retried —
 retrying could refund twice.
+
+Look up a refund after a missed `pos_refund` webhook:
+
+```ts
+const status = await acquiring.pos.getCancellationStatus({
+  cancelRef: "synthetic-refund-reference",
+});
+```
+
+Use the refund's `cancelRef`; do not assume it equals initiation `tranId`.
+Every response field is optional. `amount` uses minor units; timestamps are
+RFC-3339 and status is `new`, `processing`, `success`, `rejected`, or `reversed`.
+Monobank's lookup window is unspecified. This safe GET supports configured
+retries and cancellation.
 
 ### Acquiring statements
 
@@ -487,7 +517,11 @@ const successfulFullPayments = statement.list.filter(
 
 `statement.list` is readonly and ordered newest first. Monetary values use
 minor currency units; transaction and cancellation `date` fields are RFC-3339
-strings. The method is a safe GET eligible for configured retries.
+strings. Optional `agentFee` is an integer in minor units, `metadata` is a
+merchant-defined record, and `splitReceiverList` contains validated allocations
+with required `splitReceiverId`, integer `amount` and `profit`, plus optional
+integer `agentFee`. `profitAmount` remains optional. The method is a safe GET
+eligible for configured retries.
 
 Create a debit invoice and inspect its status:
 
@@ -558,6 +592,8 @@ await acquiring.invoices.create({
   saveCardData: { saveCard: true },
 });
 ```
+
+Fiscal checks accept `FiscalizationSource.Vchasnokasa` (`vchasnokasa`).
 
 ### Public data
 
@@ -939,6 +975,24 @@ const event = parseInstallmentsCallbackEvent(
 
 Callbacks arrive only for terminal outcomes. Intermediate states such as
 `IN_PROCESS/WAITING_FOR_CLIENT` are never delivered, so poll for those.
+
+#### QR carts
+
+```ts
+const cart = await installments.qr.createCart({
+  qr_id: "qr-synthetic-42",
+  store_order_id: "fa4a8249-336e-4e6d-9b85-79bc8be62377",
+  products: [{ name: "Chair", count: 1, sum: 2499.99 }],
+  result_callback: "https://example.com/installments/qr-callback",
+});
+await installments.qr.cancelCart({ qr_id: "qr-synthetic-42" });
+```
+
+These use store credentials and HMAC on `u2.monobank.com.ua`, retain snake_case,
+and send unit prices in hryvnia. QR codes must belong to the authenticated store.
+`cart.id` is an optional UUID; cancellation resolves without a response body.
+Both mutations accept `RequestOptions.signal` and are never retried automatically.
+Authenticate callback delivery separately before acting on it.
 
 ## Retries, timeouts, and cancellation
 
