@@ -71,7 +71,7 @@
     "eslint-plugin-simple-import-sort": "14.0.0",
     "husky": "9.1.7",
     "jscpd": "5.4.2",
-    "knip": "6.43.0",
+    "knip": "6.44.0",
     "prettier": "3.9.10",
     "publint": "0.3.25",
     "tsup": "8.5.1",
